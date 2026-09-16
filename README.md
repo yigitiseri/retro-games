@@ -11,20 +11,31 @@ space it is given, and a keyboard fallback on desktop.
 | [**YARIŞ**](games/yaris/) | An *Enduro*-style road racer. Pass your quota of cars before nightfall, then keep driving in the dark. | [`games/yaris/index.html`](games/yaris/index.html) |
 | [**ROKET**](games/roket/) | A lander, but a supply run: hop pad to pad on fuel you only earn by delivering. | [`games/roket/index.html`](games/roket/index.html) |
 
+`index.html` at the root is the arcade menu: the three cabinets side by side,
+each with a live attract-mode preview of the game running in miniature. It is
+what GitHub Pages serves, so the Pages URL opens straight into the arcade.
+
 Each game has its own README covering controls, rules, and how it is drawn.
 
 ## Running them
 
-Open the file directly, or serve the folder:
+Open `index.html` directly, or serve the folder:
 
 ```sh
 python3 -m http.server 8000
-# then visit http://localhost:8000/games/yilan/
+# then visit http://localhost:8000/
 ```
+
+## Publishing
+
+Settings → Pages → Deploy from a branch → `main` / root. The menu is then at
+`https://<user>.github.io/retro-games/` and each cabinet a link away, with no
+sign-in and nothing to install.
 
 ## Repository layout
 
 ```
+index.html       the arcade menu
 games/
   yilan/   index.html  README.md
   yaris/   index.html  README.md
