@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
-<meta name="description" content="KUS - a retro neon-night flappy cabinet for phone or desktop.">
+<meta name="description" content="KUS - a retro woods cabinet for phone or desktop.">
 <meta name="theme-color" content="#08090e">
 <style>
   :root {
@@ -21,13 +21,13 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap">
 <style>
   :root {
-    --ink:    #0a0714;
-    --bezel:  #2a1c3e;
-    --neon:   #ff6ad5;
-    --violet: #9d7bff;
-    --dim:    #3b2a57;
-    --pale:   #ffe7fb;
-    --mint:   #5ef0c0;
+    --ink:    #0a1109;
+    --bezel:  #26401f;
+    --neon:   #63cc57;        /* leaf */
+    --violet: #86a87c;        /* muted label green */
+    --dim:    #2c4a26;
+    --pale:   #eefbe8;
+    --mint:   #6bbeff;        /* sky */
 
     --cell-font: "Press Start 2P", ui-monospace, "Courier New", monospace;
     --read-font: "VT323", ui-monospace, "Courier New", monospace;
@@ -39,7 +39,7 @@
   body {
     margin: 0;
     background:
-      radial-gradient(120% 90% at 50% 0%, #241442 0%, var(--ink) 62%),
+      radial-gradient(120% 90% at 50% 0%, #17280f 0%, var(--ink) 62%),
       var(--ink);
     color: var(--pale);
     font-family: var(--read-font);
@@ -66,7 +66,7 @@
     font-size: clamp(15px, 5.4vw, 26px);
     letter-spacing: 0.12em;
     color: var(--neon);
-    text-shadow: 0 0 8px rgba(255, 106, 213, 0.55), 0 0 24px rgba(157, 123, 255, 0.4);
+    text-shadow: 0 0 8px rgba(99, 204, 87, 0.5), 0 0 24px rgba(107, 190, 255, 0.35);
     text-wrap: balance;
   }
   .marquee p {
@@ -85,7 +85,7 @@
     grid-template-columns: repeat(3, 1fr);
     gap: 5px;
     border: 1px solid var(--dim);
-    background: linear-gradient(180deg, rgba(255,106,213,0.06), transparent);
+    background: linear-gradient(180deg, rgba(99,204,87,0.07), transparent);
     padding: 6px 3px;
   }
   .hud div { text-align: center; }
@@ -120,10 +120,10 @@
     position: relative;
     border: 2px solid var(--bezel);
     border-radius: 10px;
-    background: #070412;
+    background: #6bbeff;
     box-shadow:
-      0 0 0 4px #120a20,
-      0 0 40px rgba(157, 123, 255, 0.14) inset,
+      0 0 0 4px #14200f,
+      0 0 40px rgba(31, 107, 46, 0.18) inset,
       0 10px 34px rgba(0, 0, 0, 0.6);
     overflow: hidden;
     touch-action: none;
@@ -155,7 +155,7 @@
     gap: 11px;
     text-align: center;
     padding: 18px;
-    background: rgba(10, 7, 20, 0.86);
+    background: rgba(8, 17, 7, 0.86);
     z-index: 3;
   }
   .overlay h2 {
@@ -164,7 +164,7 @@
     font-size: clamp(13px, 4.4vw, 19px);
     letter-spacing: 0.05em;
     color: var(--neon);
-    text-shadow: 0 0 10px rgba(255, 106, 213, 0.45);
+    text-shadow: 0 0 10px rgba(99, 204, 87, 0.45);
   }
   .overlay h2.over { color: #ff5b5b; text-shadow: 0 0 12px rgba(255, 91, 91, 0.5); }
   .overlay p { margin: 0; font-size: clamp(16px, 4.2vw, 20px); letter-spacing: 0.06em; color: var(--violet); }
@@ -182,7 +182,7 @@
     font-size: clamp(11px, 3.4vw, 15px);
     letter-spacing: 0.06em;
     color: var(--mint);
-    text-shadow: 0 2px 0 #000, 0 0 14px rgba(94, 240, 192, 0.5);
+    text-shadow: 0 2px 0 #000, 0 0 14px rgba(107, 190, 255, 0.5);
     animation: banner 1.7s ease-out 1 forwards;
     pointer-events: none;
   }
@@ -202,8 +202,8 @@
     font-size: 11px;
     letter-spacing: 0.12em;
     color: var(--ink);
-    background: linear-gradient(180deg, var(--neon), #c93fa2);
-    border: 1px solid #ff9ae2;
+    background: linear-gradient(180deg, var(--neon), #2f8f2a);
+    border: 1px solid #9ae08f;
     border-radius: 9px;
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
@@ -222,7 +222,7 @@
     letter-spacing: 0.08em;
     padding: 8px 10px;
     color: var(--violet);
-    background: #150e26;
+    background: #14200f;
     border: 1px solid var(--dim);
     border-radius: 5px;
     cursor: pointer;
@@ -255,7 +255,7 @@
 <div class="cabinet">
   <header class="marquee">
     <h1>KU&#350;</h1>
-    <p>Cabinet No. 31 &mdash; 1984</p>
+    <p>Cabinet No. 31 &mdash; 1985</p>
   </header>
 
   <div class="hud">
@@ -265,13 +265,13 @@
   </div>
 
   <div class="stage" id="stage">
-    <div class="screen" id="screen" tabindex="0" aria-label="Flappy game screen">
+    <div class="screen" id="screen" tabindex="0" aria-label="Bird and woods game screen">
       <canvas id="view"></canvas>
       <div class="scan"></div>
       <div class="vignette"></div>
       <div class="overlay" id="overlay">
         <h2 id="ovTitle">INSERT COIN</h2>
-        <p id="ovBody">Tap to flap. Every gap you clear tightens the next one.</p>
+        <p id="ovBody">Tap to flap. Thread the gap between the crowns.</p>
         <p class="blink" id="ovBlink">&#9654; PRESS START</p>
       </div>
     </div>
@@ -297,12 +297,13 @@
   /* ---------------- constants (internal pixels) ---------------- */
   var VW = 180;                     // internal width; height follows the screen
   var VH = 260;
-  var GROUND = 26;                  // ground strip height
+  var GROUND = 24;                  // forest floor height
+  var CROWN_H = 34;                 // how deep a crown hangs into the frame
 
   var GRAV = 470;
   var FLAP_V = -152;
   var SPEED0 = 64;                  // pipe scroll speed
-  var PIPE_W = 26;
+  var TREE_W = 26;                  // trunk-and-crown footprint you must clear
   var SPACING = 118;                // distance between pipe centres
   var GAP_MAX = 78, GAP_MIN = 58;   // the gap tightens as you score
   var BIRD_W = 11, BIRD_H = 9;
@@ -326,8 +327,8 @@
   ctx.imageSmoothingEnabled = false;
 
   var state = "idle";               // idle | running | paused | over
-  var bird, pipes, score, best, startBest, beatIt, shake, deadAt, flapPhase, bgScroll;
-  var skyline = [], stars = [], bannerEl;
+  var bird, trees, score, best, startBest, beatIt, shake, deadAt, flapPhase, bgScroll;
+  var clouds = [], bannerEl;
   var soundOn = true;
 
   /* ---------------- persistence ---------------- */
@@ -368,7 +369,7 @@
     var availW = r.width - 4, availH = r.height - 4;
     if (availW < 40 || availH < 40) return;
 
-    // portrait suits a bird between two pipes; never wider than square
+    // portrait suits a bird between two trees; never wider than square
     var aspect = Math.max(0.52, Math.min(1.0, availW / availH));
     var w = Math.min(availW, availH * aspect);
     var h = w / aspect;
@@ -384,16 +385,9 @@
   }
 
   function buildBackdrop() {
-    skyline = [];
-    var x = 0;
-    while (x < VW * 2 + 40) {
-      var bw = 12 + Math.floor(Math.random() * 16);
-      skyline.push({ x: x, w: bw, h: 18 + Math.floor(Math.random() * 46) });
-      x += bw + 2 + Math.floor(Math.random() * 6);
-    }
-    stars = [];
-    for (var i = 0; i < 46; i++) {
-      stars.push({ x: Math.random() * VW, y: Math.random() * (VH - GROUND - 90), b: 0.3 + Math.random() * 0.7 });
+    clouds = [];
+    for (var i = 0; i < 5; i++) {
+      clouds.push({ x: Math.random() * (VW + 80), y: 12 + Math.random() * Math.max(10, VH * 0.3) });
     }
   }
 
@@ -407,7 +401,7 @@
 
   function reset(startNow) {
     bird = { x: Math.round(VW * 0.3), y: (VH - GROUND) / 2, vy: 0, angle: 0 };
-    pipes = [];
+    trees = [];
     score = 0;
     shake = 0;
     deadAt = 0;
@@ -416,18 +410,18 @@
     best = loadBest();
     startBest = best;               // what there was to beat when this run began
     beatIt = false;
-    for (var i = 0; i < 3; i++) addPipe(VW + 40 + i * SPACING);
+    for (var i = 0; i < 3; i++) addTree(VW + 40 + i * SPACING);
     setState(startNow ? "running" : "idle");
     syncHud();
     render(0);
   }
 
-  function addPipe(x) {
+  function addTree(x) {
     var gap = gapFor(score);
-    var margin = 22;
+    var margin = CROWN_H + 2;
     var floorY = VH - GROUND;
     var top = margin + Math.random() * (floorY - gap - margin * 2);
-    pipes.push({ x: x, top: top, gap: gap, scored: false });
+    trees.push({ x: x, top: top, gap: gap, scored: false, seed: Math.random() * 10 });
   }
 
   function flap() {
@@ -454,11 +448,11 @@
     if (bird.y < BIRD_H / 2) { bird.y = BIRD_H / 2; bird.vy = 0; }
 
     var sp = speedFor(score);
-    for (var i = pipes.length - 1; i >= 0; i--) {
-      var p = pipes[i];
+    for (var i = trees.length - 1; i >= 0; i--) {
+      var p = trees[i];
       p.x -= sp * dt;
 
-      if (!p.scored && p.x + PIPE_W < bird.x - BIRD_W / 2) {
+      if (!p.scored && p.x + TREE_W < bird.x - BIRD_W / 2) {
         p.scored = true;
         score++;
         bump(hScore);
@@ -471,11 +465,11 @@
         syncHud();
       }
 
-      if (p.x + PIPE_W < -8) {
-        pipes.splice(i, 1);
+      if (p.x + TREE_W < -8) {
+        trees.splice(i, 1);
         var far = 0;
-        for (var j = 0; j < pipes.length; j++) far = Math.max(far, pipes[j].x);
-        addPipe(far + SPACING);
+        for (var j = 0; j < trees.length; j++) far = Math.max(far, trees[j].x);
+        addTree(far + SPACING);
       }
     }
 
@@ -489,9 +483,9 @@
   function hits() {
     var bx0 = bird.x - BIRD_W / 2 + 2, bx1 = bird.x + BIRD_W / 2 - 2;
     var by0 = bird.y - BIRD_H / 2 + 1, by1 = bird.y + BIRD_H / 2 - 1;
-    for (var i = 0; i < pipes.length; i++) {
-      var p = pipes[i];
-      if (bx1 < p.x || bx0 > p.x + PIPE_W) continue;
+    for (var i = 0; i < trees.length; i++) {
+      var p = trees[i];
+      if (bx1 < p.x || bx0 > p.x + TREE_W) continue;
       if (by0 < p.top || by1 > p.top + p.gap) return true;
     }
     return false;
@@ -517,104 +511,159 @@
     ctx.translate(sx, sy);
 
     drawSky(now);
-    drawPipes();
+    drawTrees();
     drawGround();
     drawBird(now);
 
     ctx.restore();
   }
 
+  /* ---- the woods ----
+     Palette is a Famicom afternoon: one cyan sky, three greens, one brown. The
+     trees you must clear are drawn in the light greens; everything in the
+     backdrop is pushed darker so it can never be mistaken for an obstacle. */
+  var SKY = ["#6bbeff", "#7cc7ff", "#9bd8ff"];
+  var LEAF = "#38a838", LEAF_DARK = "#1f6b2e", LEAF_LITE = "#63cc57";
+  var BARK = "#8b5a2b", BARK_LITE = "#a9713c";
+  var FAR = "#17532a", GRASS = "#3fa13f", GRASS_DARK = "#1f6b2e";
+
   function drawSky(now) {
-    var bands = 10;
-    var top = [26, 12, 54], bot = [92, 34, 106];
-    for (var i = 0; i < bands; i++) {
-      var t = i / (bands - 1);
-      ctx.fillStyle = "rgb(" + Math.round(top[0] + (bot[0] - top[0]) * t) + "," +
-                               Math.round(top[1] + (bot[1] - top[1]) * t) + "," +
-                               Math.round(top[2] + (bot[2] - top[2]) * t) + ")";
-      ctx.fillRect(0, Math.floor(i * (VH - GROUND) / bands), VW, Math.ceil((VH - GROUND) / bands) + 1);
-    }
-
-    for (var s = 0; s < stars.length; s++) {
-      var st = stars[s];
-      var tw = 0.6 + Math.sin(now / 540 + s) * 0.4;
-      ctx.fillStyle = "rgba(255, 231, 251," + (st.b * tw * 0.8).toFixed(2) + ")";
-      ctx.fillRect(st.x | 0, st.y | 0, 1, 1);
-    }
-
-    // moon
-    ctx.fillStyle = "rgba(255, 231, 251, 0.9)";
-    ctx.beginPath(); ctx.arc(VW * 0.76, VH * 0.16, 9, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = "rgba(92, 34, 106, 0.55)";
-    ctx.beginPath(); ctx.arc(VW * 0.73, VH * 0.14, 2.4, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(VW * 0.79, VH * 0.19, 1.8, 0, Math.PI * 2); ctx.fill();
-
-    // skyline, parallaxed behind the pipes
-    var base = VH - GROUND;
-    var off = bgScroll % (VW + 40);
-    ctx.fillStyle = "#1b0f33";
-    for (var b = 0; b < skyline.length; b++) {
-      var bd = skyline[b];
-      var x = bd.x - off;
-      if (x > VW || x + bd.w < 0) continue;
-      ctx.fillRect(x, base - bd.h, bd.w, bd.h);
-      // lit windows
-      ctx.fillStyle = "rgba(255, 106, 213, 0.30)";
-      for (var wy = base - bd.h + 4; wy < base - 4; wy += 6) {
-        for (var wx = x + 2; wx < x + bd.w - 3; wx += 5) {
-          if (((wx + wy) | 0) % 3 === 0) ctx.fillRect(wx, wy, 2, 2);
-        }
-      }
-      ctx.fillStyle = "#1b0f33";
-    }
-  }
-
-  function drawPipes() {
     var floorY = VH - GROUND;
-    for (var i = 0; i < pipes.length; i++) {
-      var p = pipes[i];
-      if (p.x > VW || p.x + PIPE_W < 0) continue;
-      pipeColumn(p.x, 0, p.top);                       // upper
-      pipeColumn(p.x, p.top + p.gap, floorY - (p.top + p.gap));  // lower
+    for (var i = 0; i < SKY.length; i++) {
+      ctx.fillStyle = SKY[i];
+      ctx.fillRect(0, Math.floor(i * floorY / SKY.length), VW, Math.ceil(floorY / SKY.length) + 1);
+    }
+
+    ctx.fillStyle = "#fcfcfc";
+    for (var c = 0; c < clouds.length; c++) {
+      var cl = clouds[c];
+      var span = VW + 80;
+      var x = ((cl.x - bgScroll * 0.4) % span + span) % span - 40;
+      ctx.fillRect(x, cl.y, 22, 5);
+      ctx.fillRect(x + 5, cl.y - 3, 12, 5);
+      ctx.fillRect(x + 3, cl.y + 4, 16, 3);
+    }
+
+    // distant pines, deliberately darker than anything you can hit
+    var park = (bgScroll * 0.55) % 10;
+    ctx.fillStyle = FAR;
+    for (var fx = -10; fx < VW + 10; fx += 10) {
+      var px = Math.round(fx - park);
+      var h = 16 + ((Math.abs(Math.sin(fx * 0.37)) * 14) | 0);
+      for (var row = 0; row < h; row += 2) {
+        var half = Math.max(1, Math.round((1 - row / h) * 5));
+        ctx.fillRect(px - half, floorY - row - 2, half * 2 + 1, 2);
+      }
     }
   }
 
-  function pipeColumn(x, y, h) {
-    if (h <= 0) return;
-    ctx.fillStyle = "#1f8f6d";
-    ctx.fillRect(x, y, PIPE_W, h);
-    ctx.fillStyle = "#5ef0c0";
-    ctx.fillRect(x + 3, y, 4, h);                      // highlight stripe
-    ctx.fillStyle = "#14634b";
-    ctx.fillRect(x + PIPE_W - 4, y, 4, h);             // shaded edge
+  // deterministic wobble: a crown's edge is lumpy but never flickers
+  function lump(seed, x) {
+    return Math.sin(seed * 12.9898 + x * 0.55) * 2.2 +
+           Math.sin(seed * 4.1414 + x * 1.31) * 1.5 +
+           Math.sin(x * 0.27 + seed) * 1.8;
+  }
 
-    // lip at the mouth of the gap
-    var lipY = y === 0 ? y + h - 7 : y;
-    ctx.fillStyle = "#26a37c";
-    ctx.fillRect(x - 3, lipY, PIPE_W + 6, 7);
-    ctx.fillStyle = "#5ef0c0";
-    ctx.fillRect(x - 3, lipY, PIPE_W + 6, 2);
-    ctx.fillStyle = "#14634b";
-    ctx.fillRect(x - 3, lipY + 6, PIPE_W + 6, 1);
+  function drawTrees() {
+    var floorY = VH - GROUND;
+    for (var i = 0; i < trees.length; i++) {
+      var t = trees[i];
+      if (t.x > VW || t.x + TREE_W < 0) continue;
+      hangingTree(t.x, t.top, t.seed);
+      standingTree(t.x, t.top + t.gap, floorY, t.seed);
+    }
+  }
+
+  function hangingTree(x, bottom, seed) {
+    if (bottom <= 0) return;
+    var cx = Math.round(x + TREE_W / 2);
+    var crownTop = bottom - CROWN_H;
+    limb(cx, 0, Math.max(0, crownTop + 6));
+    branches(cx, 4, Math.max(6, crownTop - 2), seed, 1);
+    crown(cx, crownTop, CROWN_H, seed, false);
+  }
+
+  function standingTree(x, top, floorY, seed) {
+    if (top >= floorY) return;
+    var cx = Math.round(x + TREE_W / 2);
+    limb(cx, top + CROWN_H - 6, floorY);
+    branches(cx, top + CROWN_H, floorY - 4, seed, -1);
+    crown(cx, top, CROWN_H, seed, true);
+  }
+
+  function limb(cx, y0, y1) {
+    if (y1 <= y0) return;
+    ctx.fillStyle = BARK;
+    ctx.fillRect(cx - 4, y0, 8, y1 - y0);
+    ctx.fillStyle = BARK_LITE;
+    ctx.fillRect(cx - 4, y0, 2, y1 - y0);
+  }
+
+  // side limbs with a clump of leaves on the end, so the column reads as solid
+  function branches(cx, y0, y1, seed, dir) {
+    for (var y = y0 + 6; y < y1; y += 14) {
+      var side = ((y + seed * 7) | 0) % 2 === 0 ? 1 : -1;
+      var len = 8 + (((y * 3 + seed * 5) | 0) % 5);
+      ctx.fillStyle = BARK;
+      for (var i = 0; i < len; i++) {
+        ctx.fillRect(cx + side * (4 + i), y + dir * Math.round(i * 0.45), 2, 2);
+      }
+      var lx = cx + side * (4 + len), ly = y + dir * Math.round(len * 0.45);
+      ctx.fillStyle = LEAF;
+      ctx.fillRect(lx - 4, ly - 3, 8, 6);
+      ctx.fillRect(lx - 3, ly - 5, 6, 10);
+      ctx.fillStyle = LEAF_LITE;
+      ctx.fillRect(lx - 2, ly - 4, 3, 2);
+    }
+  }
+
+  // the crown: a lumpy dome, flat on the side facing the gap
+  function crown(cx, top, h, seed, pointDown) {
+    var rx = TREE_W / 2 + 5;
+    for (var i = -rx; i <= rx; i++) {
+      var t = Math.abs(i) / rx;
+      var depth = Math.round(h * (1 - t * t * 0.78)) - Math.round(Math.abs(lump(seed + 2.3, i)));
+      if (depth <= 1) continue;
+      var y = pointDown ? top + (h - depth) : top;
+      var px = Math.round(cx + i);
+      ctx.fillStyle = LEAF;
+      ctx.fillRect(px, y, 1, depth);
+      ctx.fillStyle = LEAF_DARK;
+      ctx.fillRect(px, pointDown ? y + depth - 3 : y, 1, 3);
+      if (((i + 40) | 0) % 6 === 0) {
+        ctx.fillStyle = LEAF_LITE;
+        ctx.fillRect(px, pointDown ? y + 2 : y + depth - 7, 1, 4);
+      }
+    }
+    // a bright rim on the gap side, so the edge you must miss is the crispest
+    ctx.fillStyle = LEAF_LITE;
+    for (var j = -rx; j <= rx; j++) {
+      var t2 = Math.abs(j) / rx;
+      var d2 = Math.round(h * (1 - t2 * t2 * 0.78)) - Math.round(Math.abs(lump(seed + 2.3, j)));
+      if (d2 <= 1) continue;
+      var ry = pointDown ? top + (h - d2) : top + d2 - 1;
+      ctx.fillRect(Math.round(cx + j), ry, 1, 1);
+    }
   }
 
   function drawGround() {
     var y = VH - GROUND;
-    ctx.fillStyle = "#2b1a3f";
+    ctx.fillStyle = GRASS;
     ctx.fillRect(0, y, VW, GROUND);
-    ctx.fillStyle = "#ff6ad5";
-    ctx.fillRect(0, y, VW, 1);
-
-    var off = (bgScroll * 3) % 10;
-    ctx.fillStyle = "#4a2d68";
-    for (var x = -off; x < VW; x += 10) ctx.fillRect(x, y + 4, 6, 2);
-    ctx.fillStyle = "#1a0f28";
-    ctx.fillRect(0, y + 10, VW, GROUND - 10);
+    ctx.fillStyle = LEAF_LITE;
+    ctx.fillRect(0, y, VW, 2);
+    ctx.fillStyle = GRASS_DARK;
+    ctx.fillRect(0, y + 8, VW, GROUND - 8);
+    var off = (bgScroll * 3) % 12;
+    ctx.fillStyle = GRASS;
+    for (var x = -off; x < VW; x += 12) ctx.fillRect(x, y + 8, 6, 2);
+    ctx.fillStyle = BARK;
+    for (var b = -off * 0.5; b < VW; b += 37) ctx.fillRect(b, y + 3, 7, 2);
   }
 
   /* bird sprite: body drawn from a character map, wing drawn on top so it can
      beat without needing three copies of the whole sprite */
-  var BIRD_PAL = { o: "#2a1b3c", b: "#ffd34d", d: "#e2a92c", e: "#fff6ff", p: "#2a1b3c", k: "#ff8a3d" };
+  var BIRD_PAL = { o: "#241a08", b: "#ffd34d", d: "#e2a92c", e: "#fff6ff", p: "#241a08", k: "#f97316" };
   var BIRD_ROWS = [
     "...ooooo...",
     "..obbbbbo..",
@@ -650,7 +699,7 @@
     var wy = 3 + flapPhase;
     ctx.fillStyle = "#fff0b8";
     ctx.fillRect(2, wy, 4, 2);
-    ctx.fillStyle = "#2a1b3c";
+    ctx.fillStyle = "#241a08";
     ctx.fillRect(2, wy + 2, 4, 1);
 
     ctx.restore();
@@ -689,8 +738,9 @@
 
     if (state === "idle") {
       ovTitle.textContent = "INSERT COIN";
-      ovBody.innerHTML = "Tap to flap. Every five gaps you clear, the next one " +
-                         "gets <em>narrower</em> and the city comes at you faster.";
+      ovBody.innerHTML = "Tap to flap. Thread the gap between the hanging crown " +
+                         "and the tree below it &mdash; every five you clear, the wood " +
+                         "closes in a little <em>tighter</em>.";
       ovBlink.innerHTML = "&#9654; PRESS START";
     } else if (state === "paused") {
       ovTitle.textContent = "PAUSED";
