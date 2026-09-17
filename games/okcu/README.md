@@ -46,8 +46,10 @@ ends the run on its own, without anything ever hitting you.
 - Some balloons rise in **pairs on one string**. Hit either balloon and you get
   just that one. Hit the **knot** below them and both burst at **double** value
   — the greedy shot, and a much smaller target.
-  Either way, once a string has no balloons left on it the string is cut: the
-  knot flutters down and out of the sky instead of hanging there empty.
+  A knot only exists to hold two balloons together, so the moment the pair is
+  down to one the string is cut: the knot flutters away and the survivor
+  carries on as an ordinary single balloon. Nothing is ever left hanging in
+  the sky with nothing on it.
 - Balloons that escape off the top cost you nothing but the arrow you did not
   get back.
 

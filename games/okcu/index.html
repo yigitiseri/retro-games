@@ -603,11 +603,19 @@
   function pruneKnots() {
     for (var k = knots.length - 1; k >= 0; k--) {
       var kn = knots[k];
-      var held = false;
+      var held = [];
       for (var i = 0; i < balloons.length; i++) {
-        if (balloons[i].knot === kn) { held = true; break; }
+        if (balloons[i].knot === kn) held.push(balloons[i]);
       }
-      if (held) continue;
+      if (held.length > 1) continue;
+
+      // A knot is only there to hold two balloons together. Down to one, it has
+      // no job left: cut it loose and the survivor carries on as an ordinary
+      // balloon, with its own dangling string.
+      for (var h = 0; h < held.length; h++) {
+        held[h].knot = null;
+        held[h].off = 0;
+      }
       knots.splice(k, 1);
       // only a knot we actually shot free flutters down; one whose balloons
       // simply climbed off the top goes with them
