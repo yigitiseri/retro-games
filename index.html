@@ -37,6 +37,7 @@
     --okcu:    #ff8a7a;
     --goktasi: #7ce8ff;
     --blok:    #d8a12b;
+    --istila:  #ff8a5c;
 
     --cell-font: "Press Start 2P", ui-monospace, "Courier New", monospace;
     --read-font: "VT323", ui-monospace, "Courier New", monospace;
@@ -218,6 +219,7 @@
   .okcu  { --accent: var(--okcu); }
   .goktasi { --accent: var(--goktasi); }
   .blok  { --accent: var(--blok); }
+  .istila { --accent: var(--istila); }
 
   /* ---------- footer ---------- */
   .foot {
@@ -341,6 +343,17 @@
         <h2>BLOK</h2>
         <p>Wool falls on the loom in five kilim dyes. Fill a row and it is woven into the carpet beside you &mdash; and a row that mirrors around its centre pays many times a mixed one.</p>
         <span class="keys">Arrows &middot; X &middot; SPACE</span>
+        <span class="play">&#9654; PLAY</span>
+      </div>
+    </a>
+
+    <a class="cab istila" href="games/istila/">
+      <div class="tube"><canvas data-demo="invade" aria-hidden="true"></canvas></div>
+      <div class="plate">
+        <span class="no">CABINET NO. 12 &mdash; 1978</span>
+        <h2>&#304;ST&#304;LA</h2>
+        <p>The swarm is a structure. Shoot a stack low and everything above drops a row &mdash; and the one that lands can now shoot back. Thread a gap for the top and it holds.</p>
+        <span class="keys">Arrows &middot; SPACE</span>
         <span class="play">&#9654; PLAY</span>
       </div>
     </a>
@@ -1409,12 +1422,138 @@
     }
   }
 
+  /* ---------- istila: a stack collapsing over a skyline ---------- */
+  var iv = null;
+  var IV_SPR = ["..XX..XX", ".XXXXXX.", "XX.XX.XX", "XXXXXXXX", ".X.XX.X.", "X......X"];
+  var IV_SHIP = ["...XX...", "..XXXX..", "XXXXXXXX", "XX.XX.XX"];
+  var IV_SKY = ["#2a0d14", "#4d1820", "#7d2a20", "#a03c24", "#c2542a"];
+  var IV_TIER = ["#b03a52", "#e8564a", "#ff8a5c"];
+
+  function ivInit(W, H) {
+    var v = { W: W, H: H, g: [], dy: [], t: 0, x: 8, dir: 1, step: 0,
+              ship: 80, want: 80, shot: null, cool: 0.4, boom: [] };
+    for (var r = 0; r < 4; r++) {
+      var gr = [], dr = [];
+      for (var c = 0; c < 6; c++) { gr.push(((r + c) % 4 === 3) ? 0 : (r === 0 ? 0 : (r === 1 ? 1 : 2))); dr.push(0); }
+      v.g.push(gr); v.dy.push(dr);
+    }
+    // give row 0 the top tier so the stacks read
+    for (var c2 = 0; c2 < 6; c2++) if (v.g[0][c2] !== 0 || true) v.g[0][c2] = ((0 + c2) % 4 === 3) ? 0 : 0;
+    return v;
+  }
+  function ivLow(v, c) { for (var r = v.g.length - 1; r >= 0; r--) if (v.g[r][c]) return r; return -1; }
+  function ivX(v, c) { return v.x + c * 24; }
+  function ivY(v, r, c) { return 12 + r * 15 + v.dy[r][c]; }
+
+  function drawInvade(ctx, W, H, now) {
+    if (!iv || iv.W !== W || iv.H !== H) iv = ivInit(W, H);
+    var v = iv, dt = Math.min(0.05, (now - (v.last || now)) / 1000);
+    v.last = now; v.t += dt;
+
+    var band = Math.ceil((H - 22) / IV_SKY.length);
+    for (var i = 0; i < IV_SKY.length; i++) { ctx.fillStyle = IV_SKY[i]; ctx.fillRect(0, i * band, W, band + 1); }
+    ctx.fillStyle = "rgba(255,225,160,0.45)";
+    ctx.beginPath(); ctx.arc(W * 0.72, H - 26, 13, 0, Math.PI * 2); ctx.fill();
+
+    ctx.fillStyle = "#1e0b14";
+    for (var b2 = 0; b2 < 11; b2++) {
+      var bh = 9 + ((b2 * 7) % 11);
+      ctx.fillRect(b2 * 15, H - bh - 6, 13, bh + 6);
+      ctx.fillStyle = "rgba(255,200,120,0.5)";
+      ctx.fillRect(b2 * 15 + 3, H - bh - 2, 2, 2);
+      ctx.fillStyle = "#1e0b14";
+    }
+
+    // slide and bounce
+    v.step -= dt;
+    if (v.step <= 0) {
+      v.step = 0.42;
+      var lo = 1e9, hi = -1e9, any = false;
+      for (var c = 0; c < 6; c++) { if (ivLow(v, c) < 0) continue; any = true; lo = Math.min(lo, ivX(v, c)); hi = Math.max(hi, ivX(v, c) + 16); }
+      if (!any) { iv = ivInit(W, H); return; }
+      if ((v.dir > 0 && hi + 3 >= W) || (v.dir < 0 && lo - 3 <= 0)) v.dir = -v.dir;
+      else v.x += v.dir * 3;
+    }
+    for (var r2 = 0; r2 < v.g.length; r2++)
+      for (var c3 = 0; c3 < 6; c3++)
+        if (v.dy[r2][c3] < 0) v.dy[r2][c3] = Math.min(0, v.dy[r2][c3] + 15 * 4 * dt);
+
+    if (!v.shot) {
+      v.cool -= dt;
+      if (v.cool <= 0) {
+        var picks = [];
+        for (var c4 = 0; c4 < 6; c4++) if (ivLow(v, c4) >= 0) picks.push(c4);
+        if (picks.length) {
+          var tc = picks[(Math.random() * picks.length) | 0];
+          v.want = ivX(v, tc) + 8;
+          if (Math.abs(v.ship - v.want) < 2) { v.shot = { x: v.ship, y: H - 24 }; v.cool = 0.5; }
+        }
+      }
+    }
+    v.ship += (v.want - v.ship) * Math.min(1, dt * 6);
+
+    if (v.shot) {
+      v.shot.y -= 90 * dt;
+      var hit = false;
+      for (var r3 = v.g.length - 1; r3 >= 0 && !hit; r3--) {
+        for (var c5 = 0; c5 < 6; c5++) {
+          if (!v.g[r3][c5]) continue;
+          var gx = ivX(v, c5), gy = ivY(v, r3, c5);
+          if (v.shot.x >= gx && v.shot.x <= gx + 16 && v.shot.y >= gy && v.shot.y <= gy + 12) {
+            v.boom.push({ x: gx + 8, y: gy + 6, t: 0.25 });
+            for (var rr = r3; rr > 0; rr--) { v.g[rr][c5] = v.g[rr - 1][c5]; v.dy[rr][c5] = v.g[rr][c5] ? -15 : 0; }
+            v.g[0][c5] = 0;
+            hit = true; break;
+          }
+        }
+      }
+      if (hit || v.shot.y < 0) v.shot = null;
+    }
+
+    var frame = Math.floor(v.t * 2.2) % 2;
+    for (var r4 = 0; r4 < v.g.length; r4++) {
+      for (var c6 = 0; c6 < 6; c6++) {
+        var t4 = v.g[r4][c6];
+        if (!t4) continue;
+        ivSprite(ctx, Math.round(ivX(v, c6)) + 1, Math.round(ivY(v, r4, c6)) + 1, "rgba(30,6,14,0.55)");
+        ivSprite(ctx, Math.round(ivX(v, c6)), Math.round(ivY(v, r4, c6)), IV_TIER[t4]);
+      }
+    }
+    for (var k = v.boom.length - 1; k >= 0; k--) {
+      var bm = v.boom[k];
+      bm.t -= dt;
+      if (bm.t <= 0) { v.boom.splice(k, 1); continue; }
+      var rad = Math.round((0.25 - bm.t) * 30) + 2;
+      ctx.globalAlpha = bm.t / 0.25;
+      ctx.fillStyle = "#fff3cf";
+      ctx.fillRect(bm.x - rad, bm.y - 1, rad * 2, 2);
+      ctx.fillRect(bm.x - 1, bm.y - rad, 2, rad * 2);
+      ctx.globalAlpha = 1;
+    }
+    if (v.shot) { ctx.fillStyle = "#fff3cf"; ctx.fillRect(Math.round(v.shot.x) - 1, Math.round(v.shot.y), 2, 5); }
+    ivShip(ctx, Math.round(v.ship) - 8, H - 22);
+  }
+
+  function ivSprite(ctx, x, y, col) {
+    ctx.fillStyle = col;
+    for (var r = 0; r < IV_SPR.length; r++)
+      for (var c = 0; c < 8; c++)
+        if (IV_SPR[r].charAt(c) === "X") ctx.fillRect(x + c * 2, y + r * 2, 2, 2);
+  }
+  function ivShip(ctx, x, y) {
+    ctx.fillStyle = "#ffd98a";
+    for (var r = 0; r < IV_SHIP.length; r++)
+      for (var c = 0; c < 8; c++)
+        if (IV_SHIP[r].charAt(c) === "X") ctx.fillRect(x + c * 2, y + r * 2, 2, 2);
+  }
+
   /* ---------- wire up ---------- */
-  var painters = { snake: drawSnake, road: drawRoad, lander: drawLander, flap: drawFlap, brick: drawBrick, maze: drawMaze, arch: drawArch, rocks: drawRocks, loom: drawLoom };
+  var painters = { snake: drawSnake, road: drawRoad, lander: drawLander, flap: drawFlap, brick: drawBrick, maze: drawMaze, arch: drawArch, rocks: drawRocks, loom: drawLoom, invade: drawInvade };
   Array.prototype.forEach.call(document.querySelectorAll("[data-demo]"), function (c) {
     var fn = painters[c.dataset.demo];
     if (fn) register(c, fn, c.dataset.demo === "flap" || c.dataset.demo === "brick" || c.dataset.demo === "maze" || c.dataset.demo === "arch" ||
-                       c.dataset.demo === "rocks" || c.dataset.demo === "loom");
+                       c.dataset.demo === "rocks" || c.dataset.demo === "loom" ||
+                       c.dataset.demo === "invade");
   });
 
   if (window.ResizeObserver) {
