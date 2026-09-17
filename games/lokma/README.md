@@ -46,6 +46,12 @@ algorithm in four colours. They arrive one per market, up to four.
 | **Çırak** | teal | Ignores where you are and paths to the cell **four ahead of the way you are facing** — it is cutting you off, not following you. |
 | **Köpek** | brass, ears | Wanders at junctions, then lunges: inside three cells it jumps from 30 to 44 speed. Empty-handed you are quicker than the lunge, so it can be outrun; three lokma on the tray and it cannot. |
 
+Every chaser speeds up by 2.5 each market, but the ramp **stops at 47** —
+just under your empty-handed 50. So no matter how deep the run goes, dropping
+your tray and running is always an escape. The pressure past that point comes
+from there being four of them, not from them simply being faster than you.
+
+
 None of them may reverse unless it is the only way out, which is what makes
 their paths readable enough to plan against.
 

@@ -462,6 +462,8 @@
   /* ---------------- the four of them ----------------
      Each one is a different rule for choosing the next cell, not the same
      pursuit with a different colour. */
+  function chaserSpeed(base) { return Math.min(base + (floorNo - 1) * 2.5, 47); }
+
   function makeChasers(n) {
     var kinds = [
       { kind: "kedi",  color: "#c1362f", ears: true,  base: 38 },   // straight at you
@@ -473,7 +475,7 @@
     for (var i = 0; i < n; i++) {
       var k = kinds[i];
       var home = CORNERS[i];
-      var m = mover(home.c, home.r, k.base + (floorNo - 1) * 2.5);
+      var m = mover(home.c, home.r, chaserSpeed(k.base));
       m.kind = k.kind;
       m.color = k.color;
       m.ears = k.ears;
@@ -608,7 +610,7 @@
       if (m.kind === "bekci") m.alert = d2 >= 0 && d2 <= 5 ? 2.2 : Math.max(0, m.alert - dt);
       if (m.kind === "kopek") {
         m.alert = d2 >= 0 && d2 <= 3 ? 1.4 : Math.max(0, m.alert - dt);
-        m.speed = (m.alert > 0 ? 44 : 30) + (floorNo - 1) * 2.5;
+        m.speed = chaserSpeed(m.alert > 0 ? 44 : 30);
       }
 
       if (advance(m, dt)) chooseChaser(m, toPlayer);
