@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Was diese Spielhalle speichert und was sie weitergibt.">
+<meta name="theme-color" content="#08090e">
+<title>Datenschutz &middot; Retro Games</title>
+<link rel="alternate" hreflang="en" href="privacy.html">
+<link rel="alternate" hreflang="de" href="datenschutz.html">
+<link rel="preload" href="assets/fonts/press-start-2p-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="assets/fonts/fonts.css">
+<!-- Cloudflare Web Analytics: no cookies, no client-side storage -->
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "aee6e644a3b74cb9bdaf4e1569d570e2"}'></script>
+<!-- End Cloudflare Web Analytics -->
+<style>
+  :root {
+    --ink:    #08090e;
+    --dim:    #2a2b48;
+    --pale:   #e8ecff;
+    --violet: #9a86ff;
+    --amber:  #ffb43c;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 0 18px;
+    padding-top: calc(env(safe-area-inset-top, 0px) + 26px);
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 44px);
+    background: radial-gradient(130% 80% at 50% 0%, #1b1c3a 0%, var(--ink) 60%), var(--ink);
+    color: var(--pale);
+    font-family: "VT323", ui-monospace, "Courier New", monospace;
+    font-size: 19px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 640px; margin-inline: auto; }
+  h1 {
+    font-family: "Press Start 2P", ui-monospace, monospace;
+    font-size: clamp(14px, 5vw, 21px);
+    letter-spacing: 0.1em;
+    color: var(--amber);
+    line-height: 1.5;
+  }
+  h2 {
+    font-family: "Press Start 2P", ui-monospace, monospace;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--violet);
+    margin: 32px 0 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--dim);
+  }
+  p, li { opacity: 0.9; }
+  a { color: var(--amber); }
+  code { color: var(--violet); }
+  .back {
+    display: inline-block;
+    margin-top: 34px;
+    padding-top: 16px;
+    border-top: 1px solid var(--dim);
+    width: 100%;
+  }
+  .stamp { opacity: 0.55; font-size: 16px; }
+  .lang {
+    font-family: "Press Start 2P", ui-monospace, monospace;
+    font-size: 8px;
+    letter-spacing: 0.12em;
+    margin-bottom: 20px;
+  }
+  .lang a { color: var(--violet); text-decoration: none; border-bottom: 1px solid currentColor; }
+  .lang span { opacity: 0.45; }
+</style>
+</head>
+<body>
+<main>
+  <p class="lang"><a href="privacy.html">ENGLISH</a> &nbsp;/&nbsp; <span>DEUTSCH</span></p>
+  <h1>Datenschutz</h1>
+  <p>
+    Dies ist eine private Spielhalle mit zehn Spielen. Sie ist bewusst so gebaut,
+    dass es hier wenig zu sagen gibt &mdash; aber hier steht alles davon.
+  </p>
+
+  <h2>Was auf Ihrem Gerät bleibt</h2>
+  <p>
+    Jedes Spiel speichert Ihre <strong>beste Punktzahl</strong> und ob Sie den Ton
+    eingeschaltet gelassen haben, über den <code>localStorage</code> Ihres Browsers.
+    Diese Daten verlassen Ihr Gerät nicht, werden nirgendwohin übertragen, und
+    niemand außer Ihnen kann sie lesen. Wenn Sie die Websitedaten für diese Seite
+    in Ihrem Browser löschen, sind sie weg.
+  </p>
+
+  <h2>Besuche zählen</h2>
+  <p>
+    Diese Seite verwendet <strong>Cloudflare Web Analytics</strong>. Damit sehe ich,
+    wie viele Menschen die Seite besuchen und welche Spiele sie öffnen. Es werden
+    <strong>keine Cookies</strong> gesetzt und nichts auf Ihrem Gerät gespeichert,
+    Sie werden nicht über andere Websites hinweg verfolgt, und es wird kein Profil
+    über Sie erstellt. Deshalb gibt es hier auch kein Cookie-Banner: Es gibt
+    schlicht nichts, dessen Speicherung Sie zustimmen müssten.
+  </p>
+  <p>
+    Cloudflare erhält die Adresse der aufgerufenen Seite, Ihren Browsertyp, die
+    verweisende Seite, falls Sie über einen Link gekommen sind, sowie Ihre
+    IP-Adresse &mdash; daraus wird ein ungefähres Herkunftsland ermittelt; die
+    Adresse wird nicht dauerhaft mit Ihnen verknüpft aufbewahrt. Einzelheiten
+    stehen in der
+    <a href="https://developers.cloudflare.com/web-analytics/">Dokumentation von Cloudflare Web Analytics</a>.
+    Ich selbst sehe ausschließlich Summen, nie etwas über einzelne Besucher.
+  </p>
+  <p>
+    Darüber hinaus <strong>nichts</strong>: keine Werbung, keine Tracker Dritter,
+    keine eingebetteten Videos, keine Social-Buttons. Die beiden Schriftarten der
+    Spiele werden von dieser Seite selbst ausgeliefert und nicht von Google Fonts
+    &mdash; eben damit der Aufruf einer Seite Ihre IP-Adresse nicht an Dritte
+    weitergibt.
+  </p>
+
+  <h2>Das Einzige, was ich nicht abstellen kann</h2>
+  <p>
+    Diese Seite wird auf <strong>GitHub Pages</strong> gehostet. Wie bei jeder
+    Website erhält der Server, der Ihnen die Seite ausliefert, zwangsläufig Ihre
+    IP-Adresse und die User-Agent-Kennung Ihres Browsers &mdash; anders lässt sich
+    die Anfrage gar nicht beantworten. Das ist eine Verarbeitung durch GitHub, nicht
+    durch mich, und unterliegt der
+    <a href="https://docs.github.com/de/site-policy/privacy-policies/github-general-privacy-statement">GitHub-Datenschutzerklärung</a>.
+    Ich habe weder Zugriff auf diese Protokolle noch eine Möglichkeit, sie
+    abzuschalten.
+  </p>
+
+  <h2>Kontakt</h2>
+  <p>
+    Die Seite und ihr gesamter Quelltext liegen offen auf
+    <a href="https://github.com/yigitiseri/retro-games">github.com/yigitiseri/retro-games</a>.
+    Wenn hier etwas falsch oder unklar ist, öffnen Sie dort bitte ein Issue.
+  </p>
+
+  <p class="stamp">
+    Sollte diese Seite jemals nicht mehr zutreffen &mdash; weil Analyse oder sonst
+    etwas hinzukommt &mdash; wird sie in derselben Änderung aktualisiert, nicht
+    irgendwann später.
+  </p>
+
+  <a class="back" href="./">&#9664; Zurück zur Spielhalle</a>
+</main>
+</body>
+</html>
