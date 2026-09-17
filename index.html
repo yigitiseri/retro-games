@@ -281,7 +281,7 @@
       <div class="plate">
         <span class="no">CABINET NO. 31 &mdash; 1984</span>
         <h2>KU&#350;</h2>
-        <p>One button, a Famicom afternoon and a bird that only ever falls. Thread the gap between the hanging crown and the tree below it.</p>
+        <p>One button, a Famicom afternoon. Every tree you clear puts another bird in the line behind you &mdash; and the line whips through turns you took cleanly.</p>
         <span class="keys">Tap anywhere &middot; SPACE</span>
         <span class="play">&#9654; PLAY</span>
       </div>
@@ -624,19 +624,27 @@
     ctx.fillStyle = LEAF_DARK;
     ctx.fillRect(0, floorY + 6, W, groundH - 6);
 
-    var by = birdY(now);
-    var tilt = Math.max(-0.4, Math.min(0.8, (birdY(now + 60) - by) * 0.09));
+    // the leader and the line it has picked up, each one lagging the last
+    for (var f = 5; f >= 0; f--) {
+      var ft = now - f * 200;
+      var fy = birdY(ft);
+      var ftilt = Math.max(-0.4, Math.min(0.8, (birdY(ft + 60) - fy) * 0.09));
+      flapBird(ctx, birdX - f * 11, fy, ftilt, now + f * 140, f === 0);
+    }
+  }
+
+  function flapBird(ctx, x, y, tilt, now, lead) {
     ctx.save();
-    ctx.translate(birdX, Math.round(by));
+    ctx.translate(Math.round(x), Math.round(y));
     ctx.rotate(Math.round(tilt * 4) / 4);
     ctx.fillStyle = "#241a08";
     ctx.fillRect(-6, -4, 12, 8);
     ctx.fillRect(-4, -5, 8, 10);
-    ctx.fillStyle = "#ffd34d";
+    ctx.fillStyle = lead ? "#ffd34d" : "#e0b53f";
     ctx.fillRect(-5, -3, 10, 6);
-    ctx.fillStyle = "#fff0b8";
+    ctx.fillStyle = lead ? "#fff0b8" : "#f3e2ae";
     ctx.fillRect(-4, -1 + Math.round(Math.sin(now / 130) * 2), 6, 3);
-    ctx.fillStyle = "#f97316";
+    ctx.fillStyle = lead ? "#f97316" : "#d9631a";
     ctx.fillRect(5, -1, 4, 3);
     ctx.fillStyle = "#fff6ff";
     ctx.fillRect(1, -3, 2, 2);

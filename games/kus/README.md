@@ -1,8 +1,7 @@
 # KUŞ
 
-One button, a Famicom afternoon, and a bird that only ever falls. You thread the
-gap between a tree crown hanging from above and one growing up from the forest
-floor.
+One button, a Famicom afternoon, and a line of birds behind you that is getting
+longer and harder to fly.
 
 ## Play
 
@@ -17,31 +16,45 @@ load from Google Fonts; the game works with system fallbacks offline).
 | Pause | P | PAUSE button |
 | Restart | R | RESTART button, or tap after a crash |
 
-## Rules
+## The flock
 
-- Each tree you pass is a point. Touch a tree or the ground and the run is over
-  — there is no second life.
-- **The wood closes in.** The gap starts at 78 pixels and loses 2 every five
-  points, down to a floor of 58, while the scroll speed climbs from 64 to
-  96 px/s. The HUD's GAP readout shows the current width.
-- The hitbox is two pixels smaller than the bird on every side — near misses
-  are misses.
-- Best score is kept in `localStorage` on the device that set it.
+You start alone. **Every tree you clear, another bird falls in behind you**, up
+to fifteen.
 
-## The look
+The flock is not a recording of your path. It is a chain: each bird chases the
+one in front of it, so the lag compounds down the line. Fly a smooth, centred
+line and the whole skein follows you through. Take a gap steeply, late, or off
+centre and the tail cuts the corner you turned — and the corner is where the
+crown is.
 
-A Famicom daylight palette: one cyan sky, three greens, one brown, drawn at 180
-internal pixels wide with `image-rendering: pixelated` over the top, so the
-scene is chunky by construction rather than by filter.
+- **Tail clips a tree: you lose that bird.** Feathers, a jolt, and the line
+  closes up. The rest get a moment's grace so one branch cannot shred the whole
+  flock.
+- **Your head clips a tree, or the ground: that is the run.**
+- The gap is a constant 78 pixels. Nothing narrows on a timer — the difficulty
+  is the flock you built.
+- The wood does come at you a little faster as you clear trees, from 64 to
+  96 px/s.
+- The HUD reads **FLOCK** (birds including you), **BEST** (the biggest flock you
+  have ever held) and **GAPS** (trees cleared this run).
+
+Played well, the run settles into a push and pull: you gather birds until the
+tail starts costing you them, and you hold at whatever length your flying is
+good enough for.
+
+## Notes on the drawing
+
+Everything is drawn at 180 internal pixels wide with `image-rendering: pixelated`
+over the top, so the scene is chunky by construction rather than by filter.
 
 Each obstacle is a whole tree — a trunk running off the frame, side limbs with
-clumps of leaves, and a lumpy crown that ends exactly at the edge of the gap,
-with a bright rim along that edge so the line you have to miss is the crispest
-thing on screen. Backdrop pines are drawn in a deliberately darker green so
-they can never be mistaken for something you can hit. Crown edges come from a
-per-tree seed through a fixed wobble function, so every tree is a different
-shape but none of them flicker.
+clumps of leaves, and a lumpy crown ending exactly at the gap edge with a bright
+rim along that edge. Crown shapes come from a per-tree seed through a fixed
+wobble function, so every tree differs but none flicker. Backdrop pines are a
+deliberately darker green so they can never be mistaken for an obstacle.
 
 The bird is an 11×9 character map (`BIRD_ROWS`) with the wing drawn separately
-on top so it can beat without needing three copies of the sprite, and its tilt
-snaps to 15° steps so it stays blocky as it rotates.
+on top so it can beat without three copies of the sprite; its tilt snaps to 15°
+steps to stay blocky while rotating. Followers use the same sprite one shade
+back, each beating slightly behind the bird in front, which is what makes the
+line ripple rather than move as a block.
