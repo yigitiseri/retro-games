@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
-<meta name="description" content="Retro Games - six single-file arcade cabinets.">
+<meta name="description" content="Retro Games - seven single-file arcade cabinets.">
 <meta name="theme-color" content="#08090e">
 <style>
   :root {
@@ -34,6 +34,7 @@
     --kus:     #6bbeff;
     --tugla:   #e5533a;
     --lokma:   #2fbfae;
+    --okcu:    #ff8a7a;
 
     --cell-font: "Press Start 2P", ui-monospace, "Courier New", monospace;
     --read-font: "VT323", ui-monospace, "Courier New", monospace;
@@ -212,6 +213,7 @@
   .kus   { --accent: var(--kus); }
   .tugla { --accent: var(--tugla); }
   .lokma { --accent: var(--lokma); }
+  .okcu  { --accent: var(--okcu); }
 
   /* ---------- footer ---------- */
   .foot {
@@ -239,7 +241,7 @@
 <div class="hall">
   <header class="marquee">
     <h1>RETRO GAMES</h1>
-    <p class="sub">Six cabinets &middot; one tube each</p>
+    <p class="sub">Seven cabinets &middot; one tube each</p>
     <p class="coin"><span>&#9654; INSERT COIN</span> &middot; CREDIT 00</p>
   </header>
 
@@ -303,6 +305,16 @@
         <h2>LOKMA</h2>
         <p>A night market, and a tray that slows you down as it fills. Nothing counts until you reach the counter, and getting caught spills the lot.</p>
         <span class="keys">Swipe or D-pad &middot; arrows / WASD</span>
+        <span class="play">&#9654; PLAY</span>
+      </div>
+    </a>
+    <a class="cab okcu" href="games/okcu/">
+      <div class="tube"><canvas data-demo="arch" aria-hidden="true"></canvas></div>
+      <div class="plate">
+        <span class="no">CABINET NO. 09 &mdash; 1982</span>
+        <h2>OK&#199;U</h2>
+        <p>Drag back, loose, and watch the wind take it. Every balloon you pop hands the arrow back &mdash; every miss stays in the grass.</p>
+        <span class="keys">Drag anywhere &middot; arrows &middot; SPACE</span>
         <span class="play">&#9654; PLAY</span>
       </div>
     </a>
@@ -1038,11 +1050,178 @@
     ctx.fillRect(4, H - 4, Math.round((W - 8) * Math.min(1, mz.tray / 10)), 2);
   }
 
+  /* ---------- OKÇU: a shot every couple of seconds, solved exactly ---------- */
+  var AR_SKY = ["#2b1b4a", "#43225a", "#6b2f63", "#a3405f", "#d4614f", "#f4874c", "#ffb35f"];
+  var AR_BALLOON = ["#e8493f", "#f0a92e", "#3fb0e8", "#5fd08a", "#c86fe0"];
+  var AR_KIT = {
+    h: "#2f7a34", H: "#1f5a26", f: "#e8493f", s: "#e8b489", e: "#2a1810",
+    t: "#4a9c42", d: "#2f6f31", b: "#4a2c18", l: "#8f5a33", q: "#7a4a2a",
+    a: "#e8ddc4", r: "#d8452f"
+  };
+  var AR_SPRITE = [
+    "...r..f.....", "...a.fff....", "..HaHHHH....", ".HhhhhhhH...", "..hhhhhhh...",
+    "...sssss....", "...ssess....", "...sssss....", "..ttttttt...", ".qtttttttt..",
+    ".qtttttttt..", ".qdttttttt..", "..dtttttt...", "..bbbbbbb...", "..dddddd....",
+    "..dddddd....", "...dd.dd....", "...ll.ll....", "...ll.ll....", "..bbb.bbb...",
+    "..bbb.bbb..."
+  ];
+  var ar = null;
+
+  function arInit(W, H) {
+    return { W: W, H: H, ground: H - 16, balloons: [], shot: null, burst: null,
+             next: 0.7, last: 0, aim: -0.7 };
+  }
+
+  function arStep(g, dt, now) {
+    for (var i = g.balloons.length - 1; i >= 0; i--) {
+      var b = g.balloons[i];
+      b.y -= b.rise * dt;
+      b.bob += dt;
+      if (b.y < -10) g.balloons.splice(i, 1);
+    }
+    if (g.balloons.length < 4 && Math.random() < dt * 1.4) {
+      g.balloons.push({
+        x: 70 + Math.random() * (g.W - 86), y: g.H + 6,
+        r: 5, c: (Math.random() * AR_BALLOON.length) | 0,
+        rise: 15 + Math.random() * 10, bob: Math.random() * 6
+      });
+    }
+
+    if (g.shot) {
+      var s = g.shot;
+      s.t += dt;
+      s.vy += 96 * dt;
+      s.x += s.vx * dt;
+      s.y += s.vy * dt;
+      g.aim = Math.atan2(s.vy, s.vx) * 0.3 - 0.5;
+      // did it reach what it was aimed at
+      for (var j = g.balloons.length - 1; j >= 0; j--) {
+        var t = g.balloons[j];
+        if (Math.hypot(s.x - t.x, s.y - t.y) < t.r + 3) {
+          g.burst = { x: t.x, y: t.y, c: t.c, t: 0.4 };
+          g.balloons.splice(j, 1);
+          g.shot = null;
+          break;
+        }
+      }
+      if (g.shot && (s.y > g.ground || s.x > g.W + 10 || s.t > 3)) g.shot = null;
+    } else {
+      g.next -= dt;
+      if (g.next <= 0 && g.balloons.length) {
+        // solve the arc exactly for a fixed flight time, no searching
+        var target = g.balloons[(Math.random() * g.balloons.length) | 0];
+        var x0 = 22, y0 = g.ground - 12, T = 1.05;
+        var vx = (target.x - x0) / T;
+        var vy = (target.y - target.rise * T - y0 - 0.5 * 96 * T * T) / T;
+        g.shot = { x: x0, y: y0, vx: vx, vy: vy, t: 0 };
+        g.aim = Math.atan2(vy, vx);
+        g.next = 1.5 + Math.random();
+      }
+    }
+    if (g.burst) { g.burst.t -= dt; if (g.burst.t <= 0) g.burst = null; }
+  }
+
+  function drawArch(ctx, W, H, now) {
+    if (!ar || ar.W !== W || ar.H !== H) ar = arInit(W, H);
+    arStep(ar, Math.min(0.05, (now - (ar.last || now)) / 1000), now);
+    ar.last = now;
+    var ground = ar.ground;
+
+    var band = Math.ceil(ground / AR_SKY.length);
+    for (var i = 0; i < AR_SKY.length; i++) {
+      ctx.fillStyle = AR_SKY[i];
+      ctx.fillRect(0, i * band, W, band + 1);
+    }
+    ctx.fillStyle = "rgba(255, 216, 138, 0.18)";
+    ctx.beginPath(); ctx.arc(W * 0.72, ground - 22, 22, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#ffd88a";
+    ctx.beginPath(); ctx.arc(W * 0.72, ground - 22, 13, 0, Math.PI * 2); ctx.fill();
+
+    ctx.fillStyle = "#4a2352";
+    for (var x = 0; x < W; x += 2) {
+      var hh = 13 + Math.sin(x * 0.05) * 6 + Math.sin(x * 0.019 + 2) * 5;
+      ctx.fillRect(x, ground - hh, 2, hh);
+    }
+    ctx.fillStyle = "#241534";
+    for (var x2 = 0; x2 < W; x2 += 2) {
+      var h2 = 8 + Math.sin(x2 * 0.075 + 1.2) * 3 + Math.sin(x2 * 0.022) * 3;
+      ctx.fillRect(x2, ground - h2, 2, h2);
+    }
+    ctx.fillStyle = "#1d2a1c";
+    ctx.fillRect(0, ground, W, H - ground);
+    ctx.fillStyle = "#2b3d26";
+    ctx.fillRect(0, ground, W, 2);
+
+    for (var bi = 0; bi < ar.balloons.length; bi++) {
+      var b = ar.balloons[bi];
+      var by = b.y + Math.sin(b.bob * 1.4) * 2;
+      ctx.fillStyle = "rgba(255,230,222,0.4)";
+      for (var st = 0; st < 6; st++) ctx.fillRect(Math.round(b.x), Math.round(by + b.r + st), 1, 1);
+      ctx.fillStyle = AR_BALLOON[b.c];
+      ctx.beginPath(); ctx.arc(b.x, by, b.r, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "rgba(255,255,255,0.45)";
+      ctx.fillRect(b.x - b.r + 2, by - b.r + 2, 2, 3);
+    }
+
+    if (ar.burst) {
+      ctx.fillStyle = AR_BALLOON[ar.burst.c];
+      var bt = 1 - ar.burst.t / 0.4;
+      for (var k = 0; k < 8; k++) {
+        var a2 = (k / 8) * Math.PI * 2, d = 2 + bt * 11;
+        ctx.fillRect(Math.round(ar.burst.x + Math.cos(a2) * d), Math.round(ar.burst.y + Math.sin(a2) * d), 2, 2);
+      }
+    }
+
+    if (ar.shot) {
+      ctx.save();
+      ctx.translate(Math.round(ar.shot.x), Math.round(ar.shot.y));
+      ctx.rotate(Math.atan2(ar.shot.vy, ar.shot.vx));
+      ctx.fillStyle = "#e8ddc4";
+      ctx.fillRect(-8, 0, 11, 1);
+      ctx.fillStyle = "#cfd6e0";
+      ctx.fillRect(3, -1, 3, 3);
+      ctx.fillStyle = "#d8452f";
+      ctx.fillRect(-9, -1, 3, 1);
+      ctx.fillRect(-9, 1, 3, 1);
+      ctx.restore();
+    }
+
+    var ax = 16, ay = ground - AR_SPRITE.length + 1;
+    for (var r = 0; r < AR_SPRITE.length; r++) {
+      var row = AR_SPRITE[r], last = -1;
+      for (var c = 0; c < row.length; c++) {
+        var ch = row.charAt(c);
+        if (ch === ".") continue;
+        ctx.fillStyle = AR_KIT[ch];
+        ctx.fillRect(ax + c, ay + r, 1, 1);
+        last = c;
+      }
+      if (last >= 0) {
+        ctx.fillStyle = "rgba(255, 179, 95, 0.55)";
+        ctx.fillRect(ax + last, ay + r, 1, 1);
+      }
+    }
+    ctx.save();
+    ctx.translate(ax + 15, ay + 10);
+    ctx.rotate(Math.max(-1.3, Math.min(0.2, ar.aim)));
+    ctx.strokeStyle = "#c98a3c";
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(0, 0, 9, -1.25, 1.25); ctx.stroke();
+    ctx.strokeStyle = "#ffe6de";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(-1.25) * 9, Math.sin(-1.25) * 9);
+    ctx.lineTo(ar.shot ? -2 : -8, 0);
+    ctx.lineTo(Math.cos(1.25) * 9, Math.sin(1.25) * 9);
+    ctx.stroke();
+    ctx.restore();
+  }
+
   /* ---------- wire up ---------- */
-  var painters = { snake: drawSnake, road: drawRoad, lander: drawLander, flap: drawFlap, brick: drawBrick, maze: drawMaze };
+  var painters = { snake: drawSnake, road: drawRoad, lander: drawLander, flap: drawFlap, brick: drawBrick, maze: drawMaze, arch: drawArch };
   Array.prototype.forEach.call(document.querySelectorAll("[data-demo]"), function (c) {
     var fn = painters[c.dataset.demo];
-    if (fn) register(c, fn, c.dataset.demo === "flap" || c.dataset.demo === "brick" || c.dataset.demo === "maze");
+    if (fn) register(c, fn, c.dataset.demo === "flap" || c.dataset.demo === "brick" || c.dataset.demo === "maze" || c.dataset.demo === "arch");
   });
 
   if (window.ResizeObserver) {

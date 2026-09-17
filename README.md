@@ -1,6 +1,6 @@
 # Retro Games
 
-Six arcade cabinets, each a single self-contained HTML file. No build step, no
+Seven arcade cabinets, each a single self-contained HTML file. No build step, no
 dependencies, no framework — open any `index.html` in a browser and it runs.
 All three are built for a phone first: touch controls, a screen that fills the
 space it is given, and a keyboard fallback on desktop.
@@ -13,6 +13,7 @@ space it is given, and a keyboard fallback on desktop.
 | [**KUŞ**](games/kus/) | A Famicom wood where every tree you clear adds a bird to the line behind you — and the line whips. | [`games/kus/index.html`](games/kus/index.html) |
 | [**TUĞLA**](games/tugla/) | Breakout, with a ball that heats up away from your bat and burns two bricks deep. | [`games/tugla/index.html`](games/tugla/index.html) |
 | [**LOKMA**](games/lokma/) | A night-market maze. A full tray is slow, and nothing counts until you reach the counter. | [`games/lokma/index.html`](games/lokma/index.html) |
+| [**OKÇU**](games/okcu/) | A sunset archery range. Pops give the arrow back, misses stay in the grass, wind moves everything. | [`games/okcu/index.html`](games/okcu/index.html) |
 
 `index.html` at the root is the arcade menu: the three cabinets side by side,
 each with a live attract-mode preview of the game running in miniature. It is
@@ -46,4 +47,5 @@ games/
   kus/     index.html  README.md
   tugla/   index.html  README.md
   lokma/   index.html  README.md
+  okcu/    index.html  README.md
 ```
