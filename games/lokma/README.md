@@ -22,7 +22,7 @@ load from Google Fonts; the game works with system fallbacks offline).
 This is the whole game, and it is not the game it looks like.
 
 - Lokma you pick up **ride on a tray. They are not scored yet.**
-- **A full tray is slow.** Your speed drops from 46 down to a floor of 24 as it
+- **A full tray is slow.** Your speed drops from 50 down to a floor of 26 as it
   fills — the gauge under the maze is your weight.
 - You bank a tray by standing on **the counter**, the brass tile in the middle.
 - Banking pays more per lokma the more you are carrying: **10** each up to
@@ -44,7 +44,7 @@ algorithm in four colours. They arrive one per market, up to four.
 | **Kedi** | red, ears | Shortest path to you, always. No tricks, no let-up. |
 | **Bekçi** | purple | Walks a round of the lanterns, and only breaks off to chase when you come within five cells. |
 | **Çırak** | teal | Ignores where you are and paths to the cell **four ahead of the way you are facing** — it is cutting you off, not following you. |
-| **Köpek** | brass, ears | Wanders at junctions, then lunges: inside three cells it jumps from 30 to 58 speed. |
+| **Köpek** | brass, ears | Wanders at junctions, then lunges: inside three cells it jumps from 30 to 44 speed. Empty-handed you are quicker than the lunge, so it can be outrun; three lokma on the tray and it cannot. |
 
 None of them may reverse unless it is the only way out, which is what makes
 their paths readable enough to plan against.
