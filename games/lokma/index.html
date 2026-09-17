@@ -1,0 +1,963 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="description" content="LOKMA - a night-market maze cabinet for phone or desktop.">
+<meta name="theme-color" content="#08090e">
+<style>
+  :root {
+    color-scheme: dark;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  body { margin: 0; }
+  img { max-width: 100%; }
+  [hidden] { display: none !important; }
+</style>
+<title>LOKMA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap">
+<style>
+  :root {
+    --ink:    #06120f;
+    --bezel:  #103029;
+    --teal:   #2fbfae;
+    --teal-2: #1c7a70;
+    --dim:    #164a42;
+    --brass:  #d8a22e;
+    --cream:  #f0e6cd;
+    --alarm:  #e2564a;
+
+    --cell-font: "Press Start 2P", ui-monospace, "Courier New", monospace;
+    --read-font: "VT323", ui-monospace, "Courier New", monospace;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+
+  body {
+    margin: 0;
+    background:
+      radial-gradient(120% 90% at 50% 0%, #0f2b26 0%, var(--ink) 62%),
+      var(--ink);
+    color: var(--cream);
+    font-family: var(--read-font);
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+
+  .cabinet {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    padding: 12px 16px;
+    padding-block: 10px 12px;
+    max-width: 640px;
+    margin-inline: auto;
+  }
+
+  /* ---- marquee ---- */
+  .marquee { text-align: center; flex: 0 0 auto; }
+  .marquee h1 {
+    margin: 0;
+    font-family: var(--cell-font);
+    font-size: clamp(15px, 5.4vw, 26px);
+    letter-spacing: 0.12em;
+    color: var(--brass);
+    text-shadow: 0 0 8px rgba(216, 162, 46, 0.45), 0 0 24px rgba(47, 191, 174, 0.3);
+    text-wrap: balance;
+  }
+  .marquee p {
+    margin: 4px 0 0;
+    font-size: clamp(13px, 3.6vw, 17px);
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--teal);
+    opacity: 0.8;
+  }
+
+  /* ---- hud ---- */
+  .hud {
+    flex: 0 0 auto;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 5px;
+    border: 1px solid var(--dim);
+    background: linear-gradient(180deg, rgba(47,191,174,0.07), transparent);
+    padding: 6px 3px;
+  }
+  .hud div { text-align: center; }
+  .hud .k {
+    display: block;
+    font-family: var(--cell-font);
+    font-size: 7px;
+    letter-spacing: 0.1em;
+    color: var(--teal);
+  }
+  .hud .v {
+    display: block;
+    margin-top: 5px;
+    font-size: clamp(18px, 5.2vw, 23px);
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    color: var(--cream);
+  }
+  .hud .tray .v.heavy { color: #ff8a3d; }
+  .hud .best .v { color: var(--brass); }
+  .hud .lives .v { color: var(--alarm); letter-spacing: 0.08em; }
+  .hud .v.bump { animation: bump 240ms steps(3) 1; }
+  @keyframes bump { 50% { transform: scale(1.22); } }
+
+  /* ---- screen ---- */
+  .stage {
+    flex: 1 1 0;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .screen {
+    position: relative;
+    border: 2px solid var(--bezel);
+    border-radius: 10px;
+    background: #071a16;
+    box-shadow:
+      0 0 0 4px #0a201b,
+      0 0 40px rgba(47, 191, 174, 0.12) inset,
+      0 10px 34px rgba(0, 0, 0, 0.6);
+    overflow: hidden;
+    touch-action: none;
+  }
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+  }
+
+  .scan, .vignette { position: absolute; inset: 0; pointer-events: none; }
+  .scan {
+    background: repeating-linear-gradient(to bottom,
+      rgba(0,0,0,0.26) 0 1px, rgba(0,0,0,0) 1px 3px);
+    mix-blend-mode: multiply;
+  }
+  .vignette {
+    background: radial-gradient(112% 112% at 50% 45%, transparent 48%, rgba(0,0,0,0.75) 100%);
+  }
+
+  .overlay {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-content: center;
+    gap: 11px;
+    text-align: center;
+    padding: 18px;
+    background: rgba(5, 16, 13, 0.88);
+    z-index: 3;
+  }
+  .overlay h2 {
+    margin: 0;
+    font-family: var(--cell-font);
+    font-size: clamp(13px, 4.4vw, 19px);
+    letter-spacing: 0.05em;
+    color: var(--brass);
+    text-shadow: 0 0 10px rgba(216, 162, 46, 0.45);
+  }
+  .overlay h2.over { color: var(--alarm); text-shadow: 0 0 12px rgba(226, 86, 74, 0.5); }
+  .overlay p { margin: 0; font-size: clamp(16px, 4.2vw, 20px); letter-spacing: 0.06em; color: var(--teal); }
+  .overlay p em { font-style: normal; color: var(--cream); }
+  .blink { animation: blink 1.05s steps(2, start) infinite; }
+  @keyframes blink { 50% { opacity: 0.15; } }
+
+  .banner {
+    position: absolute;
+    left: 0; right: 0;
+    top: 24%;
+    z-index: 2;
+    text-align: center;
+    font-family: var(--cell-font);
+    font-size: clamp(11px, 3.4vw, 15px);
+    letter-spacing: 0.06em;
+    color: var(--brass);
+    text-shadow: 0 2px 0 #000, 0 0 14px rgba(216, 162, 46, 0.5);
+    animation: banner 1.7s ease-out 1 forwards;
+    pointer-events: none;
+  }
+  @keyframes banner {
+    0%   { opacity: 0; transform: translateY(10px) scale(0.92); }
+    18%  { opacity: 1; transform: translateY(0) scale(1); }
+    76%  { opacity: 1; }
+    100% { opacity: 0; }
+  }
+
+  /* ---- controls ---- */
+  .controls {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    touch-action: none;
+  }
+  .dpad {
+    display: grid;
+    grid-template-columns: repeat(3, 46px);
+    grid-template-rows: repeat(3, 40px);
+    gap: 5px;
+    touch-action: none;
+  }
+  .dpad button {
+    font: inherit;
+    font-size: 17px;
+    color: var(--teal);
+    background: linear-gradient(180deg, #14352e, #0a1f1a);
+    border: 1px solid var(--dim);
+    border-radius: 6px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    touch-action: none;
+  }
+  .dpad button:active { background: var(--teal); color: #05211c; }
+  .dpad .up    { grid-area: 1 / 2; }
+  .dpad .left  { grid-area: 2 / 1; }
+  .dpad .right { grid-area: 2 / 3; }
+  .dpad .down  { grid-area: 3 / 2; }
+
+  .sidekeys { display: flex; flex-direction: column; gap: 7px; }
+  .sidekeys button {
+    font-family: var(--cell-font);
+    font-size: 8px;
+    letter-spacing: 0.08em;
+    padding: 10px 12px;
+    min-width: 104px;
+    color: var(--teal);
+    background: #0a1f1a;
+    border: 1px solid var(--dim);
+    border-radius: 5px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .sidekeys button:active, .sidekeys button[aria-pressed="true"] { color: var(--brass); border-color: var(--brass); }
+
+  button:focus-visible, .screen:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
+
+  .hint {
+    flex: 0 0 auto;
+    margin: 0;
+    text-align: center;
+    font-size: 15px;
+    letter-spacing: 0.08em;
+    color: var(--teal);
+    opacity: 0.6;
+  }
+
+  @media (max-height: 700px) {
+    .marquee p, .hint { display: none; }
+    .dpad { grid-template-rows: repeat(3, 34px); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .blink, .hud .v.bump, .banner { animation: none; }
+  }
+</style>
+</head>
+<body>
+<div class="cabinet">
+  <header class="marquee">
+    <h1>LOKMA</h1>
+    <p>Cabinet No. 18 &mdash; 1980</p>
+  </header>
+
+  <div class="hud">
+    <div><span class="k">SCORE</span><span class="v" id="hScore">0</span></div>
+    <div class="tray"><span class="k">TRAY</span><span class="v" id="hTray">0</span></div>
+    <div class="lives"><span class="k">LIVES</span><span class="v" id="hLives">&#9679;&#9679;&#9679;</span></div>
+    <div class="best"><span class="k">BEST</span><span class="v" id="hBest">0</span></div>
+  </div>
+
+  <div class="stage" id="stage">
+    <div class="screen" id="screen" tabindex="0" aria-label="Maze game screen">
+      <canvas id="view" width="180" height="146"></canvas>
+      <div class="scan"></div>
+      <div class="vignette"></div>
+      <div class="overlay" id="overlay">
+        <h2 id="ovTitle">INSERT COIN</h2>
+        <p id="ovBody">Collect lokma, carry them to the counter.</p>
+        <p class="blink" id="ovBlink">&#9654; PRESS START</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <div class="dpad" aria-label="Direction pad">
+      <button class="up"    data-dir="up"    aria-label="Up">&#9650;</button>
+      <button class="left"  data-dir="left"  aria-label="Left">&#9664;</button>
+      <button class="right" data-dir="right" aria-label="Right">&#9654;</button>
+      <button class="down"  data-dir="down"  aria-label="Down">&#9660;</button>
+    </div>
+    <div class="sidekeys">
+      <button id="btnPause">PAUSE</button>
+      <button id="btnSound" aria-pressed="true">SOUND ON</button>
+      <button id="btnReset">RESTART</button>
+    </div>
+  </div>
+
+  <p class="hint">Swipe the screen or use the pad &middot; arrows / WASD &middot; P pauses</p>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ---------------- the market ---------------- */
+  var MAZE = [
+    "###############",
+    "#.............#",
+    "#.##.#####.##.#",
+    "#.#....#....#.#",
+    "#...##.#.##...#",
+    "##.#...C...#.##",
+    "#...##.#.##...#",
+    "#.#....#....#.#",
+    "#.##.#####.##.#",
+    "#.............#",
+    "###############"
+  ];
+  var COLS = 15, ROWS = 11, CELL = 12;
+  var VW = COLS * CELL, VH = ROWS * CELL + 14;   // strip under the maze for the tray gauge
+  var COUNTER = { c: 7, r: 5 };
+  var START = { c: 7, r: 9 };
+  var CORNERS = [{ c: 1, r: 1 }, { c: 13, r: 1 }, { c: 1, r: 9 }, { c: 13, r: 9 }];
+  var LANTERNS = [{ c: 3, r: 2 }, { c: 11, r: 2 }, { c: 3, r: 8 }, { c: 11, r: 8 }, { c: 7, r: 5 }];
+
+  var DIRS = {
+    up:    { x: 0, y: -1 },
+    down:  { x: 0, y: 1 },
+    left:  { x: -1, y: 0 },
+    right: { x: 1, y: 0 }
+  };
+
+  var canvas = document.getElementById("view");
+  var ctx = canvas.getContext("2d");
+  var screenEl = document.getElementById("screen");
+  var stageEl = document.getElementById("stage");
+  var overlay = document.getElementById("overlay");
+  var ovTitle = document.getElementById("ovTitle");
+  var ovBody = document.getElementById("ovBody");
+  var ovBlink = document.getElementById("ovBlink");
+  var hScore = document.getElementById("hScore");
+  var hTray = document.getElementById("hTray");
+  var hLives = document.getElementById("hLives");
+  var hBest = document.getElementById("hBest");
+  var btnPause = document.getElementById("btnPause");
+  var btnSound = document.getElementById("btnSound");
+  var btnReset = document.getElementById("btnReset");
+
+  ctx.imageSmoothingEnabled = false;
+
+  var state = "idle";
+  var lokma, player, chasers, score, best, tray, lives, floorNo, caught, bannerEl;
+  var soundOn = true;
+
+  /* ---------------- persistence ---------------- */
+  function loadBest() {
+    try { return parseInt(localStorage.getItem("lokma-best"), 10) || 0; } catch (e) { return 0; }
+  }
+  function saveBest(v) { try { localStorage.setItem("lokma-best", String(v)); } catch (e) {} }
+  function loadSound() {
+    try { var v = localStorage.getItem("lokma-sound"); return v === null ? true : v === "1"; }
+    catch (e) { return true; }
+  }
+  function saveSound(v) { try { localStorage.setItem("lokma-sound", v ? "1" : "0"); } catch (e) {} }
+
+  /* ---------------- audio ---------------- */
+  var actx = null;
+  function blip(freq, dur, type, vol) {
+    if (!soundOn) return;
+    try {
+      if (!actx) {
+        var AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return;
+        actx = new AC();
+      }
+      if (actx.state === "suspended") actx.resume();
+      var o = actx.createOscillator(), g = actx.createGain();
+      o.type = type || "square";
+      o.frequency.setValueAtTime(freq, actx.currentTime);
+      g.gain.setValueAtTime(vol || 0.05, actx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.0001, actx.currentTime + dur);
+      o.connect(g); g.connect(actx.destination);
+      o.start(); o.stop(actx.currentTime + dur);
+    } catch (e) {}
+  }
+
+  /* ---------------- layout ---------------- */
+  function fit() {
+    var r = stageEl.getBoundingClientRect();
+    var availW = r.width - 4, availH = r.height - 4;
+    if (availW < 40 || availH < 40) return;
+    var ratio = VW / VH;
+    var w = Math.min(availW, availH * ratio);
+    screenEl.style.width = Math.floor(w) + 4 + "px";
+    screenEl.style.height = Math.floor(w / ratio) + 4 + "px";
+  }
+
+  /* ---------------- maze helpers ---------------- */
+  function walkable(c, r) {
+    if (r < 0 || r >= ROWS || c < 0 || c >= COLS) return false;
+    return MAZE[r].charAt(c) !== "#";
+  }
+
+  // breadth-first distance field from a cell; the basis of every chaser
+  function field(sc, sr) {
+    var d = [], r, c;
+    for (r = 0; r < ROWS; r++) { d.push([]); for (c = 0; c < COLS; c++) d[r].push(-1); }
+    if (!walkable(sc, sr)) return d;
+    var q = [[sc, sr]], head = 0;
+    d[sr][sc] = 0;
+    while (head < q.length) {
+      var cur = q[head++], cx = cur[0], cy = cur[1];
+      var n = [[cx + 1, cy], [cx - 1, cy], [cx, cy + 1], [cx, cy - 1]];
+      for (var i = 0; i < 4; i++) {
+        var nx = n[i][0], ny = n[i][1];
+        if (!walkable(nx, ny) || d[ny][nx] >= 0) continue;
+        d[ny][nx] = d[cy][cx] + 1;
+        q.push([nx, ny]);
+      }
+    }
+    return d;
+  }
+
+  function mover(c, r, speed) {
+    return { c: c, r: r, nc: c, nr: r, t: 0, speed: speed, dir: DIRS.left, queued: null };
+  }
+  function ex(m) { return (m.c + (m.nc - m.c) * m.t) * CELL + CELL / 2; }
+  function ey(m) { return (m.r + (m.nr - m.r) * m.t) * CELL + CELL / 2; }
+
+  function advance(m, dt) {
+    if (m.nc === m.c && m.nr === m.r) return true;         // standing still, ready to choose
+    m.t += m.speed * dt / CELL;
+    if (m.t >= 1) { m.c = m.nc; m.r = m.nr; m.t = 0; return true; }
+    return false;
+  }
+
+  function stepTo(m, c, r) {
+    m.nc = c; m.nr = r; m.t = 0;
+    if (c !== m.c) m.dir = c > m.c ? DIRS.right : DIRS.left;
+    else if (r !== m.r) m.dir = r > m.r ? DIRS.down : DIRS.up;
+  }
+
+  function neighbours(m) {
+    var out = [];
+    var opts = [[m.c + 1, m.r], [m.c - 1, m.r], [m.c, m.r + 1], [m.c, m.r - 1]];
+    for (var i = 0; i < 4; i++) if (walkable(opts[i][0], opts[i][1])) out.push(opts[i]);
+    return out;
+  }
+
+  /* ---------------- the four of them ----------------
+     Each one is a different rule for choosing the next cell, not the same
+     pursuit with a different colour. */
+  function makeChasers(n) {
+    var kinds = [
+      { kind: "kedi",  color: "#c1362f", ears: true,  base: 38 },   // straight at you
+      { kind: "bekci", color: "#7a5ea8", ears: false, base: 34 },   // patrols, then pounces
+      { kind: "cirak", color: "#2fbfae", ears: false, base: 40 },   // cuts you off
+      { kind: "kopek", color: "#d8a22e", ears: true,  base: 32 }    // wanders, then lunges
+    ];
+    var out = [];
+    for (var i = 0; i < n; i++) {
+      var k = kinds[i];
+      var home = CORNERS[i];
+      var m = mover(home.c, home.r, k.base + (floorNo - 1) * 2.5);
+      m.kind = k.kind;
+      m.color = k.color;
+      m.ears = k.ears;
+      m.home = home;
+      m.alert = 0;
+      m.patrol = 0;
+      out.push(m);
+    }
+    return out;
+  }
+
+  function chooseChaser(m, toPlayer) {
+    var opts = neighbours(m);
+    if (!opts.length) return;
+
+    // never reverse unless it is the only way out — that is what makes them read
+    var back = [m.c - m.dir.x, m.r - m.dir.y];
+    var forward = opts.filter(function (o) { return !(o[0] === back[0] && o[1] === back[1]); });
+    if (forward.length) opts = forward;
+
+    var goal = null, jitter = 0;
+
+    if (m.kind === "kedi") {
+      goal = toPlayer;                                   // shortest path, always
+    } else if (m.kind === "cirak") {
+      // four cells ahead of where the runner is heading: an ambush, not a chase
+      var ac = player.c + player.dir.x * 4, ar = player.r + player.dir.y * 4;
+      while ((ac !== player.c || ar !== player.r) && !walkable(ac, ar)) {
+        ac -= player.dir.x; ar -= player.dir.y;
+      }
+      goal = field(ac, ar);
+    } else if (m.kind === "bekci") {
+      if (m.alert > 0) goal = toPlayer;
+      else {
+        var post = LANTERNS[m.patrol % LANTERNS.length];
+        if (m.c === post.c && m.r === post.r) m.patrol++;
+        goal = field(post.c, post.r);                    // doing the rounds
+      }
+    } else {
+      if (m.alert > 0) goal = toPlayer;                  // lunge
+      else jitter = 9;                                   // otherwise, nose to the ground
+    }
+
+    var best = null, bestVal = Infinity;
+    for (var i = 0; i < opts.length; i++) {
+      var o = opts[i];
+      var v = goal ? (goal[o[1]][o[0]] < 0 ? 999 : goal[o[1]][o[0]]) : 0;
+      v += Math.random() * jitter;
+      if (v < bestVal) { bestVal = v; best = o; }
+    }
+    if (best) stepTo(m, best[0], best[1]);
+  }
+
+  /* ---------------- game ---------------- */
+  function fillFloor() {
+    lokma = [];
+    for (var r = 0; r < ROWS; r++) {
+      for (var c = 0; c < COLS; c++) {
+        if (MAZE[r].charAt(c) === "." && !(c === START.c && r === START.r)) {
+          lokma.push({ c: c, r: r });
+        }
+      }
+    }
+  }
+
+  function reset(startNow) {
+    score = 0;
+    tray = 0;
+    lives = 3;
+    floorNo = 1;
+    caught = 0;
+    best = loadBest();
+    fillFloor();
+    player = mover(START.c, START.r, 46);
+    chasers = makeChasers(2);
+    fit();
+    setState(startNow ? "running" : "idle");
+    syncHud();
+    render(0);
+  }
+
+  function respawn() {
+    player = mover(START.c, START.r, 46);
+    chasers = makeChasers(chasers.length);
+    caught = 0.9;
+  }
+
+  function nextFloor() {
+    floorNo++;
+    fillFloor();
+    player = mover(START.c, START.r, 46);
+    chasers = makeChasers(Math.min(4, 1 + floorNo));
+    banner("MARKET " + floorNo);
+    blip(680, 0.09); setTimeout(function () { blip(920, 0.13); }, 110);
+  }
+
+  function playerSpeed() { return Math.max(24, 46 - tray * 1.9); }
+
+  function update(dt) {
+    if (caught > 0) { caught -= dt; return; }
+
+    player.speed = playerSpeed();
+    if (advance(player, dt)) {
+      // take the queued turn if it is open, otherwise carry on, otherwise stop
+      var d = player.queued && DIRS[player.queued];
+      if (d && walkable(player.c + d.x, player.r + d.y)) {
+        player.dir = d;
+        player.queued = null;
+        stepTo(player, player.c + d.x, player.r + d.y);
+      } else if (walkable(player.c + player.dir.x, player.r + player.dir.y)) {
+        stepTo(player, player.c + player.dir.x, player.r + player.dir.y);
+      }
+
+      for (var i = lokma.length - 1; i >= 0; i--) {
+        if (lokma[i].c === player.c && lokma[i].r === player.r) {
+          lokma.splice(i, 1);
+          tray++;
+          blip(420 + Math.min(tray, 12) * 28, 0.04, "square", 0.045);
+          bump(hTray);
+          syncHud();
+        }
+      }
+
+      if (player.c === COUNTER.c && player.r === COUNTER.r && tray > 0) bank();
+    }
+
+    var toPlayer = field(player.c, player.r);
+    for (var k = 0; k < chasers.length; k++) {
+      var m = chasers[k];
+      var d2 = toPlayer[m.r] ? toPlayer[m.r][m.c] : -1;
+
+      if (m.kind === "bekci") m.alert = d2 >= 0 && d2 <= 5 ? 2.2 : Math.max(0, m.alert - dt);
+      if (m.kind === "kopek") {
+        m.alert = d2 >= 0 && d2 <= 3 ? 1.4 : Math.max(0, m.alert - dt);
+        m.speed = (m.alert > 0 ? 58 : 30) + (floorNo - 1) * 2.5;
+      }
+
+      if (advance(m, dt)) chooseChaser(m, toPlayer);
+
+      if (Math.abs(ex(m) - ex(player)) < 7 && Math.abs(ey(m) - ey(player)) < 7) return grabbed();
+    }
+
+    if (!lokma.length && tray === 0) nextFloor();
+  }
+
+  function bank() {
+    var per = tray >= 8 ? 25 : (tray >= 4 ? 15 : 10);
+    var gain = tray * per;
+    score += gain;
+    banner("+" + gain + (tray >= 4 ? "  ×" + per : ""));
+    blip(640, 0.07); setTimeout(function () { blip(880, 0.1); }, 90);
+    tray = 0;
+    if (score > best) { best = score; saveBest(best); }
+    bump(hScore);
+    syncHud();
+  }
+
+  // the tray goes everywhere: what you were carrying scatters back into the market
+  function grabbed() {
+    if (tray > 0) {
+      var free = [];
+      for (var r = 0; r < ROWS; r++) {
+        for (var c = 0; c < COLS; c++) {
+          if (!walkable(c, r)) continue;
+          if (c === COUNTER.c && r === COUNTER.r) continue;
+          var taken = false;
+          for (var i = 0; i < lokma.length; i++) if (lokma[i].c === c && lokma[i].r === r) { taken = true; break; }
+          if (!taken) free.push({ c: c, r: r });
+        }
+      }
+      for (var n = 0; n < tray && free.length; n++) {
+        lokma.push(free.splice((Math.random() * free.length) | 0, 1)[0]);
+      }
+      tray = 0;
+    }
+    lives--;
+    blip(200, 0.22, "sawtooth", 0.07);
+    setTimeout(function () { blip(130, 0.3, "sawtooth", 0.06); }, 120);
+    syncHud();
+    if (lives <= 0) { caught = 0.6; setTimeout(function () { if (state === "running") setState("over"); }, 600); }
+    else respawn();
+  }
+
+  /* ---------------- rendering ---------------- */
+  function render(now) {
+    if (!lokma) return;
+    ctx.fillStyle = "#0d2420";
+    ctx.fillRect(0, 0, VW, VH);
+
+    // carpet
+    for (var r = 0; r < ROWS; r++) {
+      for (var c = 0; c < COLS; c++) {
+        if (!walkable(c, r)) continue;
+        var x = c * CELL, y = r * CELL;
+        ctx.fillStyle = (c + r) % 2 === 0 ? "#0a1f1b" : "#081a17";
+        ctx.fillRect(x, y, CELL, CELL);
+        ctx.fillStyle = "rgba(216,162,46,0.045)";
+        ctx.fillRect(x + 5, y + 5, 2, 2);
+      }
+    }
+
+    // stalls: solid blocks, with one long awning per run of stalls that fronts
+    // onto a lane rather than a stripe on every cell
+    for (var r2 = 0; r2 < ROWS; r2++) {
+      for (var c2 = 0; c2 < COLS; c2++) {
+        if (walkable(c2, r2)) continue;
+        var sx = c2 * CELL, sy = r2 * CELL;
+        ctx.fillStyle = "#1c6b60";
+        ctx.fillRect(sx, sy, CELL, CELL);
+        ctx.fillStyle = "#2fbfae";
+        ctx.fillRect(sx, sy, CELL, 1);
+        ctx.fillStyle = "#0d3a34";
+        ctx.fillRect(sx, sy + CELL - 2, CELL, 2);
+        ctx.fillStyle = "rgba(13,58,52,0.55)";
+        for (var s2 = 1; s2 < CELL - 1; s2 += 4) ctx.fillRect(sx + s2, sy + 2, 1, CELL - 4);
+      }
+    }
+    for (var r3 = 0; r3 < ROWS; r3++) {
+      var run = -1;
+      for (var c3 = 0; c3 <= COLS; c3++) {
+        var fronts = c3 < COLS && !walkable(c3, r3) && walkable(c3, r3 - 1);
+        if (fronts && run < 0) run = c3;
+        if (!fronts && run >= 0) {
+          awning(run * CELL, r3 * CELL, (c3 - run) * CELL);
+          run = -1;
+        }
+      }
+    }
+
+    // lanterns
+    for (var l = 0; l < LANTERNS.length; l++) {
+      var L = LANTERNS[l];
+      var lx = L.c * CELL + CELL / 2, ly = L.r * CELL + 2;
+      var flick = 0.72 + Math.sin(now / 260 + l) * 0.16;
+      ctx.fillStyle = "rgba(255, 217, 138," + (0.10 * flick).toFixed(3) + ")";
+      ctx.fillRect(lx - 7, ly - 2, 14, 14);
+      ctx.fillStyle = "#8a6a2b";
+      ctx.fillRect(lx, ly - 2, 1, 2);
+      ctx.fillStyle = "#ffd98a";
+      ctx.fillRect(lx - 1, ly, 3, 3);
+    }
+
+    // the counter
+    var kx = COUNTER.c * CELL, ky = COUNTER.r * CELL;
+    var urgent = !lokma.length && tray > 0;
+    var pulse = 0.5 + Math.sin(now / (urgent ? 130 : 280)) * 0.5;
+    ctx.fillStyle = "rgba(216,162,46," + (0.12 + pulse * 0.3).toFixed(2) + ")";
+    ctx.fillRect(kx, ky, CELL, CELL);
+    ctx.strokeStyle = "#d8a22e";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(kx + 0.5, ky + 0.5, CELL - 1, CELL - 1);
+    ctx.fillStyle = "#d8a22e";
+    ctx.fillRect(kx + 2, ky + CELL - 4, CELL - 4, 2);
+
+    // lokma
+    for (var i = 0; i < lokma.length; i++) {
+      var p = lokma[i];
+      var px2 = p.c * CELL + CELL / 2, py2 = p.r * CELL + CELL / 2;
+      ctx.fillStyle = "#8a5a2b";
+      ctx.fillRect(px2 - 2, py2 - 1, 4, 3);
+      ctx.fillStyle = "#ffc75a";
+      ctx.fillRect(px2 - 2, py2 - 2, 4, 3);
+      ctx.fillStyle = "#fff3cf";
+      ctx.fillRect(px2 - 1, py2 - 2, 1, 1);
+    }
+
+    // the runner, with the tray over their head
+    var rx = Math.round(ex(player)), ry = Math.round(ey(player));
+    var blink = caught > 0 && Math.floor(now / 90) % 2 === 0;
+    ctx.fillStyle = blink ? "#e2564a" : "#f0e6cd";
+    ctx.fillRect(rx - 3, ry - 2, 7, 6);
+    ctx.fillStyle = "#3b2d1c";
+    ctx.fillRect(rx - 3, ry - 4, 7, 2);
+    ctx.fillStyle = "#1a2b24";
+    ctx.fillRect(rx + (player.dir.x >= 0 ? 1 : -2), ry, 2, 2);
+    if (tray > 0) {
+      ctx.fillStyle = "#8a5a2b";
+      ctx.fillRect(rx - 5, ry - 7, 11, 1);
+      ctx.fillStyle = "#ffc75a";
+      for (var t = 0; t < Math.min(tray, 9); t++) ctx.fillRect(rx - 5 + t * 1.2, ry - 8, 1, 1);
+    }
+
+    // chasers
+    for (var k = 0; k < chasers.length; k++) {
+      var m = chasers[k];
+      var mx = Math.round(ex(m)), my = Math.round(ey(m));
+      ctx.fillStyle = m.color;
+      ctx.fillRect(mx - 3, my - 2, 7, 6);
+      if (m.ears) {
+        ctx.fillRect(mx - 3, my - 4, 2, 2);
+        ctx.fillRect(mx + 2, my - 4, 2, 2);
+      } else {
+        ctx.fillRect(mx - 2, my - 4, 5, 2);
+      }
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(mx - 2, my - 1, 2, 2);
+      ctx.fillRect(mx + 1, my - 1, 2, 2);
+      if (m.alert > 0) {
+        ctx.fillStyle = "#ffe08a";
+        ctx.fillRect(mx, my - 7, 1, 3);
+      }
+    }
+
+    // tray weight along the bottom strip
+    var gy = ROWS * CELL + 5;
+    ctx.fillStyle = "#0a1f1a";
+    ctx.fillRect(0, ROWS * CELL, VW, 14);
+    ctx.fillStyle = "rgba(240,230,205,0.14)";
+    ctx.fillRect(4, gy, VW - 8, 3);
+    var load = Math.min(1, tray / 12);
+    ctx.fillStyle = load > 0.6 ? "#ff8a3d" : "#ffc75a";
+    ctx.fillRect(4, gy, Math.round((VW - 8) * load), 3);
+    ctx.fillStyle = "#2fbfae";
+    ctx.fillRect(4, gy + 5, Math.round((VW - 8) * (1 - (playerSpeed() - 24) / 22)), 1);
+  }
+
+  function awning(x, y, w) {
+    ctx.fillStyle = "#a8322c";
+    ctx.fillRect(x, y, w, 3);
+    ctx.fillStyle = "#e8ddc4";
+    for (var i = 2; i < w - 1; i += 8) ctx.fillRect(x + i, y, 4, 3);
+    ctx.fillStyle = "rgba(0,0,0,0.35)";
+    ctx.fillRect(x, y + 3, w, 1);
+  }
+
+  /* ---------------- hud + overlay ---------------- */
+  function bump(el) {
+    el.classList.remove("bump");
+    void el.offsetWidth;
+    el.classList.add("bump");
+  }
+
+  function syncHud() {
+    hScore.textContent = score;
+    hTray.textContent = tray;
+    hTray.className = "v" + (tray >= 7 ? " heavy" : "");
+    hBest.textContent = best;
+    var dots = "";
+    for (var i = 0; i < Math.max(0, lives); i++) dots += "●";
+    hLives.textContent = dots || "–";
+  }
+
+  function banner(text) {
+    if (bannerEl && bannerEl.parentNode) bannerEl.parentNode.removeChild(bannerEl);
+    bannerEl = document.createElement("div");
+    bannerEl.className = "banner";
+    bannerEl.textContent = text;
+    screenEl.appendChild(bannerEl);
+    var mine = bannerEl;
+    setTimeout(function () { if (mine.parentNode) mine.parentNode.removeChild(mine); }, 1800);
+  }
+
+  function setState(next) {
+    state = next;
+    btnPause.textContent = state === "paused" ? "RESUME" : "PAUSE";
+    if (state === "running") { overlay.hidden = true; return; }
+    overlay.hidden = false;
+    ovTitle.classList.toggle("over", state === "over");
+
+    if (state === "idle") {
+      ovTitle.textContent = "INSERT COIN";
+      ovBody.innerHTML = "Lokma ride on your <em>tray</em>, and a full tray is slow. " +
+                         "Nothing counts until you reach the <em>counter</em> &mdash; and if " +
+                         "they catch you, the whole tray goes back on the floor.";
+      ovBlink.innerHTML = "&#9654; PRESS START";
+    } else if (state === "paused") {
+      ovTitle.textContent = "PAUSED";
+      ovBody.textContent = "The market holds its breath.";
+      ovBlink.innerHTML = "&#9654; TAP OR PRESS P";
+    } else if (state === "over") {
+      ovTitle.textContent = "SHUT DOWN";
+      ovBody.innerHTML = "Banked <em>" + score + "</em> across <em>" + floorNo + "</em> market" +
+                         (floorNo === 1 ? "" : "s") +
+                         (score >= best && score > 0 ? " &middot; <em>BEST RUN</em>"
+                                                     : " &middot; best <em>" + best + "</em>");
+      ovBlink.innerHTML = "&#9654; TAP TO PLAY AGAIN";
+    }
+  }
+
+  function start() { lastTs = 0; setState("running"); }
+  function togglePause() {
+    if (state === "running") setState("paused");
+    else if (state === "paused") start();
+  }
+  function primary() {
+    if (state === "idle" || state === "paused") start();
+    else if (state === "over") reset(true);
+    else setState("paused");
+  }
+
+  /* ---------------- loop ---------------- */
+  var lastTs = 0;
+  function frame(now) {
+    var dt = lastTs ? Math.min(0.05, (now - lastTs) / 1000) : 0;
+    lastTs = now;
+    if (state === "running") update(dt);
+    render(now);
+    requestAnimationFrame(frame);
+  }
+
+  /* ---------------- input ---------------- */
+  function turn(name) {
+    if (!DIRS[name]) return;
+    if (state === "idle") start();
+    if (state !== "running") return;
+    player.queued = name;
+  }
+
+  var KEYS = {
+    ArrowUp: "up", ArrowDown: "down", ArrowLeft: "left", ArrowRight: "right",
+    w: "up", s: "down", a: "left", d: "right",
+    W: "up", S: "down", A: "left", D: "right"
+  };
+
+  window.addEventListener("keydown", function (ev) {
+    var k = KEYS[ev.key];
+    if (k) { ev.preventDefault(); turn(k); return; }
+    if (ev.key === "p" || ev.key === "P") { ev.preventDefault(); togglePause(); }
+    else if (ev.key === " " || ev.key === "Enter") { ev.preventDefault(); primary(); }
+    else if (ev.key === "r" || ev.key === "R") { ev.preventDefault(); reset(true); }
+  });
+
+  Array.prototype.forEach.call(document.querySelectorAll("[data-dir]"), function (b) {
+    b.addEventListener("pointerdown", function (ev) { ev.preventDefault(); turn(b.dataset.dir); });
+    b.addEventListener("click", function (ev) { ev.preventDefault(); });
+  });
+
+  var sx = 0, sy = 0, swiping = false, moved = false;
+  screenEl.addEventListener("pointerdown", function (ev) {
+    swiping = true; moved = false; sx = ev.clientX; sy = ev.clientY;
+    try { screenEl.setPointerCapture(ev.pointerId); } catch (e) {}
+  });
+  screenEl.addEventListener("pointermove", function (ev) {
+    if (!swiping) return;
+    var dx = ev.clientX - sx, dy = ev.clientY - sy;
+    if (Math.abs(dx) < 22 && Math.abs(dy) < 22) return;
+    moved = true;
+    turn(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? "right" : "left") : (dy > 0 ? "down" : "up"));
+    sx = ev.clientX; sy = ev.clientY;
+  });
+  screenEl.addEventListener("pointerup", function () {
+    if (swiping && !moved) primary();
+    swiping = false;
+  });
+  screenEl.addEventListener("pointercancel", function () { swiping = false; });
+  screenEl.addEventListener("contextmenu", function (ev) { ev.preventDefault(); });
+
+  btnPause.addEventListener("click", togglePause);
+  btnReset.addEventListener("click", function () { reset(true); });
+  btnSound.addEventListener("click", function () {
+    soundOn = !soundOn;
+    saveSound(soundOn);
+    btnSound.textContent = soundOn ? "SOUND ON" : "SOUND OFF";
+    btnSound.setAttribute("aria-pressed", soundOn ? "true" : "false");
+    if (soundOn) blip(620, 0.05);
+  });
+
+  document.addEventListener("visibilitychange", function () {
+    if (document.hidden && state === "running") setState("paused");
+  });
+
+  /* ---------------- boot ---------------- */
+  function boot(saved) {
+    soundOn = loadSound();
+    btnSound.textContent = soundOn ? "SOUND ON" : "SOUND OFF";
+    btnSound.setAttribute("aria-pressed", soundOn ? "true" : "false");
+    fit();
+    if (window.ResizeObserver) new ResizeObserver(fit).observe(stageEl);
+    window.addEventListener("resize", fit);
+    reset(false);
+    if (saved && saved.best > best) { best = saved.best; saveBest(best); }
+    syncHud();
+    requestAnimationFrame(frame);
+  }
+
+  if (window.claude && window.claude.hot) {
+    try { window.claude.hot.snapshot(function () { return { best: best || 0 }; }); } catch (e) {}
+  }
+  if (window.claude && window.claude.hot && window.claude.hot.ready) {
+    window.claude.hot.ready(boot);
+  } else {
+    boot({});
+  }
+})();
+</script>
+</body>
+</html>
