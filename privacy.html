@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="What this arcade stores and what it sends anywhere.">
+<meta name="theme-color" content="#08090e">
+<title>Privacy &middot; Retro Games</title>
+<link rel="preload" href="assets/fonts/press-start-2p-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="assets/fonts/fonts.css">
+<style>
+  :root {
+    --ink:    #08090e;
+    --dim:    #2a2b48;
+    --pale:   #e8ecff;
+    --violet: #9a86ff;
+    --amber:  #ffb43c;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 0 18px;
+    padding-top: calc(env(safe-area-inset-top, 0px) + 26px);
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 44px);
+    background: radial-gradient(130% 80% at 50% 0%, #1b1c3a 0%, var(--ink) 60%), var(--ink);
+    color: var(--pale);
+    font-family: "VT323", ui-monospace, "Courier New", monospace;
+    font-size: 19px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 640px; margin-inline: auto; }
+  h1 {
+    font-family: "Press Start 2P", ui-monospace, monospace;
+    font-size: clamp(14px, 5vw, 21px);
+    letter-spacing: 0.1em;
+    color: var(--amber);
+    line-height: 1.5;
+  }
+  h2 {
+    font-family: "Press Start 2P", ui-monospace, monospace;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--violet);
+    margin: 32px 0 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--dim);
+  }
+  p, li { opacity: 0.9; }
+  a { color: var(--amber); }
+  code { color: var(--violet); }
+  .back {
+    display: inline-block;
+    margin-top: 34px;
+    padding-top: 16px;
+    border-top: 1px solid var(--dim);
+    width: 100%;
+  }
+  .stamp { opacity: 0.55; font-size: 16px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Privacy</h1>
+  <p>
+    This is a hobby arcade of ten games. It is deliberately built so there is very
+    little to say here, but here is all of it.
+  </p>
+
+  <h2>What stays on your device</h2>
+  <p>
+    Each game saves your <strong>best score</strong> and whether you left the sound
+    on, using your browser's <code>localStorage</code>. That data never leaves your
+    device, is never sent anywhere, and nobody but you can read it. Clearing your
+    browser's site data for this site erases it.
+  </p>
+
+  <h2>What gets sent to third parties</h2>
+  <p>
+    <strong>Nothing.</strong> There are no cookies, no analytics, no advertising, no
+    trackers, no embedded videos and no social buttons. The two fonts the games use
+    are served from this site itself rather than from Google Fonts, precisely so
+    that loading a page does not hand your IP address to anyone else.
+  </p>
+
+  <h2>The one thing I cannot remove</h2>
+  <p>
+    This site is hosted on <strong>GitHub Pages</strong>. As with any website
+    anywhere, the server that sends you the page necessarily receives your IP
+    address and your browser's user-agent string in order to answer the request.
+    That is GitHub's processing, not mine, and it is covered by the
+    <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement">GitHub Privacy Statement</a>.
+    I have no access to those logs and no way to switch them off.
+  </p>
+
+  <h2>Contact</h2>
+  <p>
+    The site and every line of its source are at
+    <a href="https://github.com/yigitiseri/retro-games">github.com/yigitiseri/retro-games</a>.
+    Open an issue there if something here is wrong or unclear.
+  </p>
+
+  <p class="stamp">
+    If this page ever stops being accurate &mdash; if analytics or anything else is
+    added &mdash; it gets updated in the same change, not afterwards.
+  </p>
+
+  <a class="back" href="./">&#9664; Back to the arcade</a>
+</main>
+</body>
+</html>
