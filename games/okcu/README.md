@@ -25,6 +25,9 @@ the shot.
 You start with **six**. Every shot spends one.
 
 - **Pop a balloon and you get that arrow back**, up to a quiver of twelve.
+- **An arrow does not stop at the first balloon.** It runs on through everything
+  in its line, losing a little speed with each one it punches through, until it
+  reaches the grass or leaves the screen.
 - **Miss and the arrow sticks in the grass.** It is gone.
 - **Run dry — with nothing still in the air — and the day is over.**
 
@@ -35,6 +38,9 @@ ends the run on its own, without anything ever hitting you.
 
 - A balloon is worth **10 points plus 5 for every 12 pixels of height** it had
   when you hit it. Letting one climb is worth more than popping it off the grass.
+- **Each balloon further down the same arrow's path is worth more**: the first
+  scores face value, the second double, the third triple. Lining a row up is the
+  big play — and it hands back an arrow for every one of them.
 - Some balloons rise in **pairs on one string**. Hit either balloon and you get
   just that one. Hit the **knot** below them and both burst at **double** value
   — the greedy shot, and a much smaller target.

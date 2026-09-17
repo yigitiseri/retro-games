@@ -290,7 +290,7 @@
     <button id="btnReset">RESTART</button>
   </div>
 
-  <p class="hint">Drag anywhere and pull back &middot; arrows / WASD aim, SPACE looses &middot; P pauses</p>
+  <p class="hint">Drag anywhere and pull back &middot; line them up and one arrow takes the lot &middot; P pauses</p>
 </div>
 
 <script>
@@ -465,7 +465,8 @@
       x: gripX() + Math.cos(aim.angle) * 10,
       y: gripY() + Math.sin(aim.angle) * 10,
       vx: Math.cos(aim.angle) * sp,
-      vy: Math.sin(aim.angle) * sp
+      vy: Math.sin(aim.angle) * sp,
+      hits: 0
     });
     twang(aim.power);
     bump(hArrows);
@@ -510,22 +511,27 @@
 
       var done = false;
 
-      for (var kk = 0; kk < knots.length && !done; kk++) {
+      // An arrow does not stop at the first balloon. It runs on through
+      // everything in its path, costing a little speed each time it punches
+      // through, and each one further down the line is worth more.
+      for (var kk = knots.length - 1; kk >= 0; kk--) {
         var kn = knots[kk];
         if (kn.dead) continue;
         if (Math.abs(s.x - kn.x) < 4 && Math.abs(s.y - kn.y) < 4) {
-          cutKnot(kn);
-          done = true;
+          s.hits += cutKnot(kn, s);
+          s.vx *= 0.9; s.vy *= 0.9;
         }
       }
 
-      for (var bi = balloons.length - 1; bi >= 0 && !done; bi--) {
+      for (var bi = balloons.length - 1; bi >= 0; bi--) {
         var bb = balloons[bi];
         var by = bb.y + Math.sin(bb.bob * 1.4) * 2;
         var dx = s.x - bb.x, dy = s.y - by;
         if (dx * dx + dy * dy <= (bb.r + 2) * (bb.r + 2)) {
-          popBalloon(bi, 1);
-          done = true;
+          s.hits++;
+          popBalloon(bi, s.hits);
+          skewer(s.hits);
+          s.vx *= 0.93; s.vy *= 0.93;
         }
       }
 
@@ -569,11 +575,11 @@
     return points;
   }
 
-  function cutKnot(kn) {
+  function cutKnot(kn, shaft) {
     kn.dead = true;
-    var freed = 0, total = 0;
+    var freed = 0;
     for (var i = balloons.length - 1; i >= 0; i--) {
-      if (balloons[i].knot === kn) { total += popBalloon(i, 2); freed++; }
+      if (balloons[i].knot === kn) { popBalloon(i, 2); freed++; }
     }
     for (var k = knots.length - 1; k >= 0; k--) if (knots[k] === kn) knots.splice(k, 1);
     if (freed > 1) {
@@ -581,6 +587,15 @@
       blip(880, 0.12, "triangle", 0.06);
       shake = 0.4;
     }
+    return freed;
+  }
+
+  // one arrow, several balloons: say so
+  function skewer(n) {
+    if (n < 2) return;
+    banner("SKEWER ×" + n);
+    blip(700 + n * 110, 0.12, "triangle", 0.06);
+    shake = Math.max(shake, 0.3);
   }
 
   function outOfArrows() {
@@ -782,9 +797,9 @@
       ctx.save();
       ctx.translate(Math.round(s.x), Math.round(s.y));
       ctx.rotate(Math.atan2(s.vy, s.vx));
-      ctx.fillStyle = "#e8ddc4";
+      ctx.fillStyle = s.hits ? "#ffd9a0" : "#e8ddc4";
       ctx.fillRect(-9, 0, 12, 1);
-      ctx.fillStyle = "#cfd6e0";
+      ctx.fillStyle = s.hits ? "#ffe6b8" : "#cfd6e0";
       ctx.fillRect(3, -1, 3, 3);
       ctx.fillStyle = "#d8452f";
       ctx.fillRect(-10, -1, 3, 1);
@@ -911,8 +926,9 @@
     if (state === "idle") {
       ovTitle.textContent = "INSERT COIN";
       ovBody.innerHTML = "Drag anywhere and pull <em>back</em> to draw; let go to loose. " +
-                         "Every balloon you pop hands the arrow back &mdash; every miss " +
-                         "stays in the grass. Run dry and the day is over.";
+                         "An arrow does not stop at the first balloon &mdash; it runs on " +
+                         "through whatever is in line, and each one further down is worth " +
+                         "more. Every pop hands an arrow back; every miss stays in the grass.";
       ovBlink.innerHTML = "&#9654; PRESS START";
     } else if (state === "paused") {
       ovTitle.textContent = "PAUSED";
@@ -936,11 +952,11 @@
   /* ---------------- loop ---------------- */
   var lastTs = 0;
   function frame(now) {
+    requestAnimationFrame(frame);          // queued first: one bad frame is not fatal
     var dt = lastTs ? Math.min(0.05, (now - lastTs) / 1000) : 0;
     lastTs = now;
     if (state === "running") update(dt);
     render(now);
-    requestAnimationFrame(frame);
   }
 
   /* ---------------- input ---------------- */
