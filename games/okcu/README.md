@@ -25,6 +25,8 @@ the shot.
 You start with **six**. Every shot spends one.
 
 - **Pop a balloon and you get that arrow back**, up to a quiver of twelve.
+  You see it happen: a small gold arrow lifts off the burst and drifts home to
+  the bow, so a three-balloon line sends three of them back at once.
 - **An arrow does not stop at the first balloon.** It runs on through everything
   in its line, losing a little speed with each one it punches through, until it
   reaches the grass or leaves the screen.

@@ -330,7 +330,7 @@
   ctx.imageSmoothingEnabled = false;
 
   var state = "idle";
-  var balloons, knots, shafts, stuck, bursts, quiver, score, best, wind, windTarget;
+  var balloons, knots, shafts, stuck, bursts, recovered, quiver, score, best, wind, windTarget;
   var aim, spawnIn, elapsed, bannerEl, shake;
   var soundOn = true;
   var held = { up: false, down: false };
@@ -414,6 +414,7 @@
     shafts = [];
     stuck = [];
     bursts = [];
+    recovered = [];
     quiver = START_ARROWS;
     score = 0;
     elapsed = 0;
@@ -551,6 +552,13 @@
       bursts[bu].t -= dt;
       if (bursts[bu].t <= 0) bursts.splice(bu, 1);
     }
+    for (var rc = recovered.length - 1; rc >= 0; rc--) {
+      var rv = recovered[rc];
+      rv.t -= dt;
+      rv.y -= 26 * dt;
+      rv.x += (gripX() - rv.x) * Math.min(1, dt * 1.6);   // drifting home
+      if (rv.t <= 0) recovered.splice(rc, 1);
+    }
     if (shake > 0) shake = Math.max(0, shake - dt * 2.5);
 
     if (quiver <= 0 && shafts.length === 0) return outOfArrows();
@@ -563,7 +571,10 @@
     var height = Math.max(0, GROUND - by);
     var points = (10 + Math.round(height / 12) * 5) * mult;
     score += points;
-    quiver = Math.min(MAX_ARROWS, quiver + 1);
+    if (quiver < MAX_ARROWS) {
+      quiver++;
+      recovered.push({ x: b.x, y: by, t: 0.7 });   // an arrow floats back to you
+    }
     bursts.push({ x: b.x, y: by, c: b.c, t: 0.45 });
     balloons.splice(index, 1);
     blip(620 + Math.round(height), 0.07, "square", 0.05);
@@ -654,6 +665,7 @@
     drawTethers();
     drawBalloons(now);
     drawBursts();
+    drawRecovered();
     drawShafts();
     drawArcher(now);
     if (state === "running") drawAim(now);
@@ -788,6 +800,26 @@
         var d = 2 + t * 12;
         ctx.fillRect(Math.round(p.x + Math.cos(a) * d), Math.round(p.y + Math.sin(a) * d), 2, 2);
       }
+    }
+  }
+
+  // a small gold arrow lifting off each pop: that is the one you just earned
+  function drawRecovered() {
+    for (var i = 0; i < recovered.length; i++) {
+      var r = recovered[i];
+      var fade = Math.min(1, r.t / 0.45);
+      ctx.save();
+      ctx.globalAlpha = fade;
+      ctx.translate(Math.round(r.x), Math.round(r.y));
+      ctx.rotate(-0.9);
+      ctx.fillStyle = "#ffc75a";
+      ctx.fillRect(-4, 0, 7, 1);
+      ctx.fillRect(2, -1, 2, 3);
+      ctx.fillStyle = "#fff0c8";
+      ctx.fillRect(-5, -1, 2, 1);
+      ctx.fillRect(-5, 1, 2, 1);
+      ctx.restore();
+      ctx.globalAlpha = 1;
     }
   }
 
@@ -928,7 +960,8 @@
       ovBody.innerHTML = "Drag anywhere and pull <em>back</em> to draw; let go to loose. " +
                          "An arrow does not stop at the first balloon &mdash; it runs on " +
                          "through whatever is in line, and each one further down is worth " +
-                         "more. Every pop hands an arrow back; every miss stays in the grass.";
+                         "more. <em>Every pop hands an arrow back</em>, so a good eye keeps the " +
+                         "day going; every miss stays in the grass.";
       ovBlink.innerHTML = "&#9654; PRESS START";
     } else if (state === "paused") {
       ovTitle.textContent = "PAUSED";
