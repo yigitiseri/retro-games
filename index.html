@@ -35,6 +35,8 @@
     --tugla:   #e5533a;
     --lokma:   #2fbfae;
     --okcu:    #ff8a7a;
+    --goktasi: #7ce8ff;
+    --blok:    #d8a12b;
 
     --cell-font: "Press Start 2P", ui-monospace, "Courier New", monospace;
     --read-font: "VT323", ui-monospace, "Courier New", monospace;
@@ -214,6 +216,8 @@
   .tugla { --accent: var(--tugla); }
   .lokma { --accent: var(--lokma); }
   .okcu  { --accent: var(--okcu); }
+  .goktasi { --accent: var(--goktasi); }
+  .blok  { --accent: var(--blok); }
 
   /* ---------- footer ---------- */
   .foot {
@@ -315,6 +319,28 @@
         <h2>OK&#199;U</h2>
         <p>Drag back, loose, and watch the wind take it. An arrow runs on through every balloon in its line, and each one further down is worth more.</p>
         <span class="keys">Drag anywhere &middot; arrows &middot; SPACE</span>
+        <span class="play">&#9654; PLAY</span>
+      </div>
+    </a>
+
+    <a class="cab goktasi" href="games/goktasi/">
+      <div class="tube"><canvas data-demo="rocks" aria-hidden="true"></canvas></div>
+      <div class="plate">
+        <span class="no">CABINET NO. 10 &mdash; 1980</span>
+        <h2>G&Ouml;KTA&#350;I</h2>
+        <p>No guns anywhere. You are a salvage tug: line up behind a rock and lean on it until the collector ring takes it. Ram one and it shatters into pieces worth less.</p>
+        <span class="keys">Arrows &middot; hold to thrust</span>
+        <span class="play">&#9654; PLAY</span>
+      </div>
+    </a>
+
+    <a class="cab blok" href="games/blok/">
+      <div class="tube"><canvas data-demo="loom" aria-hidden="true"></canvas></div>
+      <div class="plate">
+        <span class="no">CABINET NO. 11 &mdash; 1984</span>
+        <h2>BLOK</h2>
+        <p>Wool falls on the loom in five kilim dyes. Fill a row and it is woven into the carpet beside you &mdash; and a row that mirrors around its centre pays many times a mixed one.</p>
+        <span class="keys">Arrows &middot; X &middot; SPACE</span>
         <span class="play">&#9654; PLAY</span>
       </div>
     </a>
@@ -1217,11 +1243,178 @@
     ctx.restore();
   }
 
+  /* ---------- goktasi: rocks nudged toward the ring ---------- */
+  var gk = null;
+  function gkInit(W, H) {
+    var g = { W: W, H: H, rocks: [], stars: [], t: 0,
+              ring: { x: W * 0.74, y: H * 0.5, r: 15 },
+              tug: { x: W * 0.26, y: H * 0.5, a: 0 } };
+    for (var i = 0; i < 22; i++) g.stars.push({ x: Math.random() * W, y: Math.random() * H });
+    for (var j = 0; j < 3; j++) {
+      g.rocks.push({ x: Math.random() * W * 0.5, y: Math.random() * H, r: 6 + Math.random() * 4,
+                     vx: 6 + Math.random() * 7, vy: (Math.random() - 0.5) * 6,
+                     rot: Math.random() * 6, c: j % 3 });
+    }
+    return g;
+  }
+  var GK_ROCK = ["#8d7fb8", "#6f7bb5", "#b98a72"];
+  function drawRocks(ctx, W, H, now) {
+    if (!gk || gk.W !== W || gk.H !== H) gk = gkInit(W, H);
+    var dt = Math.min(0.05, (now - (gk.last || now)) / 1000);
+    gk.last = now; gk.t += dt;
+
+    ctx.fillStyle = "#0d0f2a"; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = "rgba(200,215,255,0.6)";
+    for (var i = 0; i < gk.stars.length; i++) ctx.fillRect(gk.stars[i].x | 0, gk.stars[i].y | 0, 1, 1);
+
+    var g = gk.ring;
+    g.y = H * 0.5 + Math.sin(gk.t * 0.7) * H * 0.16;
+    ctx.fillStyle = "#66e29a";
+    for (var a = 0; a < Math.PI * 2; a += 0.34) {
+      ctx.fillRect(Math.round(g.x + Math.cos(a) * g.r), Math.round(g.y + Math.sin(a) * g.r), 2, 2);
+    }
+
+    for (var k = 0; k < gk.rocks.length; k++) {
+      var r = gk.rocks[k];
+      r.x += r.vx * dt; r.y += r.vy * dt; r.rot += dt * 0.5;
+      if (r.x > W + r.r) { r.x = -r.r; r.y = Math.random() * H; }
+      if (r.y < -r.r) r.y = H + r.r;
+      if (r.y > H + r.r) r.y = -r.r;
+      ctx.fillStyle = GK_ROCK[r.c];
+      ctx.beginPath();
+      for (var v = 0; v < 8; v++) {
+        var ang = r.rot + v * Math.PI / 4;
+        var rad = r.r * (0.78 + 0.22 * ((v * 7) % 3) / 2);
+        var px = Math.round(r.x + Math.cos(ang) * rad), py = Math.round(r.y + Math.sin(ang) * rad);
+        if (v === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      }
+      ctx.closePath(); ctx.fill();
+    }
+
+    // the tug, always leaning on the nearest rock
+    var t = gk.tug, best = gk.rocks[0], bd = 1e9;
+    for (var m = 0; m < gk.rocks.length; m++) {
+      var d = Math.hypot(gk.rocks[m].x - t.x, gk.rocks[m].y - t.y);
+      if (d < bd) { bd = d; best = gk.rocks[m]; }
+    }
+    var wx = best.x - t.x, wy = best.y - t.y;
+    t.a = Math.atan2(wy, wx);
+    t.x += Math.cos(t.a) * 14 * dt; t.y += Math.sin(t.a) * 14 * dt;
+    if (bd < best.r + 5) { t.x -= Math.cos(t.a) * 26 * dt; t.y -= Math.sin(t.a) * 26 * dt; }
+    ctx.save();
+    ctx.translate(Math.round(t.x), Math.round(t.y));
+    ctx.rotate(t.a);
+    ctx.fillStyle = "#ffca57";
+    ctx.fillRect(-7, -1, 3, 2);
+    ctx.fillStyle = "#7ce8ff";
+    ctx.beginPath(); ctx.moveTo(6, 0); ctx.lineTo(-4, -4); ctx.lineTo(-2, 0); ctx.lineTo(-4, 4);
+    ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+
+  /* ---------- blok: the loom and the carpet beside it ---------- */
+  var lm = null;
+  var LM_DYE = ["#b5392d", "#2f4478", "#d8a12b", "#7a5230", "#e8ddc4"];
+  function lmInit(W, H) {
+    var l = { W: W, H: H, cols: 8, rows: 11, cell: 9, grid: [], kilim: [],
+              piece: null, drop: 0, flash: 0 };
+    // the carpet already has history on it, and the loom is part-woven, so the
+    // tile shows what the game is about in its first frame rather than after a minute
+    for (var r = 0; r < 6; r++) {
+      var row = [];
+      for (var c = 0; c < l.cols; c++) {
+        var mirror = Math.min(c, l.cols - 1 - c);          // symmetric, like a real motif
+        row.push(LM_DYE[(mirror + r) % LM_DYE.length]);
+      }
+      l.kilim.push(row);
+    }
+    for (var y = l.rows - 2; y < l.rows; y++) {
+      for (var x = 0; x < l.cols; x++) {
+        if ((x + y) % 7 === 3) continue;                    // leave gaps to fill
+        l.grid.push({ x: x, y: y, c: (x * 2 + y) % LM_DYE.length });
+      }
+    }
+    return l;
+  }
+  function lmSpawn(l) {
+    l.piece = { x: 1 + ((Math.random() * (l.cols - 2)) | 0), y: -1,
+                c: (Math.random() * LM_DYE.length) | 0, w: 1 + ((Math.random() * 2) | 0) };
+  }
+  function drawLoom(ctx, W, H, now) {
+    if (!lm || lm.W !== W || lm.H !== H) { lm = lmInit(W, H); lmSpawn(lm); }
+    var l = lm, dt = Math.min(0.05, (now - (l.last || now)) / 1000);
+    l.last = now;
+
+    ctx.fillStyle = "#1a0f08"; ctx.fillRect(0, 0, W, H);
+
+    var bx = 6, by = 8, C = l.cell;
+    // the loom frame
+    ctx.strokeStyle = "#7a5230"; ctx.lineWidth = 1;
+    ctx.strokeRect(bx - 2.5, by - 2.5, l.cols * C + 4, l.rows * C + 4);
+
+    l.drop += dt;
+    if (l.drop > 0.16) {
+      l.drop = 0;
+      var p = l.piece;
+      p.y++;
+      var landed = p.y >= l.rows - 1;
+      for (var q = 0; !landed && q < l.grid.length; q++) {
+        if (l.grid[q].y === p.y + 1 && l.grid[q].x >= p.x && l.grid[q].x < p.x + p.w) landed = true;
+      }
+      if (landed) {
+        for (var w = 0; w < p.w; w++) l.grid.push({ x: p.x + w, y: p.y, c: p.c });
+        // a full row is woven and taken off the loom
+        var counts = {};
+        for (var g = 0; g < l.grid.length; g++) counts[l.grid[g].y] = (counts[l.grid[g].y] || 0) + 1;
+        for (var row in counts) {
+          if (counts[row] >= l.cols) {
+            var woven = [];
+            for (var z = 0; z < l.cols; z++) woven.push(LM_DYE[(z * 3 + (+row)) % LM_DYE.length]);
+            l.kilim.unshift(woven);
+            if (l.kilim.length > 7) l.kilim.pop();
+            l.flash = 0.35;
+            l.grid = l.grid.filter(function (c) { return c.y !== +row; });
+            l.grid.forEach(function (c) { if (c.y < +row) c.y++; });
+          }
+        }
+        if (l.grid.length > 34) l.grid = [];
+        lmSpawn(l);
+      }
+    }
+    if (l.flash > 0) l.flash -= dt;
+
+    for (var i = 0; i < l.grid.length; i++) {
+      var c = l.grid[i];
+      ctx.fillStyle = LM_DYE[c.c];
+      ctx.fillRect(bx + c.x * C, by + c.y * C, C - 1, C - 1);
+    }
+    var pp = l.piece;
+    for (var k = 0; k < pp.w; k++) {
+      if (pp.y < 0) continue;
+      ctx.fillStyle = LM_DYE[pp.c];
+      ctx.fillRect(bx + (pp.x + k) * C, by + pp.y * C, C - 1, C - 1);
+    }
+
+    // the carpet, growing beside the loom
+    var kx = bx + l.cols * C + 8;
+    ctx.fillStyle = l.flash > 0 ? "rgba(216,161,43,0.25)" : "rgba(0,0,0,0.35)";
+    ctx.fillRect(kx - 2, by - 2, W - kx, l.rows * C + 4);
+    ctx.strokeStyle = "#7a5230";
+    ctx.strokeRect(kx - 2.5, by - 2.5, W - kx, l.rows * C + 4);
+    for (var r2 = 0; r2 < l.kilim.length; r2++) {
+      for (var s2 = 0; s2 < l.kilim[r2].length; s2++) {
+        ctx.fillStyle = l.kilim[r2][s2];
+        ctx.fillRect(kx + s2 * 5, by + 2 + r2 * 6, 4, 5);
+      }
+    }
+  }
+
   /* ---------- wire up ---------- */
-  var painters = { snake: drawSnake, road: drawRoad, lander: drawLander, flap: drawFlap, brick: drawBrick, maze: drawMaze, arch: drawArch };
+  var painters = { snake: drawSnake, road: drawRoad, lander: drawLander, flap: drawFlap, brick: drawBrick, maze: drawMaze, arch: drawArch, rocks: drawRocks, loom: drawLoom };
   Array.prototype.forEach.call(document.querySelectorAll("[data-demo]"), function (c) {
     var fn = painters[c.dataset.demo];
-    if (fn) register(c, fn, c.dataset.demo === "flap" || c.dataset.demo === "brick" || c.dataset.demo === "maze" || c.dataset.demo === "arch");
+    if (fn) register(c, fn, c.dataset.demo === "flap" || c.dataset.demo === "brick" || c.dataset.demo === "maze" || c.dataset.demo === "arch" ||
+                       c.dataset.demo === "rocks" || c.dataset.demo === "loom");
   });
 
   if (window.ResizeObserver) {

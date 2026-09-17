@@ -1,0 +1,1051 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="description" content="GOKTASI - a salvage tug pushing rocks into the collector ring.">
+<meta name="theme-color" content="#08090e">
+<style>
+  :root {
+    color-scheme: dark;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  body { margin: 0; }
+  img { max-width: 100%; }
+  [hidden] { display: none !important; }
+</style>
+<title>GÖKTAŞI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap">
+<style>
+  :root {
+    --ink:    #07070e;
+    --bezel:  #2a2b48;
+    --cyan:   #6fe8ff;
+    --violet: #9a86ff;
+    --dim:    #262745;
+    --pale:   #e8ecff;
+    --amber:  #ffb43c;
+    --green:  #66e29a;
+    --rose:   #ff8a7a;
+
+    --cell-font: "Press Start 2P", ui-monospace, "Courier New", monospace;
+    --read-font: "VT323", ui-monospace, "Courier New", monospace;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+
+  body {
+    margin: 0;
+    background:
+      radial-gradient(130% 90% at 50% 0%, #17183a 0%, var(--ink) 62%),
+      var(--ink);
+    color: var(--pale);
+    font-family: var(--read-font);
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+
+  .cabinet {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    padding: 12px 16px;
+    padding-block: 10px 12px;
+    max-width: 640px;
+    margin-inline: auto;
+  }
+
+  /* ---- marquee ---- */
+  .marquee { text-align: center; flex: 0 0 auto; }
+  .marquee h1 {
+    margin: 0;
+    font-family: var(--cell-font);
+    font-size: clamp(15px, 5.4vw, 26px);
+    letter-spacing: 0.12em;
+    color: var(--cyan);
+    text-shadow: 0 0 8px rgba(111, 232, 255, 0.5), 0 0 24px rgba(154, 134, 255, 0.35);
+    text-wrap: balance;
+  }
+  .marquee p {
+    margin: 4px 0 0;
+    font-size: clamp(13px, 3.6vw, 17px);
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--violet);
+    opacity: 0.85;
+  }
+
+  /* ---- hud ---- */
+  .hud {
+    flex: 0 0 auto;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 5px;
+    border: 1px solid var(--dim);
+    background: linear-gradient(180deg, rgba(111,232,255,0.07), transparent);
+    padding: 6px 3px;
+  }
+  .hud div { text-align: center; }
+  .hud .k {
+    display: block;
+    font-family: var(--cell-font);
+    font-size: 7px;
+    letter-spacing: 0.1em;
+    color: var(--violet);
+  }
+  .hud .v {
+    display: block;
+    margin-top: 5px;
+    font-size: clamp(18px, 5.2vw, 23px);
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    color: var(--pale);
+  }
+  .hud .hull .v { color: var(--cyan); letter-spacing: 0.06em; }
+  .hud .hull .v.low { color: var(--rose); }
+  .hud .quota .v { color: var(--green); letter-spacing: 0.04em; }
+  .hud .best .v { color: var(--amber); }
+  .hud .v.bump { animation: bump 240ms steps(3) 1; }
+  @keyframes bump { 50% { transform: scale(1.22); } }
+
+  /* ---- screen ---- */
+  .stage { flex: 1 1 0; min-height: 0; display: flex; align-items: center; justify-content: center; }
+  .screen {
+    position: relative;
+    border: 2px solid var(--bezel);
+    border-radius: 10px;
+    background: #0d0f2a;
+    box-shadow:
+      0 0 0 4px #14152c,
+      0 0 40px rgba(111, 232, 255, 0.12) inset,
+      0 10px 34px rgba(0, 0, 0, 0.62);
+    overflow: hidden;
+    touch-action: none;
+    cursor: crosshair;
+  }
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+  }
+
+  .scan, .vignette { position: absolute; inset: 0; pointer-events: none; }
+  .scan {
+    background: repeating-linear-gradient(to bottom, rgba(0,0,0,0.26) 0 1px, rgba(0,0,0,0) 1px 3px);
+    mix-blend-mode: multiply;
+  }
+  .vignette {
+    background: radial-gradient(112% 112% at 50% 45%, transparent 52%, rgba(0,0,0,0.72) 100%);
+  }
+
+  .overlay {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-content: center;
+    gap: 11px;
+    text-align: center;
+    padding: 18px;
+    background: rgba(7, 8, 22, 0.88);
+    z-index: 3;
+  }
+  .overlay h2 {
+    margin: 0;
+    font-family: var(--cell-font);
+    font-size: clamp(13px, 4.4vw, 19px);
+    letter-spacing: 0.05em;
+    color: var(--cyan);
+    text-shadow: 0 0 10px rgba(111, 232, 255, 0.45);
+  }
+  .overlay h2.over { color: #ff5b5b; text-shadow: 0 0 12px rgba(255, 91, 91, 0.5); }
+  .overlay p { margin: 0; font-size: clamp(16px, 4.2vw, 20px); letter-spacing: 0.06em; color: var(--violet); }
+  .overlay p em { font-style: normal; color: var(--pale); }
+  .blink { animation: blink 1.05s steps(2, start) infinite; }
+  @keyframes blink { 50% { opacity: 0.15; } }
+
+  .banner {
+    position: absolute;
+    left: 0; right: 0;
+    top: 22%;
+    z-index: 2;
+    text-align: center;
+    font-family: var(--cell-font);
+    font-size: clamp(11px, 3.4vw, 15px);
+    letter-spacing: 0.06em;
+    color: var(--amber);
+    text-shadow: 0 2px 0 #000, 0 0 14px rgba(255, 180, 60, 0.5);
+    animation: banner 1.6s ease-out 1 forwards;
+    pointer-events: none;
+  }
+  @keyframes banner {
+    0%   { opacity: 0; transform: translateY(10px) scale(0.92); }
+    18%  { opacity: 1; transform: translateY(0) scale(1); }
+    76%  { opacity: 1; }
+    100% { opacity: 0; }
+  }
+
+  /* ---- controls ---- */
+  .controls { flex: 0 0 auto; display: flex; gap: 8px; touch-action: none; }
+  .controls button {
+    flex: 1 1 0;
+    height: 50px;
+    font: inherit;
+    font-size: 18px;
+    color: var(--pale);
+    background: linear-gradient(180deg, #1c1d38, #101126);
+    border: 1px solid var(--dim);
+    border-radius: 7px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    touch-action: none;
+  }
+  .controls button:active, .controls button.held { background: var(--cyan); color: #101126; border-color: var(--cyan); }
+  .controls .thrust {
+    flex: 1.4 1 0;
+    font-family: var(--cell-font);
+    font-size: 9px;
+    letter-spacing: 0.08em;
+    color: #06202a;
+    background: linear-gradient(180deg, var(--cyan), #2f9fbd);
+    border-color: #a7f2ff;
+  }
+  .controls .thrust:active, .controls .thrust.held {
+    background: linear-gradient(180deg, #fff0c8, var(--amber));
+    color: #2a1a00;
+    border-color: #ffe0a0;
+  }
+
+  .sidekeys { flex: 0 0 auto; display: flex; gap: 6px; justify-content: center; }
+  .sidekeys button {
+    font-family: var(--cell-font);
+    font-size: 7px;
+    letter-spacing: 0.08em;
+    padding: 8px 10px;
+    color: var(--violet);
+    background: #14152c;
+    border: 1px solid var(--dim);
+    border-radius: 5px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .sidekeys button:active, .sidekeys button[aria-pressed="true"] { color: var(--pale); border-color: var(--cyan); }
+
+  button:focus-visible, .screen:focus-visible { outline: 2px solid var(--pale); outline-offset: 2px; }
+
+  .hint {
+    flex: 0 0 auto;
+    margin: 0;
+    text-align: center;
+    font-size: 15px;
+    letter-spacing: 0.08em;
+    color: var(--violet);
+    opacity: 0.65;
+  }
+
+  @media (max-height: 700px) {
+    .marquee p, .hint { display: none; }
+    .controls button { height: 44px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .blink, .hud .v.bump, .banner { animation: none; }
+  }
+</style>
+</head>
+<body>
+<div class="cabinet">
+  <header class="marquee">
+    <h1>G&Ouml;KTA&#350;I</h1>
+    <p>Cabinet No. 10 &mdash; 1980</p>
+  </header>
+
+  <div class="hud">
+    <div class="hull"><span class="k">HULL</span><span class="v" id="hHull">&#9670;&#9670;&#9670;</span></div>
+    <div><span class="k">SCORE</span><span class="v" id="hScore">0</span></div>
+    <div class="quota"><span class="k" id="hWave">WAVE 1</span><span class="v" id="hQuota">0/3</span></div>
+    <div class="best"><span class="k">BEST</span><span class="v" id="hBest">0</span></div>
+  </div>
+
+  <div class="stage" id="stage">
+    <div class="screen" id="screen" tabindex="0" aria-label="Salvage tug game screen">
+      <canvas id="view"></canvas>
+      <div class="scan"></div>
+      <div class="vignette"></div>
+      <div class="overlay" id="overlay">
+        <h2 id="ovTitle">INSERT COIN</h2>
+        <p id="ovBody">Push rocks into the ring.</p>
+        <p class="blink" id="ovBlink">&#9654; PRESS START</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button data-hold="left" aria-label="Rotate left">&#9664;</button>
+    <button data-hold="right" aria-label="Rotate right">&#9654;</button>
+    <button class="thrust" data-hold="thrust" id="btnThrust">THRUST</button>
+  </div>
+
+  <div class="sidekeys">
+    <button id="btnPause">PAUSE</button>
+    <button id="btnSound" aria-pressed="true">SOUND ON</button>
+    <button id="btnReset">RESTART</button>
+  </div>
+
+  <p class="hint">Lean on a rock, do not ram it &middot; a slow push banks it whole &middot; P pauses</p>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ---------------- constants (internal pixels) ---------------- */
+  var VW = 180;
+  var VH = 240;                 // recomputed by fit()
+
+  var ROT = 2.7;                // rad/s
+  var THRUST_ACC = 58;          // px/s^2
+  var MAXV = 96;                // the tug never goes faster than this
+  var SHATTER = 40;             // closing speed that breaks a rock and dents the hull
+  var IFRAMES = 1.2;
+  var START_HULL = 3;
+  var RING_R = 24;
+
+  // tier 3 is a boulder, tier 1 is gravel. Colour is the size read-out.
+  var TIER = [
+    null,
+    { r: 4.5,  pts: 12,  m: 1.0 },
+    { r: 8.5,  pts: 45,  m: 2.3 },
+    { r: 14.0, pts: 200, m: 4.4 }
+  ];
+  var ROCK_PAL = ["", "#6f7bb5", "#8d7fb8", "#b98a72"];
+  var ROCK_LIT = ["", "#aab5e8", "#c0b2e8", "#e6bd9c"];
+
+  var canvas = document.getElementById("view");
+  var ctx = canvas.getContext("2d");
+  var screenEl = document.getElementById("screen");
+  var stageEl = document.getElementById("stage");
+  var overlay = document.getElementById("overlay");
+  var ovTitle = document.getElementById("ovTitle");
+  var ovBody = document.getElementById("ovBody");
+  var ovBlink = document.getElementById("ovBlink");
+  var hHull = document.getElementById("hHull");
+  var hScore = document.getElementById("hScore");
+  var hWave = document.getElementById("hWave");
+  var hQuota = document.getElementById("hQuota");
+  var hBest = document.getElementById("hBest");
+  var btnPause = document.getElementById("btnPause");
+  var btnSound = document.getElementById("btnSound");
+  var btnReset = document.getElementById("btnReset");
+
+  ctx.imageSmoothingEnabled = false;
+
+  var state = "idle";
+  var rocks, bits, stars, tug, ring;
+  var score, best, hull, wave, quota, banked, iframe, shake, elapsed, ringT, thrustHum;
+  var bannerEl;
+  var soundOn = true;
+  var held = { left: false, right: false, thrust: false };
+
+  /* ---------------- persistence ---------------- */
+  function loadBest() {
+    try { return parseInt(localStorage.getItem("goktasi-best"), 10) || 0; } catch (e) { return 0; }
+  }
+  function saveBest(v) { try { localStorage.setItem("goktasi-best", String(v)); } catch (e) {} }
+  function loadSound() {
+    try { var v = localStorage.getItem("goktasi-sound"); return v === null ? true : v === "1"; }
+    catch (e) { return true; }
+  }
+  function saveSound(v) { try { localStorage.setItem("goktasi-sound", v ? "1" : "0"); } catch (e) {} }
+
+  /* ---------------- audio ---------------- */
+  var actx = null;
+  function ac() {
+    try {
+      if (!actx) {
+        var AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return null;
+        actx = new AC();
+      }
+      if (actx.state === "suspended") actx.resume();
+      return actx;
+    } catch (e) { return null; }
+  }
+  function blip(freq, dur, type, vol) {
+    if (!soundOn) return;
+    var a = ac();
+    if (!a) return;
+    try {
+      var o = a.createOscillator(), g = a.createGain();
+      o.type = type || "square";
+      o.frequency.setValueAtTime(freq, a.currentTime);
+      g.gain.setValueAtTime(vol || 0.05, a.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.0001, a.currentTime + dur);
+      o.connect(g); g.connect(a.destination);
+      o.start(); o.stop(a.currentTime + dur);
+    } catch (e) {}
+  }
+  // the crunch of a hard hit: it should sound like a mistake
+  function crunch() {
+    if (!soundOn) return;
+    var a = ac();
+    if (!a) return;
+    try {
+      var o = a.createOscillator(), g = a.createGain();
+      o.type = "sawtooth";
+      o.frequency.setValueAtTime(220, a.currentTime);
+      o.frequency.exponentialRampToValueAtTime(48, a.currentTime + 0.3);
+      g.gain.setValueAtTime(0.075, a.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.0001, a.currentTime + 0.32);
+      o.connect(g); g.connect(a.destination);
+      o.start(); o.stop(a.currentTime + 0.32);
+    } catch (e) {}
+  }
+
+  /* ---------------- layout ---------------- */
+  function fit() {
+    var r = stageEl.getBoundingClientRect();
+    var availW = r.width - 4, availH = r.height - 4;
+    if (availW < 40 || availH < 40) return;
+
+    var aspect = Math.max(0.68, Math.min(1.5, availW / availH));
+    var w = Math.min(availW, availH * aspect);
+    var h = w / aspect;
+
+    screenEl.style.width = Math.floor(w) + 4 + "px";
+    screenEl.style.height = Math.floor(h) + 4 + "px";
+
+    var nextVH = Math.max(140, Math.min(265, Math.round(VW * h / w)));
+    if (nextVH !== VH && rocks) {
+      // keep everything inside the new field rather than losing it off the bottom
+      var k = nextVH / VH;
+      for (var i = 0; i < rocks.length; i++) rocks[i].y *= k;
+      tug.y *= k;
+    }
+    VH = nextVH;
+    canvas.width = VW;
+    canvas.height = VH;
+    ctx.imageSmoothingEnabled = false;
+  }
+
+  /* ---------------- torus helpers ---------------- */
+  function wdx(a, b) { var d = a - b; if (d > VW / 2) d -= VW; else if (d < -VW / 2) d += VW; return d; }
+  function wdy(a, b) { var d = a - b; if (d > VH / 2) d -= VH; else if (d < -VH / 2) d += VH; return d; }
+  function wrapPos(o) {
+    o.x = ((o.x % VW) + VW) % VW;
+    o.y = ((o.y % VH) + VH) % VH;
+  }
+
+  /* ---------------- world ---------------- */
+  function makeRock(x, y, tier) {
+    var t = TIER[tier];
+    var verts = [], n = 7 + ((Math.random() * 3) | 0);
+    for (var i = 0; i < n; i++) verts.push(0.72 + Math.random() * 0.45);
+    return {
+      x: x, y: y, r: t.r, tier: tier, m: t.m, verts: verts,
+      rot: Math.random() * 6.28, spin: (Math.random() - 0.5) * 1.1,
+      vx: 0, vy: 0, hot: 0, grace: 0
+    };
+  }
+
+  function spawnRock(tier) {
+    var x, y, tries = 0;
+    do {
+      x = Math.random() * VW;
+      y = Math.random() * VH;
+      tries++;
+    } while (tries < 40 && Math.hypot(wdx(x, tug.x), wdy(y, tug.y)) < 46);
+    var r = makeRock(x, y, tier);
+    var a = Math.random() * 6.28, sp = 5 + Math.random() * 13;
+    r.vx = Math.cos(a) * sp;
+    r.vy = Math.sin(a) * sp;
+    rocks.push(r);
+    return r;
+  }
+
+  function makeStars() {
+    stars = [];
+    for (var i = 0; i < 46; i++) {
+      stars.push({ x: Math.random() * VW, y: Math.random() * VH, b: 0.25 + Math.random() * 0.7 });
+    }
+  }
+
+  function reset(startNow) {
+    fit();
+    rocks = [];
+    bits = [];
+    tug = { x: VW / 2, y: VH / 2, vx: 0, vy: 0, a: -Math.PI / 2, r: 4.6, burn: 0 };
+    ring = { x: VW / 2, y: VH / 2, flash: 0 };
+    makeStars();
+    score = 0;
+    hull = START_HULL;
+    wave = 1;
+    quota = 3;
+    banked = 0;
+    iframe = 0;
+    shake = 0;
+    elapsed = 0;
+    ringT = Math.random() * 30;
+    thrustHum = 0;
+    best = loadBest();
+    moveRing(0);
+    spawnRock(3); spawnRock(3); spawnRock(3); spawnRock(2);
+    setState(startNow ? "running" : "idle");
+    syncHud();
+    render(0);
+  }
+
+  function moveRing(dt) {
+    ringT += dt;
+    ring.x = VW / 2 + Math.cos(ringT * 0.21) * Math.max(0, VW / 2 - RING_R - 6);
+    ring.y = VH / 2 + Math.sin(ringT * 0.29) * Math.max(0, VH / 2 - RING_R - 6);
+  }
+
+  /* ---------------- collisions ---------------- */
+  // A rock is never destroyed. Hit it too hard and it simply comes apart into
+  // pieces that are worth less and far harder to herd.
+  function shatter(rock, force) {
+    var pieces = 2 + ((Math.random() * 2) | 0);          // 2 or 3
+    var lower = rock.tier - 1;
+    for (var i = 0; i < pieces; i++) {
+      var a = Math.random() * 6.28 + i * 2.1;
+      var p = makeRock(rock.x + Math.cos(a) * rock.r * 0.5,
+                       rock.y + Math.sin(a) * rock.r * 0.5, lower);
+      var kick = 14 + Math.random() * 16 + force * 0.18;
+      p.vx = rock.vx + Math.cos(a) * kick;
+      p.vy = rock.vy + Math.sin(a) * kick;
+      p.grace = 0.4;
+      wrapPos(p);
+      rocks.push(p);
+    }
+    for (var d = 0; d < 10; d++) {
+      var da = Math.random() * 6.28, ds = 10 + Math.random() * 42;
+      bits.push({
+        x: rock.x, y: rock.y, vx: Math.cos(da) * ds, vy: Math.sin(da) * ds,
+        t: 0.3 + Math.random() * 0.4, c: ROCK_LIT[rock.tier]
+      });
+    }
+  }
+
+  function hullHit() {
+    if (iframe > 0) return;
+    hull--;
+    iframe = IFRAMES;
+    shake = 0.75;
+    bump(hHull);
+    syncHud();
+    if (hull <= 0) { gameOver(); return; }
+    blip(150, 0.3, "sawtooth", 0.07);
+  }
+
+  function tugVsRock(r) {
+    var nx = wdx(r.x, tug.x), ny = wdy(r.y, tug.y);
+    var d = Math.hypot(nx, ny);
+    var sum = r.r + tug.r;
+    if (d >= sum || d < 0.0001) return;
+
+    nx /= d; ny /= d;
+    var closing = (tug.vx - r.vx) * nx + (tug.vy - r.vy) * ny;
+
+    if (closing > 0) {
+      var hard = closing > SHATTER && r.grace <= 0;
+      var e = hard ? 0.35 : 0.1;
+      var J = (1 + e) * closing * r.m / (1 + r.m);
+      r.vx += nx * J / r.m; r.vy += ny * J / r.m;
+      tug.vx -= nx * J;     tug.vy -= ny * J;
+
+      if (hard) {
+        crunch();
+        r.hot = 0.35;
+        if (r.tier > 1) {
+          shatter(r, closing);
+          r.dead = true;
+        } else {
+          shake = Math.max(shake, 0.4);
+        }
+        hullHit();
+        banner("TOO HARD");
+      } else if (closing > 5) {
+        blip(190 + closing * 3, 0.05, "square", 0.028);
+      }
+    }
+
+    // the tug is the light one: it gets pushed out of the overlap
+    var over = sum - d;
+    tug.x -= nx * over; tug.y -= ny * over;
+    wrapPos(tug);
+  }
+
+  function rockVsRock(a, b) {
+    var nx = wdx(b.x, a.x), ny = wdy(b.y, a.y);
+    var d = Math.hypot(nx, ny);
+    var sum = a.r + b.r;
+    if (d >= sum || d < 0.0001) return;
+    nx /= d; ny /= d;
+
+    var closing = (a.vx - b.vx) * nx + (a.vy - b.vy) * ny;
+    if (closing > 0) {
+      var J = 1.5 * closing / (1 / a.m + 1 / b.m);
+      a.vx -= nx * J / a.m; a.vy -= ny * J / a.m;
+      b.vx += nx * J / b.m; b.vy += ny * J / b.m;
+    }
+    var over = (sum - d) * 0.5;
+    var wa = b.m / (a.m + b.m), wb = a.m / (a.m + b.m);
+    a.x -= nx * over * 2 * wa; a.y -= ny * over * 2 * wa;
+    b.x += nx * over * 2 * wb; b.y += ny * over * 2 * wb;
+    wrapPos(a); wrapPos(b);
+  }
+
+  /* ---------------- scoring ---------------- */
+  function bankRock(i) {
+    var r = rocks[i];
+    var pts = TIER[r.tier].pts;
+    score += pts;
+    banked++;
+    ring.flash = 0.5;
+    rocks.splice(i, 1);
+    for (var d = 0; d < 9; d++) {
+      var a = (d / 9) * 6.28;
+      bits.push({ x: ring.x, y: ring.y, vx: Math.cos(a) * 34, vy: Math.sin(a) * 34, t: 0.45, c: "#a8ffd0" });
+    }
+    blip(360 + r.tier * 210, 0.13, "triangle", 0.06);
+    if (r.tier === 3) banner("WHOLE +" + pts);
+    if (score > best) { best = score; saveBest(best); }
+    bump(hScore);
+    bump(hQuota);
+    syncHud();
+    if (banked >= quota) nextWave();
+    topUp();
+  }
+
+  // there is always something left to push
+  function topUp() {
+    while (rocks.length < 3) spawnRock(2 + ((Math.random() * 2) | 0));
+  }
+
+  function nextWave() {
+    wave++;
+    banked = 0;
+    quota = 2 + wave;
+    score += wave * 100;
+    spawnRock(3);
+    spawnRock(wave % 2 === 0 ? 3 : 2);
+    if (hull < START_HULL) { hull++; banner("WAVE " + wave + " · HULL +1"); }
+    else banner("WAVE " + wave);
+    blip(520, 0.1, "triangle", 0.06);
+    setTimeout(function () { blip(780, 0.16, "triangle", 0.06); }, 120);
+    if (score > best) { best = score; saveBest(best); }
+    syncHud();
+  }
+
+  function gameOver() {
+    if (state !== "running") return;
+    crunch();
+    setTimeout(function () { blip(110, 0.4, "sawtooth", 0.07); }, 180);
+    if (score > best) { best = score; saveBest(best); }
+    setState("over");
+    syncHud();
+  }
+
+  /* ---------------- update ---------------- */
+  function update(dt) {
+    var i, j;
+    elapsed += dt;
+    if (iframe > 0) iframe -= dt;
+    if (shake > 0) shake = Math.max(0, shake - dt * 2.4);
+    if (ring.flash > 0) ring.flash -= dt;
+    moveRing(dt);
+
+    // the tug: rotate, thrust, and nothing else
+    if (held.left) tug.a -= ROT * dt;
+    if (held.right) tug.a += ROT * dt;
+    tug.burn = 0;
+    thrustHum -= dt;
+    if (held.thrust) {
+      tug.vx += Math.cos(tug.a) * THRUST_ACC * dt;
+      tug.vy += Math.sin(tug.a) * THRUST_ACC * dt;
+      tug.burn = 1;
+      if (thrustHum <= 0) { blip(80 + Math.random() * 40, 0.05, "sawtooth", 0.016); thrustHum = 0.1; }
+    }
+    var sp = Math.hypot(tug.vx, tug.vy);
+    if (sp > MAXV) { tug.vx = tug.vx / sp * MAXV; tug.vy = tug.vy / sp * MAXV; }
+    tug.x += tug.vx * dt;
+    tug.y += tug.vy * dt;
+    wrapPos(tug);
+
+    // no friction anywhere: every shove you make is still out there
+    for (i = 0; i < rocks.length; i++) {
+      var r = rocks[i];
+      r.x += r.vx * dt;
+      r.y += r.vy * dt;
+      r.rot += r.spin * dt;
+      if (r.hot > 0) r.hot -= dt;
+      if (r.grace > 0) r.grace -= dt;
+      wrapPos(r);
+    }
+
+    for (i = 0; i < rocks.length; i++) tugVsRock(rocks[i]);
+    for (i = 0; i < rocks.length; i++) {
+      for (j = i + 1; j < rocks.length; j++) rockVsRock(rocks[i], rocks[j]);
+    }
+
+    for (i = rocks.length - 1; i >= 0; i--) if (rocks[i].dead) rocks.splice(i, 1);
+
+    // through the ring and it is banked
+    for (i = rocks.length - 1; i >= 0; i--) {
+      var rk = rocks[i];
+      var d = Math.hypot(wdx(rk.x, ring.x), wdy(rk.y, ring.y));
+      if (d + rk.r * 0.5 < RING_R) { bankRock(i); if (state !== "running") return; }
+    }
+
+    if (rocks.length > 34) rocks.length = 34;   // a runaway field is still a field
+
+    for (i = bits.length - 1; i >= 0; i--) {
+      var b = bits[i];
+      b.x += b.vx * dt; b.y += b.vy * dt;
+      b.t -= dt;
+      if (b.t <= 0) bits.splice(i, 1);
+    }
+  }
+
+  /* ---------------- rendering ---------------- */
+  function atWrapped(x, y, rad, fn) {
+    for (var ox = -1; ox <= 1; ox++) {
+      for (var oy = -1; oy <= 1; oy++) {
+        var px = x + ox * VW, py = y + oy * VH;
+        if (px + rad < 0 || px - rad > VW || py + rad < 0 || py - rad > VH) continue;
+        fn(px, py);
+      }
+    }
+  }
+
+  function render(now) {
+    if (!rocks) return;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.fillStyle = "#0d0f2a";
+    ctx.fillRect(0, 0, VW, VH);
+
+    ctx.save();
+    if (shake > 0) {
+      ctx.translate(Math.round((Math.random() - 0.5) * shake * 5),
+                    Math.round((Math.random() - 0.5) * shake * 4));
+    }
+
+    drawStars(now);
+    drawRing(now);
+    drawRocks(now);
+    drawBits();
+    drawTug(now);
+
+    ctx.restore();
+  }
+
+  function drawStars(now) {
+    for (var i = 0; i < stars.length; i++) {
+      var s = stars[i];
+      if (s.y >= VH) continue;
+      var tw = 0.7 + 0.3 * Math.sin(now / 520 + i);
+      ctx.globalAlpha = s.b * tw;
+      ctx.fillStyle = "#c8d7ff";
+      ctx.fillRect(s.x | 0, s.y | 0, 1, 1);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function drawRing(now) {
+    var lit = ring.flash > 0;
+    var col = lit ? "#d8ffe8" : "#66e29a";
+    var step = 0.26;
+    var spin = now / 2600;
+    for (var a = 0; a < 6.283; a += step) {
+      var px = Math.round(ring.x + Math.cos(a + spin) * RING_R);
+      var py = Math.round(ring.y + Math.sin(a + spin) * RING_R);
+      ctx.fillStyle = col;
+      ctx.fillRect(px - 1, py - 1, 2, 2);
+    }
+    // four corner ticks, so the mouth reads as a mouth
+    ctx.fillStyle = lit ? "#ffffff" : "rgba(102,226,154,0.55)";
+    for (var q = 0; q < 4; q++) {
+      var qa = q * 1.5708 + 0.7854;
+      ctx.fillRect(Math.round(ring.x + Math.cos(qa) * (RING_R - 5)) - 1,
+                   Math.round(ring.y + Math.sin(qa) * (RING_R - 5)) - 1, 2, 2);
+    }
+    ctx.fillStyle = lit ? "rgba(216,255,232,0.5)" : "rgba(102,226,154,0.22)";
+    ctx.fillRect(Math.round(ring.x) - 1, Math.round(ring.y) - 1, 2, 2);
+  }
+
+  function drawRocks(now) {
+    for (var i = 0; i < rocks.length; i++) {
+      var r = rocks[i];
+      // a rock that would break on contact right now is outlined in warning amber
+      var rel = Math.hypot(tug.vx - r.vx, tug.vy - r.vy);
+      var near = Math.hypot(wdx(r.x, tug.x), wdy(r.y, tug.y)) < r.r + tug.r + 34;
+      var danger = r.hot > 0 || (near && rel > SHATTER);
+      drawOneRock(r, danger);
+    }
+  }
+
+  function drawOneRock(r, danger) {
+    var n = r.verts.length;
+    atWrapped(r.x, r.y, r.r + 3, function (cx, cy) {
+      ctx.beginPath();
+      for (var i = 0; i <= n; i++) {
+        var a = r.rot + (i % n) * 6.28318 / n;
+        var rad = r.r * r.verts[i % n];
+        var px = Math.round(cx + Math.cos(a) * rad);
+        var py = Math.round(cy + Math.sin(a) * rad);
+        if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      ctx.fillStyle = ROCK_PAL[r.tier];
+      ctx.fill();
+
+      if (danger) {
+        ctx.strokeStyle = r.hot > 0 ? "#fff0c8" : "#ffb43c";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+
+      // sun from the upper left: one lit facet, one shadowed
+      var f = Math.max(2, Math.round(r.r * 0.34));
+      ctx.fillStyle = ROCK_LIT[r.tier];
+      ctx.fillRect(Math.round(cx - r.r * 0.42), Math.round(cy - r.r * 0.46), f, f);
+      ctx.fillStyle = "rgba(0,0,0,0.32)";
+      ctx.fillRect(Math.round(cx + r.r * 0.12), Math.round(cy + r.r * 0.16), f, f);
+    });
+  }
+
+  function drawBits() {
+    for (var i = 0; i < bits.length; i++) {
+      var b = bits[i];
+      ctx.globalAlpha = Math.min(1, b.t * 2.4);
+      ctx.fillStyle = b.c;
+      ctx.fillRect(Math.round(b.x), Math.round(b.y), 1, 1);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function drawTug(now) {
+    var blinking = iframe > 0 && Math.floor(now / 90) % 2 === 0;
+    var sp = Math.hypot(tug.vx, tug.vy);
+    var fast = sp > SHATTER;
+    var body = blinking ? "#ff9a9a" : (fast ? "#ffb43c" : "#7ce8ff");
+    var c = Math.cos(tug.a), s = Math.sin(tug.a);
+    var L = tug.r * 2.15, B = tug.r * 1.15;
+    var burn = tug.burn;
+
+    // where the drift is taking you, and how hard you are travelling
+    if (sp > 3) {
+      var ux = tug.vx / sp, uy = tug.vy / sp;
+      for (var d = 1; d <= 4; d++) {
+        var t = d * (5 + sp * 0.09);
+        ctx.globalAlpha = (1 - d / 5) * 0.75;
+        ctx.fillStyle = fast ? "#ffb43c" : "rgba(124,232,255,0.9)";
+        ctx.fillRect(Math.round(tug.x + ux * t), Math.round(tug.y + uy * t), 1, 1);
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    atWrapped(tug.x, tug.y, L * 2, function (cx, cy) {
+      function P(fx, fy) { return [cx + c * fx - s * fy, cy + s * fx + c * fy]; }
+      var nose = P(L, 0), lw = P(-L * 0.6, -B), rw = P(-L * 0.6, B), tail = P(-L * 0.25, 0);
+
+      if (burn) {
+        var fl = P(-L * (0.5 + Math.random() * 0.9), 0);
+        ctx.strokeStyle = Math.random() < 0.5 ? "#ffca57" : "#ff8a3c";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(Math.round(tail[0]), Math.round(tail[1]));
+        ctx.lineTo(Math.round(fl[0]), Math.round(fl[1]));
+        ctx.stroke();
+      }
+
+      ctx.beginPath();
+      ctx.moveTo(Math.round(nose[0]), Math.round(nose[1]));
+      ctx.lineTo(Math.round(lw[0]), Math.round(lw[1]));
+      ctx.lineTo(Math.round(tail[0]), Math.round(tail[1]));
+      ctx.lineTo(Math.round(rw[0]), Math.round(rw[1]));
+      ctx.closePath();
+      ctx.fillStyle = body;
+      ctx.fill();
+      // the push plate on the nose
+      var pl = P(L * 0.55, 0);
+      ctx.fillStyle = "#e8ecff";
+      ctx.fillRect(Math.round(pl[0]) - 1, Math.round(pl[1]) - 1, 2, 2);
+    });
+  }
+
+  /* ---------------- hud + overlay ---------------- */
+  function bump(el) {
+    el.classList.remove("bump");
+    void el.offsetWidth;
+    el.classList.add("bump");
+  }
+
+  function syncHud() {
+    var d = "";
+    for (var i = 0; i < Math.max(0, hull); i++) d += "◆";
+    hHull.textContent = d || "–";
+    hHull.className = "v" + (hull <= 1 ? " low" : "");
+    hScore.textContent = score;
+    hWave.textContent = "WAVE " + wave;
+    hQuota.textContent = banked + "/" + quota;
+    hBest.textContent = best;
+  }
+
+  function banner(text) {
+    if (bannerEl && bannerEl.parentNode) bannerEl.parentNode.removeChild(bannerEl);
+    bannerEl = document.createElement("div");
+    bannerEl.className = "banner";
+    bannerEl.textContent = text;
+    screenEl.appendChild(bannerEl);
+    var mine = bannerEl;
+    setTimeout(function () { if (mine.parentNode) mine.parentNode.removeChild(mine); }, 1700);
+  }
+
+  function setState(next) {
+    state = next;
+    btnPause.textContent = state === "paused" ? "RESUME" : "PAUSE";
+    if (state === "running") { overlay.hidden = true; return; }
+    overlay.hidden = false;
+    ovTitle.classList.toggle("over", state === "over");
+
+    if (state === "idle") {
+      ovTitle.textContent = "INSERT COIN";
+      ovBody.innerHTML = "A salvage tug, no guns. Rotate and thrust, and <em>push</em> rocks " +
+                         "into the collector ring. Lean on one gently and it goes in whole; " +
+                         "ram it and it <em>shatters</em> into pieces worth far less &mdash; and " +
+                         "dents your hull. Nothing slows down, and the edges wrap, so every " +
+                         "bad shove <em>comes back around</em>.";
+      ovBlink.innerHTML = "&#9654; PRESS START";
+    } else if (state === "paused") {
+      ovTitle.textContent = "PAUSED";
+      ovBody.textContent = "Engines idle. The field is not.";
+      ovBlink.innerHTML = "&#9654; TAP OR PRESS P";
+    } else if (state === "over") {
+      ovTitle.textContent = "HULL BREACHED";
+      ovBody.innerHTML = "Wave <em>" + wave + "</em> &middot; scored <em>" + score + "</em>" +
+                         (score >= best && score > 0 ? " &middot; <em>NEW BEST</em>"
+                                                     : " &middot; best <em>" + best + "</em>");
+      ovBlink.innerHTML = "&#9654; TAP TO TOW AGAIN";
+    }
+  }
+
+  function start() { lastTs = 0; setState("running"); }
+  function togglePause() {
+    if (state === "running") setState("paused");
+    else if (state === "paused") start();
+  }
+
+  /* ---------------- loop ---------------- */
+  var lastTs = 0;
+  function frame(now) {
+    requestAnimationFrame(frame);          // queued first: one bad frame is not fatal
+    var dt = lastTs ? Math.min(0.05, (now - lastTs) / 1000) : 0;
+    lastTs = now;
+    if (state === "running") update(dt);
+    render(now);
+  }
+
+  /* ---------------- input ---------------- */
+  function poke() {
+    if (state === "idle" || state === "paused") { start(); return true; }
+    if (state === "over") { reset(true); return true; }
+    return false;
+  }
+
+  screenEl.addEventListener("pointerdown", function (ev) {
+    ev.preventDefault();
+    poke();
+    try { screenEl.focus({ preventScroll: true }); } catch (e) {}
+  });
+  screenEl.addEventListener("contextmenu", function (ev) { ev.preventDefault(); });
+
+  var KEYS = {
+    ArrowLeft: "left", a: "left", A: "left",
+    ArrowRight: "right", d: "right", D: "right",
+    ArrowUp: "thrust", w: "thrust", W: "thrust", " ": "thrust"
+  };
+  window.addEventListener("keydown", function (ev) {
+    var k = KEYS[ev.key];
+    if (k) {
+      ev.preventDefault();
+      if (poke()) { if (state !== "running") return; }
+      held[k] = true;
+      return;
+    }
+    if (ev.key === "Enter") { ev.preventDefault(); poke(); }
+    else if (ev.key === "p" || ev.key === "P") { ev.preventDefault(); togglePause(); }
+    else if (ev.key === "r" || ev.key === "R") { ev.preventDefault(); reset(true); }
+  });
+  window.addEventListener("keyup", function (ev) {
+    var k = KEYS[ev.key];
+    if (k) { ev.preventDefault(); held[k] = false; }
+  });
+  window.addEventListener("blur", function () { held.left = held.right = held.thrust = false; });
+
+  Array.prototype.forEach.call(document.querySelectorAll("[data-hold]"), function (b) {
+    var k = b.getAttribute("data-hold");
+    var press = function (ev) {
+      ev.preventDefault();
+      poke();
+      held[k] = true;
+      b.classList.add("held");
+      if (b.setPointerCapture && ev.pointerId !== undefined) {
+        try { b.setPointerCapture(ev.pointerId); } catch (e) {}
+      }
+    };
+    var rel = function (ev) { if (ev) ev.preventDefault(); held[k] = false; b.classList.remove("held"); };
+    b.addEventListener("pointerdown", press);
+    b.addEventListener("pointerup", rel);
+    b.addEventListener("pointercancel", rel);
+    b.addEventListener("pointerleave", rel);
+    b.addEventListener("click", function (ev) { ev.preventDefault(); });
+  });
+
+  btnPause.addEventListener("click", togglePause);
+  btnReset.addEventListener("click", function () { reset(true); });
+  btnSound.addEventListener("click", function () {
+    soundOn = !soundOn;
+    saveSound(soundOn);
+    btnSound.textContent = soundOn ? "SOUND ON" : "SOUND OFF";
+    btnSound.setAttribute("aria-pressed", soundOn ? "true" : "false");
+    if (soundOn) blip(620, 0.05);
+  });
+
+  document.addEventListener("visibilitychange", function () {
+    if (document.hidden && state === "running") setState("paused");
+  });
+
+  /* ---------------- boot ---------------- */
+  function boot(saved) {
+    soundOn = loadSound();
+    btnSound.textContent = soundOn ? "SOUND ON" : "SOUND OFF";
+    btnSound.setAttribute("aria-pressed", soundOn ? "true" : "false");
+    fit();
+    if (window.ResizeObserver) new ResizeObserver(fit).observe(stageEl);
+    window.addEventListener("resize", fit);
+    reset(false);
+    if (saved && saved.best > best) { best = saved.best; saveBest(best); }
+    syncHud();
+    requestAnimationFrame(frame);
+  }
+
+  if (window.claude && window.claude.hot) {
+    try { window.claude.hot.snapshot(function () { return { best: best || 0 }; }); } catch (e) {}
+  }
+  if (window.claude && window.claude.hot && window.claude.hot.ready) {
+    window.claude.hot.ready(boot);
+  } else {
+    boot({});
+  }
+})();
+</script>
+</body>
+</html>

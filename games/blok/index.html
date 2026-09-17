@@ -1,0 +1,1158 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="description" content="BLOK - falling wool that weaves a kilim.">
+<meta name="theme-color" content="#08090e">
+<style>
+  :root {
+    color-scheme: dark;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  body { margin: 0; }
+  img { max-width: 100%; }
+  [hidden] { display: none !important; }
+</style>
+<title>BLOK</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap">
+<style>
+  :root {
+    --ink:    #130b06;
+    --bezel:  #3a2415;
+    --madder: #c4503f;
+    --saffron:#d8a12b;
+    --dim:    #4d3018;
+    --cream:  #f0e2c2;
+    --indigo: #6b81c4;
+
+    --cell-font: "Press Start 2P", ui-monospace, "Courier New", monospace;
+    --read-font: "VT323", ui-monospace, "Courier New", monospace;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+
+  body {
+    margin: 0;
+    background:
+      radial-gradient(120% 90% at 50% 0%, #3a1e10 0%, var(--ink) 62%),
+      var(--ink);
+    color: var(--cream);
+    font-family: var(--read-font);
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+
+  .cabinet {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    padding: 12px 16px;
+    padding-block: 10px 12px;
+    max-width: 640px;
+    margin-inline: auto;
+  }
+
+  /* ---- marquee ---- */
+  .marquee { text-align: center; flex: 0 0 auto; }
+  .marquee h1 {
+    margin: 0;
+    font-family: var(--cell-font);
+    font-size: clamp(15px, 5.4vw, 26px);
+    letter-spacing: 0.12em;
+    color: var(--saffron);
+    text-shadow: 0 0 8px rgba(216, 161, 43, 0.45), 0 0 24px rgba(196, 80, 63, 0.35);
+    text-wrap: balance;
+  }
+  .marquee p {
+    margin: 4px 0 0;
+    font-size: clamp(13px, 3.6vw, 17px);
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--madder);
+    opacity: 0.9;
+  }
+
+  /* ---- hud ---- */
+  .hud {
+    flex: 0 0 auto;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 5px;
+    border: 1px solid var(--dim);
+    background: linear-gradient(180deg, rgba(216,161,43,0.08), transparent);
+    padding: 6px 3px;
+  }
+  .hud div { text-align: center; }
+  .hud .k {
+    display: block;
+    font-family: var(--cell-font);
+    font-size: 7px;
+    letter-spacing: 0.1em;
+    color: var(--madder);
+  }
+  .hud .v {
+    display: block;
+    margin-top: 5px;
+    font-size: clamp(18px, 5.2vw, 23px);
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    color: var(--cream);
+  }
+  .hud .motif .v { color: var(--saffron); }
+  .hud .best .v { color: var(--madder); }
+  .hud .v.bump { animation: bump 240ms steps(3) 1; }
+  @keyframes bump { 50% { transform: scale(1.22); } }
+
+  /* ---- screen ---- */
+  .stage { flex: 1 1 0; min-height: 0; display: flex; align-items: center; justify-content: center; }
+  .screen {
+    position: relative;
+    border: 2px solid var(--bezel);
+    border-radius: 10px;
+    background: #1c1109;
+    box-shadow:
+      0 0 0 4px #25160c,
+      0 0 40px rgba(216, 161, 43, 0.12) inset,
+      0 10px 34px rgba(0, 0, 0, 0.6);
+    overflow: hidden;
+    touch-action: none;
+  }
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+  }
+
+  .scan, .vignette { position: absolute; inset: 0; pointer-events: none; }
+  .scan {
+    background: repeating-linear-gradient(to bottom, rgba(0,0,0,0.26) 0 1px, rgba(0,0,0,0) 1px 3px);
+    mix-blend-mode: multiply;
+  }
+  .vignette {
+    background: radial-gradient(112% 112% at 50% 45%, transparent 50%, rgba(0,0,0,0.72) 100%);
+  }
+
+  .overlay {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-content: center;
+    gap: 11px;
+    text-align: center;
+    padding: 18px;
+    background: rgba(18, 9, 4, 0.9);
+    z-index: 3;
+  }
+  .overlay h2 {
+    margin: 0;
+    font-family: var(--cell-font);
+    font-size: clamp(13px, 4.4vw, 19px);
+    letter-spacing: 0.05em;
+    color: var(--saffron);
+    text-shadow: 0 0 10px rgba(216, 161, 43, 0.45);
+  }
+  .overlay h2.over { color: #e2564a; text-shadow: 0 0 12px rgba(226, 86, 74, 0.5); }
+  .overlay p { margin: 0; font-size: clamp(15px, 4.1vw, 20px); letter-spacing: 0.05em; color: var(--madder); }
+  .overlay p em { font-style: normal; color: var(--cream); }
+  .blink { animation: blink 1.05s steps(2, start) infinite; }
+  @keyframes blink { 50% { opacity: 0.15; } }
+
+  .banner {
+    position: absolute;
+    left: 0; right: 0;
+    top: 20%;
+    z-index: 2;
+    text-align: center;
+    font-family: var(--cell-font);
+    font-size: clamp(10px, 3.1vw, 14px);
+    letter-spacing: 0.06em;
+    color: var(--saffron);
+    text-shadow: 0 2px 0 #000, 0 0 14px rgba(216, 161, 43, 0.5);
+    animation: banner 1.6s ease-out 1 forwards;
+    pointer-events: none;
+  }
+  @keyframes banner {
+    0%   { opacity: 0; transform: translateY(10px) scale(0.92); }
+    18%  { opacity: 1; transform: translateY(0) scale(1); }
+    76%  { opacity: 1; }
+    100% { opacity: 0; }
+  }
+
+  /* ---- controls ---- */
+  .controls { flex: 0 0 auto; display: flex; gap: 8px; touch-action: none; }
+  .controls button {
+    flex: 1 1 0;
+    height: 50px;
+    font: inherit;
+    font-size: 19px;
+    color: var(--cream);
+    background: linear-gradient(180deg, #3a2415, #23140b);
+    border: 1px solid var(--dim);
+    border-radius: 7px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    touch-action: none;
+  }
+  .controls button:active, .controls button.held { background: var(--saffron); color: #23140b; border-color: var(--saffron); }
+  .controls .drop {
+    flex: 1.5 1 0;
+    font-family: var(--cell-font);
+    font-size: 9px;
+    letter-spacing: 0.08em;
+    color: #2a1008;
+    background: linear-gradient(180deg, var(--madder), #8e3227);
+    border-color: #e0806f;
+  }
+  .controls .drop:active, .controls .drop.held { background: var(--saffron); border-color: var(--saffron); }
+
+  .sidekeys { flex: 0 0 auto; display: flex; gap: 6px; justify-content: center; }
+  .sidekeys button {
+    font-family: var(--cell-font);
+    font-size: 7px;
+    letter-spacing: 0.08em;
+    padding: 8px 10px;
+    color: var(--madder);
+    background: #23140b;
+    border: 1px solid var(--dim);
+    border-radius: 5px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .sidekeys button:active, .sidekeys button[aria-pressed="true"] { color: var(--cream); border-color: var(--saffron); }
+
+  button:focus-visible, .screen:focus-visible { outline: 2px solid var(--cream); outline-offset: 2px; }
+
+  .hint {
+    flex: 0 0 auto;
+    margin: 0;
+    text-align: center;
+    font-size: 15px;
+    letter-spacing: 0.07em;
+    color: var(--madder);
+    opacity: 0.75;
+  }
+
+  @media (max-height: 700px) {
+    .marquee p, .hint { display: none; }
+    .controls button { height: 44px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .blink, .hud .v.bump, .banner { animation: none; }
+  }
+</style>
+</head>
+<body>
+<div class="cabinet">
+  <header class="marquee">
+    <h1>BLOK</h1>
+    <p>Cabinet No. 11 &mdash; 1984</p>
+  </header>
+
+  <div class="hud">
+    <div><span class="k">SCORE</span><span class="v" id="hScore">0</span></div>
+    <div><span class="k">ROWS</span><span class="v" id="hRows">0</span></div>
+    <div class="motif"><span class="k">MOTIFS</span><span class="v" id="hMotif">0</span></div>
+    <div class="best"><span class="k">BEST</span><span class="v" id="hBest">0</span></div>
+  </div>
+
+  <div class="stage" id="stage">
+    <div class="screen" id="screen" tabindex="0" aria-label="Weaving game screen">
+      <canvas id="view"></canvas>
+      <div class="scan"></div>
+      <div class="vignette"></div>
+      <div class="overlay" id="overlay">
+        <h2 id="ovTitle">INSERT COIN</h2>
+        <p id="ovBody">Weave the falling wool into patterned rows.</p>
+        <p class="blink" id="ovBlink">&#9654; PRESS START</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button data-hold="left" aria-label="Move left">&#9664;</button>
+    <button data-hold="right" aria-label="Move right">&#9654;</button>
+    <button id="btnRotate" aria-label="Turn the shuttle">&#8635;</button>
+    <button class="drop" id="btnDrop">DROP</button>
+  </div>
+
+  <div class="sidekeys">
+    <button id="btnPause">PAUSE</button>
+    <button id="btnSound" aria-pressed="true">SOUND ON</button>
+    <button id="btnReset">RESTART</button>
+  </div>
+
+  <p class="hint">Complete a row to weave it into the kilim &middot; a symmetric row is worth far more &middot; hold &#9664; &#9654; to slide, P pauses</p>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ---------------- constants ---------------- */
+  var COLS = 10, ROWS = 18, CELL = 8;
+  var BW = COLS * CELL;             // 80
+  var BH = ROWS * CELL;             // 144
+  var BX = 4;                       // board left, internal px
+  var BY = 16;                      // board top, set by layout()
+  var VW = 125;                     // fixed internal width
+  var VH = 196;                     // recomputed by fit()
+
+  var KX = 88, KW = 34;             // kilim panel
+  var KIX = 90, KCELL = 3;          // kilim inner: 10 x 3px = 30
+  var KROW = 3;                     // one woven row is 3 internal px tall
+  var NH = 24;                      // next-piece box height
+  var KY = 0, KH = 0;               // kilim body, set by layout()
+
+  var DAS = 0.19, ARR = 0.055;      // press-and-hold: delay, then repeat
+  var LOCK_DELAY = 0.42, MAX_RESETS = 10;
+  var CLEAR_TIME = 0.3;
+  var KILIM_MAX = 120;
+
+  /* real kilim dyes, not arcade primaries */
+  var DYES = [
+    { n: "MADDER",  b: "#b5392d", d: "#7a2119", l: "#d6604d" },
+    { n: "INDIGO",  b: "#2f4478", d: "#1b2a50", l: "#4d6499" },
+    { n: "SAFFRON", b: "#d3a02c", d: "#96701a", l: "#efc55e" },
+    { n: "WALNUT",  b: "#6d4a2c", d: "#472e1a", l: "#8f6842" },
+    { n: "CREAM",   b: "#ddcda6", d: "#a5977a", l: "#f4ead0" }
+  ];
+
+  var SHAPES = {
+    I: { n: 4, c: [[0,1],[1,1],[2,1],[3,1]], dye: 1 },
+    O: { n: 2, c: [[0,0],[1,0],[0,1],[1,1]], dye: 2 },
+    T: { n: 3, c: [[1,0],[0,1],[1,1],[2,1]], dye: 0 },
+    S: { n: 3, c: [[1,0],[2,0],[0,1],[1,1]], dye: 3 },
+    Z: { n: 3, c: [[0,0],[1,0],[1,1],[2,1]], dye: 4 },
+    J: { n: 3, c: [[0,0],[0,1],[1,1],[2,1]], dye: 0 },
+    L: { n: 3, c: [[2,0],[0,1],[1,1],[2,1]], dye: 2 }
+  };
+  var TYPES = ["I", "O", "T", "S", "Z", "J", "L"];
+  var KICKS = [[0,0],[-1,0],[1,0],[-2,0],[2,0],[0,-1],[-1,-1],[1,-1]];
+
+  var canvas = document.getElementById("view");
+  var ctx = canvas.getContext("2d");
+  var screenEl = document.getElementById("screen");
+  var stageEl = document.getElementById("stage");
+  var overlay = document.getElementById("overlay");
+  var ovTitle = document.getElementById("ovTitle");
+  var ovBody = document.getElementById("ovBody");
+  var ovBlink = document.getElementById("ovBlink");
+  var hScore = document.getElementById("hScore");
+  var hRows = document.getElementById("hRows");
+  var hMotif = document.getElementById("hMotif");
+  var hBest = document.getElementById("hBest");
+  var btnRotate = document.getElementById("btnRotate");
+  var btnDrop = document.getElementById("btnDrop");
+  var btnPause = document.getElementById("btnPause");
+  var btnSound = document.getElementById("btnSound");
+  var btnReset = document.getElementById("btnReset");
+
+  ctx.imageSmoothingEnabled = false;
+
+  var state = "idle";
+  var board, piece, nextType, bag, kilim, kilimOff;
+  var score, lines, motifs, best, level;
+  var fallT, lockT, lockResets, resting, elapsed;
+  var clearRows, clearT, flashRows;
+  var bannerEl, shake;
+  var soundOn = true;
+  var held = { left: 0, right: 0, down: false };
+  var repeatT = { left: 0, right: 0 };
+
+  /* ---------------- persistence ---------------- */
+  function loadBest() {
+    try { return parseInt(localStorage.getItem("blok-best"), 10) || 0; } catch (e) { return 0; }
+  }
+  function saveBest(v) { try { localStorage.setItem("blok-best", String(v)); } catch (e) {} }
+  function loadSound() {
+    try { var v = localStorage.getItem("blok-sound"); return v === null ? true : v === "1"; }
+    catch (e) { return true; }
+  }
+  function saveSound(v) { try { localStorage.setItem("blok-sound", v ? "1" : "0"); } catch (e) {} }
+
+  /* ---------------- audio ---------------- */
+  var actx = null;
+  function blip(freq, dur, type, vol) {
+    if (!soundOn) return;
+    try {
+      if (!actx) {
+        var AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return;
+        actx = new AC();
+      }
+      if (actx.state === "suspended") actx.resume();
+      var o = actx.createOscillator(), g = actx.createGain();
+      o.type = type || "square";
+      o.frequency.setValueAtTime(freq, actx.currentTime);
+      g.gain.setValueAtTime(vol || 0.045, actx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.0001, actx.currentTime + dur);
+      o.connect(g); g.connect(actx.destination);
+      o.start(); o.stop(actx.currentTime + dur);
+    } catch (e) {}
+  }
+  function chime(notes, gap) {
+    for (var i = 0; i < notes.length; i++) {
+      (function (f, k) {
+        setTimeout(function () { blip(f, 0.14, "triangle", 0.055); }, k * (gap || 80));
+      })(notes[i], i);
+    }
+  }
+
+  /* ---------------- layout ---------------- */
+  function layout() {
+    var extra = VH - BH;
+    BY = Math.max(7, Math.floor(extra * 0.45));
+    KY = BY + NH + 4;
+    KH = BH - NH - 4;
+  }
+
+  function fit() {
+    var r = stageEl.getBoundingClientRect();
+    var availW = r.width - 4, availH = r.height - 4;
+    if (availW < 40 || availH < 40) return;
+
+    // the loom keeps a tall shape; a shorter screen simply shows less carpet.
+    // VH is decided FIRST and the css box is then derived from it, so the buffer
+    // aspect and the displayed aspect can never disagree — a clamped VH used to
+    // stretch the picture on wide screens.
+    var aspect = Math.max(0.50, Math.min(0.80, availW / availH));
+    VH = Math.max(160, Math.min(252, Math.round(VW / aspect)));
+
+    var w = Math.min(availW, availH * VW / VH);
+    var h = w * VH / VW;
+
+    screenEl.style.width = Math.round(w) + 4 + "px";
+    screenEl.style.height = Math.round(h) + 4 + "px";
+    canvas.width = VW;
+    canvas.height = VH;
+    ctx.imageSmoothingEnabled = false;
+    layout();
+  }
+
+  /* ---------------- pieces ---------------- */
+  function cellsFor(type, rot) {
+    var s = SHAPES[type], n = s.n;
+    var out = [];
+    for (var i = 0; i < s.c.length; i++) {
+      var x = s.c[i][0], y = s.c[i][1];
+      for (var r = 0; r < (rot & 3); r++) {
+        var nx = n - 1 - y, ny = x;
+        x = nx; y = ny;
+      }
+      out.push([x, y]);
+    }
+    return out;
+  }
+
+  function refillBag() {
+    bag = TYPES.slice();
+    for (var i = bag.length - 1; i > 0; i--) {
+      var j = (Math.random() * (i + 1)) | 0;
+      var t = bag[i]; bag[i] = bag[j]; bag[j] = t;
+    }
+  }
+  function pullType() {
+    if (!bag || !bag.length) refillBag();
+    return bag.pop();
+  }
+
+  function makePiece(type) {
+    var s = SHAPES[type];
+    return {
+      type: type, rot: 0, n: s.n, dye: s.dye,
+      cells: cellsFor(type, 0),
+      x: Math.floor((COLS - s.n) / 2),
+      y: 0
+    };
+  }
+
+  function collides(cells, px, py) {
+    for (var i = 0; i < cells.length; i++) {
+      var gx = px + cells[i][0], gy = py + cells[i][1];
+      if (gx < 0 || gx >= COLS || gy >= ROWS) return true;
+      if (gy >= 0 && board[gy][gx] !== null) return true;
+    }
+    return false;
+  }
+
+  function spawn(forceType) {
+    var type = forceType || nextType || pullType();
+    if (!forceType) nextType = pullType();
+    piece = makePiece(type);
+    fallT = 0; lockT = 0; lockResets = 0; resting = false;
+    if (collides(piece.cells, piece.x, piece.y)) {
+      piece = null;
+      gameOver();
+      return false;
+    }
+    return true;
+  }
+
+  function restAfterMove() {
+    if (!piece) return;
+    if (!collides(piece.cells, piece.x, piece.y + 1)) {
+      resting = false; lockT = 0;
+    } else if (lockResets < MAX_RESETS) {
+      lockResets++; lockT = 0;
+    }
+  }
+
+  function tryMove(dx, dy) {
+    if (!piece) return false;
+    if (collides(piece.cells, piece.x + dx, piece.y + dy)) return false;
+    piece.x += dx; piece.y += dy;
+    return true;
+  }
+
+  function moveSide(dx) {
+    if (state !== "running" || !piece || clearT > 0) return;
+    if (tryMove(dx, 0)) { restAfterMove(); blip(260, 0.025, "square", 0.028); }
+  }
+
+  function rotate() {
+    if (state !== "running" || !piece || clearT > 0) return;
+    var rot = (piece.rot + 1) & 3;
+    var cells = cellsFor(piece.type, rot);
+    for (var k = 0; k < KICKS.length; k++) {
+      var kx = KICKS[k][0], ky = KICKS[k][1];
+      if (!collides(cells, piece.x + kx, piece.y + ky)) {
+        piece.rot = rot; piece.cells = cells;
+        piece.x += kx; piece.y += ky;
+        restAfterMove();
+        blip(430, 0.04, "square", 0.035);
+        return true;
+      }
+    }
+    blip(150, 0.05, "sawtooth", 0.03);   // refused: never overlap
+    return false;
+  }
+
+  function hardDrop() {
+    if (state !== "running" || !piece || clearT > 0) return;
+    var d = 0;
+    while (tryMove(0, 1)) d++;
+    score += d * 2;
+    shake = Math.max(shake, 0.25);
+    blip(180, 0.07, "sawtooth", 0.05);
+    lockPiece();
+  }
+
+  function lockPiece() {
+    if (!piece) return;
+    var above = false;
+    for (var i = 0; i < piece.cells.length; i++) {
+      var gx = piece.x + piece.cells[i][0], gy = piece.y + piece.cells[i][1];
+      if (gy < 0) { above = true; continue; }
+      board[gy][gx] = piece.dye;
+    }
+    piece = null;
+    blip(210, 0.05, "square", 0.04);
+    if (above) { gameOver(); return; }
+    checkLines();
+  }
+
+  /* ---------------- the weave ---------------- */
+  // A cleared row is judged as cloth, not as a line: how well it mirrors
+  // around the centre, and how long its bands of one dye run.
+  function analyzeRow(colors) {
+    var pairs = 0, half = COLS >> 1;
+    for (var i = 0; i < half; i++) if (colors[i] === colors[COLS - 1 - i]) pairs++;
+
+    var runs = [], cur = 1;
+    for (var j = 1; j < COLS; j++) {
+      if (colors[j] === colors[j - 1]) cur++;
+      else { runs.push(cur); cur = 1; }
+    }
+    runs.push(cur);
+
+    var runBonus = 0, longest = 0;
+    for (var r = 0; r < runs.length; r++) {
+      if (runs[r] >= 2) runBonus += 20 * (runs[r] - 1);
+      if (runs[r] > longest) longest = runs[r];
+    }
+
+    var mirror = pairs === half;
+    var solid = longest === COLS;
+    var pts = 50 + pairs * 35 + runBonus;
+    var mult = 1;
+    var label = "";
+
+    if (mirror) { pts += 250; mult = 3; label = "MOTIF"; }
+    if (solid) { pts += 400; label = "SOLID BAND"; }
+    else if (mirror && longest >= 4) label = "GREAT MOTIF";
+
+    return {
+      pairs: pairs, mirror: mirror, solid: solid, longest: longest,
+      runs: runs.length, runBonus: runBonus, label: label,
+      points: pts * mult
+    };
+  }
+
+  var COMBO = [1, 1, 1.35, 1.7, 2.2];
+
+  function checkLines() {
+    var full = [];
+    for (var y = 0; y < ROWS; y++) {
+      var ok = true;
+      for (var x = 0; x < COLS; x++) if (board[y][x] === null) { ok = false; break; }
+      if (ok) full.push(y);
+    }
+    if (!full.length) { spawn(); return; }
+
+    clearRows = full;
+    flashRows = full.slice();
+    clearT = CLEAR_TIME;
+
+    var gained = 0, best_label = "", bestPts = -1, motifCount = 0;
+    for (var i = 0; i < full.length; i++) {
+      var colors = board[full[i]].slice();
+      var a = analyzeRow(colors);
+      gained += a.points;
+      if (a.mirror) motifCount++;
+      if (a.points > bestPts) { bestPts = a.points; best_label = a.label; }
+      // woven top-down so the highest cleared row ends up newest on the kilim
+      kilim.unshift({ colors: colors, motif: a.mirror, solid: a.solid, pts: a.points });
+    }
+    while (kilim.length > KILIM_MAX) kilim.pop();
+    kilimOff = -KROW * full.length;
+
+    var mult = COMBO[Math.min(full.length, 4)] * (1 + (level - 1) * 0.12);
+    gained = Math.round(gained * mult);
+
+    score += gained;
+    lines += full.length;
+    motifs += motifCount;
+    level = 1 + Math.floor(lines / 10);
+    if (score > best) { best = score; saveBest(best); }
+
+    if (motifCount > 0) {
+      banner((best_label || "MOTIF") + (full.length > 1 ? " ×" + full.length : ""));
+      chime([523, 659, 784, 1046], 70);
+      shake = Math.max(shake, 0.45);
+    } else {
+      if (full.length > 1) banner("ROWS ×" + full.length);
+      blip(520 + full.length * 90, 0.09, "triangle", 0.05);
+    }
+    bump(hScore); bump(hRows);
+    if (motifCount) bump(hMotif);
+    syncHud();
+  }
+
+  function finishClear() {
+    for (var i = 0; i < clearRows.length; i++) {
+      board.splice(clearRows[i], 1);
+      var fresh = [];
+      for (var x = 0; x < COLS; x++) fresh.push(null);
+      board.unshift(fresh);
+    }
+    clearRows = [];
+    clearT = 0;
+    spawn();
+  }
+
+  /* ---------------- run control ---------------- */
+  function reset(startNow) {
+    fit();
+    board = [];
+    for (var y = 0; y < ROWS; y++) {
+      var row = [];
+      for (var x = 0; x < COLS; x++) row.push(null);
+      board.push(row);
+    }
+    kilim = [];
+    kilimOff = 0;
+    bag = null;
+    nextType = null;
+    piece = null;
+    score = 0; lines = 0; motifs = 0; level = 1;
+    fallT = 0; lockT = 0; lockResets = 0; resting = false;
+    clearRows = []; clearT = 0; flashRows = [];
+    elapsed = 0; shake = 0;
+    held.left = held.right = 0; held.down = false;
+    best = loadBest();
+    nextType = pullType();
+    spawn();
+    setState(startNow ? "running" : "idle");
+    syncHud();
+    render(0);
+  }
+
+  function gameOver() {
+    if (state === "over") return;
+    setState("over");
+    blip(220, 0.25, "sawtooth", 0.07);
+    setTimeout(function () { blip(150, 0.3, "sawtooth", 0.06); }, 150);
+    setTimeout(function () { blip(95, 0.45, "sawtooth", 0.05); }, 320);
+  }
+
+  function dropInterval() {
+    return Math.max(0.085, 0.8 * Math.pow(0.84, level - 1));
+  }
+
+  function update(dt) {
+    elapsed += dt;
+    if (shake > 0) shake = Math.max(0, shake - dt * 2.5);
+    if (kilimOff < 0) kilimOff = Math.min(0, kilimOff + dt * 42);
+
+    if (clearT > 0) {
+      clearT -= dt;
+      if (clearT <= 0) finishClear();
+      return;
+    }
+    if (!piece) return;
+
+    // press-and-hold on the side keys: one step, a pause, then a steady slide
+    var dir = 0;
+    if (held.left && !held.right) dir = -1;
+    else if (held.right && !held.left) dir = 1;
+    else if (held.left && held.right) dir = held.left > held.right ? -1 : 1;
+    if (dir !== 0) {
+      var key = dir < 0 ? "left" : "right";
+      repeatT[key] -= dt;
+      while (repeatT[key] <= 0) {
+        moveSide(dir);
+        repeatT[key] += ARR;
+      }
+    }
+
+    var iv = held.down ? Math.min(0.04, dropInterval()) : dropInterval();
+    fallT += dt;
+    while (fallT >= iv) {
+      fallT -= iv;
+      if (tryMove(0, 1)) {
+        resting = false; lockT = 0;
+        if (held.down) score += 1;
+      } else {
+        resting = true;
+        fallT = 0;
+        break;
+      }
+    }
+
+    if (resting) {
+      lockT += dt;
+      if (lockT >= LOCK_DELAY) lockPiece();
+    }
+    syncHud();
+  }
+
+  /* ---------------- rendering ---------------- */
+  function drawCell(px, py, dye, size) {
+    var d = DYES[dye], s = size || CELL;
+    ctx.fillStyle = d.b;
+    ctx.fillRect(px, py, s, s);
+    // warp and weft: a woven block, not a plastic tile
+    ctx.fillStyle = d.d;
+    ctx.fillRect(px, py + s - 1, s, 1);
+    ctx.fillRect(px + s - 1, py, 1, s);
+    if (s >= 6) {
+      ctx.fillRect(px + 2, py + 3, 1, 1);
+      ctx.fillRect(px + s - 4, py + s - 4, 1, 1);
+    }
+    ctx.fillStyle = d.l;
+    ctx.fillRect(px, py, s, 1);
+    ctx.fillRect(px, py, 1, s);
+    if (s >= 6) {
+      ctx.fillRect(px + 3, py + 2, 2, 1);
+      ctx.fillRect(px + 2, py + s - 3, 1, 1);
+    }
+  }
+
+  function drawLoom() {
+    // ground cloth
+    ctx.fillStyle = "#1b1008";
+    ctx.fillRect(0, 0, VW, VH);
+
+    // warp threads stretched down the frame
+    ctx.fillStyle = "#2a1a0e";
+    for (var x = 0; x < VW; x += 3) ctx.fillRect(x, 0, 1, VH);
+
+    // the beam across the top, and the one the cloth rolls onto below
+    var topY = Math.max(0, BY - 6);
+    ctx.fillStyle = "#4a3018";
+    ctx.fillRect(0, topY, VW, 4);
+    ctx.fillStyle = "#6b4523";
+    ctx.fillRect(0, topY, VW, 1);
+    ctx.fillStyle = "#2f1d0e";
+    ctx.fillRect(0, topY + 3, VW, 1);
+
+    var botY = Math.min(VH - 4, BY + BH + 2);
+    ctx.fillStyle = "#4a3018";
+    ctx.fillRect(0, botY, VW, 4);
+    ctx.fillStyle = "#6b4523";
+    ctx.fillRect(0, botY, VW, 1);
+
+    // fringe hanging off the bottom beam
+    ctx.fillStyle = "#c9b98f";
+    for (var f = 2; f < VW; f += 4) {
+      var len = 3 + ((f * 7) % 4);
+      if (botY + 4 + len > VH) len = Math.max(0, VH - botY - 4);
+      ctx.fillRect(f, botY + 4, 1, len);
+    }
+  }
+
+  function drawField() {
+    // the open loom behind the wool
+    ctx.fillStyle = "#120b05";
+    ctx.fillRect(BX, BY, BW, BH);
+    ctx.fillStyle = "#241609";
+    for (var x = 0; x < COLS; x++) ctx.fillRect(BX + x * CELL + 1, BY, 1, BH);
+    ctx.fillStyle = "#1c1107";
+    for (var y = 0; y < ROWS; y++) ctx.fillRect(BX, BY + y * CELL, BW, 1);
+
+    // centre line: the axis a motif mirrors around
+    ctx.fillStyle = "rgba(216,161,43,0.16)";
+    ctx.fillRect(BX + BW / 2, BY, 1, BH);
+
+    ctx.strokeStyle = "#5a3a1c";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(BX - 0.5, BY - 0.5, BW + 1, BH + 1);
+
+    var flash = clearT > 0 && (Math.floor(clearT * 24) & 1) === 0;
+    for (var gy = 0; gy < ROWS; gy++) {
+      var isClearing = clearT > 0 && flashRows.indexOf(gy) >= 0;
+      for (var gx = 0; gx < COLS; gx++) {
+        var v = board[gy][gx];
+        if (v === null) continue;
+        if (isClearing && flash) {
+          ctx.fillStyle = "#fff4d8";
+          ctx.fillRect(BX + gx * CELL, BY + gy * CELL, CELL, CELL);
+        } else {
+          drawCell(BX + gx * CELL, BY + gy * CELL, v);
+        }
+      }
+    }
+
+    if (piece && state !== "over") {
+      // the shadow on the cloth: where this shuttle will land
+      var gy2 = piece.y;
+      while (!collides(piece.cells, piece.x, gy2 + 1)) gy2++;
+      if (gy2 !== piece.y) {
+        ctx.fillStyle = "rgba(240,226,194,0.14)";
+        for (var i = 0; i < piece.cells.length; i++) {
+          var cx = piece.x + piece.cells[i][0], cy = gy2 + piece.cells[i][1];
+          if (cy < 0) continue;
+          ctx.fillRect(BX + cx * CELL + 1, BY + cy * CELL + 1, CELL - 2, CELL - 2);
+        }
+      }
+      for (var j = 0; j < piece.cells.length; j++) {
+        var px = piece.x + piece.cells[j][0], py = piece.y + piece.cells[j][1];
+        if (py < 0) continue;
+        drawCell(BX + px * CELL, BY + py * CELL, piece.dye);
+      }
+    }
+  }
+
+  function drawNext() {
+    var x = KX, y = BY, w = KW, h = NH;
+    ctx.fillStyle = "#170e06";
+    ctx.fillRect(x, y, w, h);
+    ctx.strokeStyle = "#5a3a1c";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+
+    // three tiny saffron ticks: the shuttle waiting its turn
+    ctx.fillStyle = "#8a6a2a";
+    ctx.fillRect(x + 3, y + 3, 2, 1);
+    ctx.fillRect(x + 7, y + 3, 2, 1);
+    ctx.fillRect(x + 11, y + 3, 2, 1);
+
+    if (!nextType) return;
+    var s = SHAPES[nextType];
+    var cells = cellsFor(nextType, 0);
+    var minX = 9, maxX = 0, minY = 9, maxY = 0;
+    for (var i = 0; i < cells.length; i++) {
+      if (cells[i][0] < minX) minX = cells[i][0];
+      if (cells[i][0] > maxX) maxX = cells[i][0];
+      if (cells[i][1] < minY) minY = cells[i][1];
+      if (cells[i][1] > maxY) maxY = cells[i][1];
+    }
+    var cw = (maxX - minX + 1) * 4, ch = (maxY - minY + 1) * 4;
+    var ox = x + Math.round((w - cw) / 2) - minX * 4;
+    var oy = y + 6 + Math.round((h - 8 - ch) / 2) - minY * 4;
+    for (var k = 0; k < cells.length; k++) {
+      drawCell(ox + cells[k][0] * 4, oy + cells[k][1] * 4, s.dye, 4);
+    }
+  }
+
+  // The carpet: every row you ever cleared, in the colours you cleared it in,
+  // newest at the top, sliding down as the run goes on.
+  function drawKilim() {
+    var x = KX, y = KY, w = KW, h = KH;
+    ctx.fillStyle = "#150d06";
+    ctx.fillRect(x, y, w, h);
+    ctx.strokeStyle = "#5a3a1c";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+
+    // the selvedge down both sides of the cloth
+    ctx.fillStyle = "#3c2512";
+    ctx.fillRect(x + 1, y + 1, 1, h - 2);
+    ctx.fillRect(x + w - 2, y + 1, 1, h - 2);
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(x + 2, y + 2, w - 4, h - 4);
+    ctx.clip();
+
+    var top = y + 2;
+    var bottom = y + h - 2;
+    for (var i = 0; i < kilim.length; i++) {
+      var ry = top + i * KROW + kilimOff;
+      if (ry > bottom) break;
+      if (ry + KROW < top) continue;
+      var e = kilim[i];
+      for (var c = 0; c < COLS; c++) {
+        var d = DYES[e.colors[c]];
+        ctx.fillStyle = d.b;
+        ctx.fillRect(KIX + c * KCELL, ry, KCELL, KROW);
+        ctx.fillStyle = d.d;
+        ctx.fillRect(KIX + c * KCELL, ry + KROW - 1, KCELL, 1);
+      }
+      if (e.motif) {
+        // a motif row is marked in the selvedge, gold on both edges
+        ctx.fillStyle = e.solid ? "#f4ead0" : "#d3a02c";
+        ctx.fillRect(x + 1, ry, 1, KROW - 1);
+        ctx.fillRect(x + w - 2, ry, 1, KROW - 1);
+      }
+    }
+
+    if (!kilim.length) {
+      ctx.fillStyle = "#3c2512";
+      for (var e2 = 0; e2 < 6; e2++) {
+        ctx.fillRect(x + 6 + e2 * 4, y + 8, 2, 2);
+        ctx.fillRect(x + 4 + e2 * 4, y + 14, 2, 2);
+      }
+    }
+    ctx.restore();
+  }
+
+  function render(now) {
+    if (!board) return;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.save();
+    if (shake > 0) {
+      ctx.translate(Math.round((Math.random() - 0.5) * shake * 4),
+                    Math.round((Math.random() - 0.5) * shake * 3));
+    }
+    drawLoom();
+    drawField();
+    drawNext();
+    drawKilim();
+    ctx.restore();
+  }
+
+  /* ---------------- hud + overlay ---------------- */
+  function bump(el) {
+    el.classList.remove("bump");
+    void el.offsetWidth;
+    el.classList.add("bump");
+  }
+
+  function syncHud() {
+    hScore.textContent = score;
+    hRows.textContent = lines;
+    hMotif.textContent = motifs;
+    hBest.textContent = best;
+  }
+
+  function banner(text) {
+    if (bannerEl && bannerEl.parentNode) bannerEl.parentNode.removeChild(bannerEl);
+    bannerEl = document.createElement("div");
+    bannerEl.className = "banner";
+    bannerEl.textContent = text;
+    screenEl.appendChild(bannerEl);
+    var mine = bannerEl;
+    setTimeout(function () { if (mine.parentNode) mine.parentNode.removeChild(mine); }, 1700);
+  }
+
+  function setState(next) {
+    state = next;
+    btnPause.textContent = state === "paused" ? "RESUME" : "PAUSE";
+    if (state === "running") { overlay.hidden = true; return; }
+    overlay.hidden = false;
+    ovTitle.classList.toggle("over", state === "over");
+
+    if (state === "idle") {
+      ovTitle.textContent = "INSERT COIN";
+      ovBody.innerHTML = "Wool falls on the loom in five kilim dyes. Fill a row and it is " +
+                         "<em>woven into the carpet</em> beside you, in the colours you " +
+                         "gave it. A mixed row is worth little; a row that <em>mirrors " +
+                         "around its centre</em> is a motif and pays many times over. " +
+                         "Clear for safety, or hold out for the pattern.";
+      ovBlink.innerHTML = "&#9654; PRESS START";
+    } else if (state === "paused") {
+      ovTitle.textContent = "PAUSED";
+      ovBody.textContent = "Shuttle at rest.";
+      ovBlink.innerHTML = "&#9654; TAP OR PRESS P";
+    } else if (state === "over") {
+      ovTitle.textContent = "LOOM JAMMED";
+      ovBody.innerHTML = "Wove <em>" + lines + "</em> rows, <em>" + motifs + "</em> of them motifs &middot; " +
+                         "scored <em>" + score + "</em>" +
+                         (score >= best && score > 0 ? " &middot; <em>NEW BEST</em>"
+                                                     : " &middot; best <em>" + best + "</em>");
+      ovBlink.innerHTML = "&#9654; TAP TO WEAVE AGAIN";
+    }
+  }
+
+  function start() {
+    lastTs = 0;
+    if (state === "over") { reset(true); return; }
+    setState("running");
+  }
+  function togglePause() {
+    if (state === "running") setState("paused");
+    else if (state === "paused") start();
+  }
+
+  /* ---------------- loop ---------------- */
+  var lastTs = 0;
+  function frame(now) {
+    requestAnimationFrame(frame);          // queued first: one bad frame is not fatal
+    var dt = lastTs ? Math.min(0.05, (now - lastTs) / 1000) : 0;
+    lastTs = now;
+    if (state === "running") update(dt);
+    render(now);
+  }
+
+  /* ---------------- input ---------------- */
+  var holdSeq = 1;
+
+  screenEl.addEventListener("pointerdown", function (ev) {
+    ev.preventDefault();
+    if (state === "idle" || state === "paused") { start(); return; }
+    if (state === "over") { reset(true); return; }
+  });
+  screenEl.addEventListener("contextmenu", function (ev) { ev.preventDefault(); });
+
+  function pressDir(k) {
+    if (state === "idle") start();
+    if (held[k]) return;
+    held[k] = holdSeq++;
+    repeatT[k] = DAS;
+    moveSide(k === "left" ? -1 : 1);
+  }
+  function releaseDir(k) { held[k] = 0; }
+
+  window.addEventListener("keydown", function (ev) {
+    var k = ev.key;
+    if (k === "ArrowLeft" || k === "a" || k === "A") { ev.preventDefault(); pressDir("left"); }
+    else if (k === "ArrowRight" || k === "d" || k === "D") { ev.preventDefault(); pressDir("right"); }
+    else if (k === "ArrowUp" || k === "x" || k === "X" || k === "w" || k === "W") {
+      ev.preventDefault();
+      if (state === "idle" || state === "paused") { start(); return; }
+      rotate();
+    }
+    else if (k === "ArrowDown" || k === "s" || k === "S") {
+      ev.preventDefault();
+      if (state === "idle") start();
+      held.down = true;
+    }
+    else if (k === " ") {
+      ev.preventDefault();
+      if (state === "idle" || state === "paused") start();
+      else if (state === "over") reset(true);
+      else hardDrop();
+    }
+    else if (k === "Enter") {
+      ev.preventDefault();
+      if (state === "idle" || state === "paused") start();
+      else if (state === "over") reset(true);
+    }
+    else if (k === "p" || k === "P") { ev.preventDefault(); togglePause(); }
+    else if (k === "r" || k === "R") { ev.preventDefault(); reset(true); }
+  });
+
+  window.addEventListener("keyup", function (ev) {
+    var k = ev.key;
+    if (k === "ArrowLeft" || k === "a" || k === "A") { ev.preventDefault(); releaseDir("left"); }
+    else if (k === "ArrowRight" || k === "d" || k === "D") { ev.preventDefault(); releaseDir("right"); }
+    else if (k === "ArrowDown" || k === "s" || k === "S") { ev.preventDefault(); held.down = false; }
+  });
+  window.addEventListener("blur", function () {
+    held.left = held.right = 0; held.down = false;
+  });
+
+  Array.prototype.forEach.call(document.querySelectorAll("[data-hold]"), function (b) {
+    var k = b.dataset.hold;
+    var press = function (ev) {
+      ev.preventDefault();
+      pressDir(k);
+      b.classList.add("held");
+      if (b.setPointerCapture && ev.pointerId !== undefined) {
+        try { b.setPointerCapture(ev.pointerId); } catch (e) {}
+      }
+    };
+    var rel = function (ev) { if (ev) ev.preventDefault(); releaseDir(k); b.classList.remove("held"); };
+    b.addEventListener("pointerdown", press);
+    b.addEventListener("pointerup", rel);
+    b.addEventListener("pointercancel", rel);
+    b.addEventListener("pointerleave", rel);
+    b.addEventListener("click", function (ev) { ev.preventDefault(); });
+  });
+
+  btnRotate.addEventListener("pointerdown", function (ev) {
+    ev.preventDefault();
+    if (state === "idle" || state === "paused") { start(); return; }
+    if (state === "over") { reset(true); return; }
+    rotate();
+  });
+  btnRotate.addEventListener("click", function (ev) { ev.preventDefault(); });
+
+  btnDrop.addEventListener("pointerdown", function (ev) {
+    ev.preventDefault();
+    if (state === "idle" || state === "paused") { start(); return; }
+    if (state === "over") { reset(true); return; }
+    hardDrop();
+  });
+  btnDrop.addEventListener("click", function (ev) { ev.preventDefault(); });
+
+  btnPause.addEventListener("click", togglePause);
+  btnReset.addEventListener("click", function () { reset(true); });
+  btnSound.addEventListener("click", function () {
+    soundOn = !soundOn;
+    saveSound(soundOn);
+    btnSound.textContent = soundOn ? "SOUND ON" : "SOUND OFF";
+    btnSound.setAttribute("aria-pressed", soundOn ? "true" : "false");
+    if (soundOn) blip(620, 0.05);
+  });
+
+  document.addEventListener("visibilitychange", function () {
+    if (document.hidden && state === "running") setState("paused");
+  });
+
+  /* ---------------- boot ---------------- */
+  function boot(saved) {
+    soundOn = loadSound();
+    btnSound.textContent = soundOn ? "SOUND ON" : "SOUND OFF";
+    btnSound.setAttribute("aria-pressed", soundOn ? "true" : "false");
+    fit();
+    if (window.ResizeObserver) new ResizeObserver(fit).observe(stageEl);
+    window.addEventListener("resize", fit);
+    reset(false);
+    if (saved && saved.best > best) { best = saved.best; saveBest(best); }
+    syncHud();
+    requestAnimationFrame(frame);
+  }
+
+  if (window.claude && window.claude.hot) {
+    try { window.claude.hot.snapshot(function () { return { best: best || 0 }; }); } catch (e) {}
+  }
+  if (window.claude && window.claude.hot && window.claude.hot.ready) {
+    window.claude.hot.ready(boot);
+  } else {
+    boot({});
+  }
+})();
+</script>
+</body>
+</html>

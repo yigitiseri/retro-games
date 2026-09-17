@@ -1,8 +1,8 @@
 # Retro Games
 
-Seven arcade cabinets, each a single self-contained HTML file. No build step, no
+Nine arcade cabinets, each a single self-contained HTML file. No build step, no
 dependencies, no framework — open any `index.html` in a browser and it runs.
-All three are built for a phone first: touch controls, a screen that fills the
+All of them are built for a phone first: touch controls, a screen that fills the
 space it is given, and a keyboard fallback on desktop.
 
 | Game | | Play |
@@ -14,8 +14,10 @@ space it is given, and a keyboard fallback on desktop.
 | [**TUĞLA**](games/tugla/) | Breakout, with a ball that heats up away from your bat and burns two bricks deep. | [`games/tugla/index.html`](games/tugla/index.html) |
 | [**LOKMA**](games/lokma/) | A night-market maze. A full tray is slow, and nothing counts until you reach the counter. | [`games/lokma/index.html`](games/lokma/index.html) |
 | [**OKÇU**](games/okcu/) | A sunset archery range. One arrow runs through every balloon in its line; misses stay in the grass. | [`games/okcu/index.html`](games/okcu/index.html) |
+| [**GÖKTAŞI**](games/goktasi/) | A salvage tug with no guns. Push rocks into the collector; ram one and it shatters into pieces worth less. | [`games/goktasi/index.html`](games/goktasi/index.html) |
+| [**BLOK**](games/blok/) | Falling wool on a loom. Every row you clear is woven into a kilim, and a row that mirrors itself pays many times over. | [`games/blok/index.html`](games/blok/index.html) |
 
-`index.html` at the root is the arcade menu: the three cabinets side by side,
+`index.html` at the root is the arcade menu: every cabinet in turn,
 each with a live attract-mode preview of the game running in miniature. It is
 what GitHub Pages serves, so the Pages URL opens straight into the arcade.
 
