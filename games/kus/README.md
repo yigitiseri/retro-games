@@ -5,8 +5,9 @@ longer and harder to fly.
 
 ## Play
 
-Open `index.html` in any browser. No build step, no dependencies (the two fonts
-load from Google Fonts; the game works with system fallbacks offline).
+Open `index.html` in any browser. No build step and no dependencies: the two
+fonts are served from this repository, so the page makes no third-party requests
+at all (and falls back to system fonts if the files are missing).
 
 ## Controls
 

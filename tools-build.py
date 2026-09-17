@@ -4,7 +4,7 @@ import sys, os, re
 # GitHub Pages copies. Empty means no analytics script is emitted at all.
 # The Artifact versions never get this: they are private, and counting your own
 # play sessions would only pollute the numbers.
-ANALYTICS_TOKEN = ""
+ANALYTICS_TOKEN = "aee6e644a3b74cb9bdaf4e1569d570e2"
 
 GOOGLE_FONT_LINKS = re.compile(
     r'<link rel="preconnect" href="https://fonts\.googleapis\.com">\s*'
@@ -33,8 +33,9 @@ analytics = ''
 if ANALYTICS_TOKEN:
     analytics = (
         '\n<!-- Cloudflare Web Analytics: no cookies, no client-side storage -->\n'
-        '<script defer src="https://static.cloudflareinsights.com/beacon.min.js" '
-        'data-cf-beacon=\'{"token": "%s"}\'></script>\n' % ANALYTICS_TOKEN)
+        '<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js" '
+        'data-cf-beacon=\'{"token": "%s"}\'></script>\n'
+        '<!-- End Cloudflare Web Analytics -->\n' % ANALYTICS_TOKEN)
 
 doc = '''<!doctype html>
 <html lang="en">
