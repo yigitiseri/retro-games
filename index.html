@@ -237,6 +237,65 @@
     color: #6f7796;
   }
   .foot a { color: var(--chrome); text-decoration: none; border-bottom: 1px solid var(--edge); }
+
+  /* The coffee panel. Nothing from ko-fi.com is fetched until this is opened,
+     so a visitor who never clicks never contacts them at all. */
+  .kofi-wrap {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 18px;
+    background: rgba(4, 5, 10, 0.86);
+    animation: kofi-in 160ms ease-out 1;
+  }
+  @keyframes kofi-in { from { opacity: 0; } }
+  .kofi-box {
+    width: min(420px, 100%);
+    max-height: min(680px, 100%);
+    display: flex;
+    flex-direction: column;
+    background: var(--plate);
+    border: 1px solid var(--edge);
+    border-radius: 12px;
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.6);
+    overflow: hidden;
+  }
+  .kofi-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 11px 13px;
+    border-bottom: 1px solid var(--edge);
+    font-family: var(--cell-font, "Press Start 2P", monospace);
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    color: var(--chrome);
+  }
+  .kofi-bar button {
+    font: inherit;
+    font-size: 11px;
+    color: var(--paper);
+    background: none;
+    border: 1px solid var(--edge);
+    border-radius: 5px;
+    padding: 5px 9px;
+    cursor: pointer;
+  }
+  .kofi-bar button:hover { border-color: var(--chrome); }
+  .kofi-box iframe { flex: 1 1 auto; width: 100%; min-height: 480px; border: 0; background: #f9f9f9; }
+  .kofi-foot {
+    padding: 10px 13px;
+    border-top: 1px solid var(--edge);
+    font-size: 15px;
+    color: var(--chrome);
+    text-align: center;
+  }
+  .kofi-foot a { color: var(--paper); }
+  @media (prefers-reduced-motion: reduce) { .kofi-wrap { animation: none; } }
   .foot a:hover, .foot a:focus-visible { color: var(--paper); border-color: var(--chrome); }
 
   @media (prefers-reduced-motion: reduce) {
@@ -364,7 +423,7 @@
   <footer class="foot">
     <span>Single-file HTML &middot; no build step &middot; no frameworks</span>
     <span><a href="https://github.com/yigitiseri/retro-games">github.com/yigitiseri/retro-games</a></span>
-    <span><a href="https://ko-fi.com/yigiti" target="_blank" rel="noopener">Buy me a coffee</a></span>
+    <span><a class="kofi-link" href="https://ko-fi.com/yigiti" target="_blank" rel="noopener">Buy me a coffee</a></span>
     <span><a href="privacy.html">Privacy</a> &middot; <a href="datenschutz.html">Datenschutz</a></span>
   </footer>
 </div>
@@ -1567,6 +1626,83 @@
   window.addEventListener("resize", sizeAll);
   sizeAll();
   if (!still) requestAnimationFrame(frame);
+})();
+</script>
+
+<script>
+/* Two-click support panel.
+
+   The footer link is a real link to ko-fi.com and works with scripting off. With
+   scripting on, clicking it opens Ko-fi inside a panel here instead of sending
+   you away — but the request to ko-fi.com is made at that moment, not on page
+   load. Visitors who never click never touch Ko-fi at all, which is the whole
+   point: no third-party contact without an explicit action. */
+(function () {
+  "use strict";
+  var link = document.querySelector(".kofi-link");
+  if (!link) return;
+  var wrap = null, lastFocus = null;
+
+  function close() {
+    if (!wrap) return;
+    wrap.remove();
+    wrap = null;
+    document.removeEventListener("keydown", onKey);
+    document.body.style.overflow = "";
+    if (lastFocus) lastFocus.focus();
+  }
+
+  function onKey(ev) { if (ev.key === "Escape") close(); }
+
+  function open(ev) {
+    // let people still middle-click or ctrl-click through to the real page
+    if (ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.button !== 0) return;
+    ev.preventDefault();
+    if (wrap) return;
+    lastFocus = document.activeElement;
+
+    wrap = document.createElement("div");
+    wrap.className = "kofi-wrap";
+    wrap.setAttribute("role", "dialog");
+    wrap.setAttribute("aria-modal", "true");
+    wrap.setAttribute("aria-label", "Support this arcade on Ko-fi");
+
+    var box = document.createElement("div");
+    box.className = "kofi-box";
+
+    var bar = document.createElement("div");
+    bar.className = "kofi-bar";
+    var title = document.createElement("span");
+    title.textContent = "KO-FI";
+    var shut = document.createElement("button");
+    shut.type = "button";
+    shut.textContent = "CLOSE";
+    shut.addEventListener("click", close);
+    bar.appendChild(title);
+    bar.appendChild(shut);
+
+    var frame = document.createElement("iframe");
+    frame.src = "https://ko-fi.com/yigiti/?hidefeed=true&widget=true&embed=true&preview=true";
+    frame.title = "Ko-fi";
+    frame.setAttribute("loading", "lazy");
+
+    // if Ko-fi declines to be framed, this is the way out rather than a blank box
+    var foot = document.createElement("div");
+    foot.className = "kofi-foot";
+    foot.innerHTML = 'Not loading? <a href="https://ko-fi.com/yigiti" target="_blank" rel="noopener">Open ko-fi.com/yigiti</a>';
+
+    box.appendChild(bar);
+    box.appendChild(frame);
+    box.appendChild(foot);
+    wrap.appendChild(box);
+    wrap.addEventListener("click", function (e) { if (e.target === wrap) close(); });
+    document.body.appendChild(wrap);
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", onKey);
+    shut.focus();
+  }
+
+  link.addEventListener("click", open);
 })();
 </script>
 </body>
