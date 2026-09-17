@@ -32,12 +32,20 @@ There is no fire button. A rock is never removed from the field — it is only
   wraps. A rock you shoved badly does not go away — it comes back around later in
   the wave, still carrying the speed you gave it.
 - **Your hull takes three hard hits.** Gentle contact is free. Ram something and
-  you pay for it twice: the rock shatters and your hull cracks.
+  you pay for it twice: the rock shatters and your hull cracks. The game says
+  **TOO HARD** when you cross the line, so the threshold teaches itself rather
+  than having to be memorised.
 
 ## Scoring
 
 A rock is worth its size. Bank a large one whole and it pays several times what
-the same rock pays after you have broken it into three. The wave counter in the
+the same rock pays after you have broken it into three.
+
+Played out to the end by a scripted pilot, the three styles separate clearly:
+cautious play survived a full fifteen minutes for 10,090 points, committed-but-
+controlled play survived the same fifteen minutes for 15,626, and ramming
+everything died after four and a half minutes on 4,567. Committing is right;
+committing too hard is not. The wave counter in the
 HUD is a quota, not a timer — the pressure comes from the field getting more
 crowded, not from a clock.
 

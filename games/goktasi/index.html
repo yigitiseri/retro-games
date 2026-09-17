@@ -309,20 +309,20 @@
   var VW = 180;
   var VH = 240;                 // recomputed by fit()
 
-  var ROT = 2.7;                // rad/s
-  var THRUST_ACC = 58;          // px/s^2
+  var ROT = 3.2;                // rad/s
+  var THRUST_ACC = 74;          // px/s^2
   var MAXV = 96;                // the tug never goes faster than this
   var SHATTER = 40;             // closing speed that breaks a rock and dents the hull
   var IFRAMES = 1.2;
   var START_HULL = 3;
-  var RING_R = 24;
+  var RING_R = 34;
 
   // tier 3 is a boulder, tier 1 is gravel. Colour is the size read-out.
   var TIER = [
     null,
     { r: 4.5,  pts: 12,  m: 1.0 },
-    { r: 8.5,  pts: 45,  m: 2.3 },
-    { r: 14.0, pts: 200, m: 4.4 }
+    { r: 8.5,  pts: 45,  m: 1.5 },
+    { r: 14.0, pts: 200, m: 2.2 }
   ];
   var ROCK_PAL = ["", "#6f7bb5", "#8d7fb8", "#b98a72"];
   var ROCK_LIT = ["", "#aab5e8", "#c0b2e8", "#e6bd9c"];
@@ -503,8 +503,8 @@
 
   function moveRing(dt) {
     ringT += dt;
-    ring.x = VW / 2 + Math.cos(ringT * 0.21) * Math.max(0, VW / 2 - RING_R - 6);
-    ring.y = VH / 2 + Math.sin(ringT * 0.29) * Math.max(0, VH / 2 - RING_R - 6);
+    ring.x = VW / 2 + Math.cos(ringT * 0.08) * Math.max(0, VW * 0.26 - 4);
+    ring.y = VH / 2 + Math.sin(ringT * 0.10) * Math.max(0, VH * 0.24 - 4);
   }
 
   /* ---------------- collisions ---------------- */
@@ -701,7 +701,7 @@
     for (i = rocks.length - 1; i >= 0; i--) {
       var rk = rocks[i];
       var d = Math.hypot(wdx(rk.x, ring.x), wdy(rk.y, ring.y));
-      if (d + rk.r * 0.5 < RING_R) { bankRock(i); if (state !== "running") return; }
+      if (d + rk.r * 0.35 < RING_R) { bankRock(i); if (state !== "running") return; }
     }
 
     if (rocks.length > 34) rocks.length = 34;   // a runaway field is still a field
