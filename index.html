@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
-<meta name="description" content="Seventeen hand-built arcade cabinets you can play in the browser on a phone: snake, a road racer, a lander, breakout, a night-market maze, archery, a salvage tug, two-player ping pong and more. No install, no accounts, no ads.">
+<meta name="description" content="Eighteen hand-built arcade cabinets you can play in the browser on a phone: snake, a road racer, a lander, breakout, a night-market maze, archery, a salvage tug, two-player ping pong and more. No install, no accounts, no ads.">
 <meta name="theme-color" content="#08090e">
 <style>
   :root {
@@ -21,14 +21,14 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Retro Games Arcade">
 <meta property="og:title" content="Retro Games Arcade">
-<meta property="og:description" content="Seventeen hand-built arcade cabinets you can play in the browser on a phone: snake, a road racer, a lander, breakout, a night-market maze, archery, a salvage tug, two-player ping pong and more. No install, no accounts, no ads.">
+<meta property="og:description" content="Eighteen hand-built arcade cabinets you can play in the browser on a phone: snake, a road racer, a lander, breakout, a night-market maze, archery, a salvage tug, two-player ping pong and more. No install, no accounts, no ads.">
 <meta property="og:url" content="https://yigitiseri.github.io/retro-games/">
 <meta property="og:image" content="https://yigitiseri.github.io/retro-games/assets/social-card.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Retro Games Arcade">
-<meta name="twitter:description" content="Seventeen hand-built arcade cabinets you can play in the browser on a phone: snake, a road racer, a lander, breakout, a night-market maze, archery, a salvage tug, two-player ping pong and more. No install, no accounts, no ads.">
+<meta name="twitter:description" content="Eighteen hand-built arcade cabinets you can play in the browser on a phone: snake, a road racer, a lander, breakout, a night-market maze, archery, a salvage tug, two-player ping pong and more. No install, no accounts, no ads.">
 <meta name="twitter:image" content="https://yigitiseri.github.io/retro-games/assets/social-card.png">
 <link rel="preload" href="assets/fonts/press-start-2p-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="assets/fonts/fonts.css">
@@ -61,6 +61,7 @@
     --serit:   #7d8cff;
     --sarkac:  #5fe4ff;
     --maden:   #ffc23d;
+    --fisek:   #ff6ea8;
 
     --cell-font: "Press Start 2P", ui-monospace, "Courier New", monospace;
     --read-font: "VT323", ui-monospace, "Courier New", monospace;
@@ -250,6 +251,7 @@
   .serit { --accent: var(--serit); }
   .sarkac { --accent: var(--sarkac); }
   .maden { --accent: var(--maden); }
+  .fisek { --accent: var(--fisek); }
 
   /* ---------- footer ---------- */
   .foot {
@@ -558,6 +560,17 @@
         <h2>MADEN</h2>
         <p>The tunnel you dig is the tunnel you have to climb back out of. Ore in the cart is not yours until you reach daylight &mdash; and every wide gallery you cut to reach a seam is a roof waiting to come down on you.</p>
         <span class="keys">Hold to dig &middot; Arrows</span>
+        <span class="play">&#9654; PLAY</span>
+      </div>
+    </a>
+
+    <a class="cab fisek" href="games/fisek/">
+      <div class="tube"><canvas data-demo="sky" aria-hidden="true"></canvas></div>
+      <div class="plate">
+        <span class="no">CABINET NO. 20 &mdash; 1983</span>
+        <h2>F&#304;&#350;EK</h2>
+        <p>One shell a round, and it does not go off until you let go of it. Everything it catches bursts in turn and each one in the chain pays more than the last, so the whole cabinet is a single decision made once every few seconds: fire now, or wait for the drift to bring one more into the ring.</p>
+        <span class="keys">Hold &amp; release &middot; Space</span>
         <span class="play">&#9654; PLAY</span>
       </div>
     </a>
@@ -2383,13 +2396,104 @@
     ctx.fillStyle = "#ffcf5a"; ctx.fillRect(mx - 3, my - 5, 6, 3);
   }
 
+
+  /* ---------- fisek: one shell, and a chain that pays more as it goes ---------- */
+  var fk = null;
+  var FK_COLS = ["#ff6ea8", "#56e3ff", "#9bf06a", "#ffc75a", "#b184ff"];
+  function fkInit(W, H) {
+    var v = { motes: [], bursts: [], wait: 1.2, last: 0, W: W, t: 0 };
+    for (var i = 0; i < 16; i++) {
+      var a = Math.random() * 6.2832;
+      v.motes.push({ x: 10 + Math.random() * (W - 20), y: 10 + Math.random() * (H - 20),
+                     vx: Math.cos(a) * 9, vy: Math.sin(a) * 9,
+                     col: FK_COLS[(Math.random() * 5) | 0], lit: false });
+    }
+    return v;
+  }
+  function drawSky(ctx, W, H, now) {
+    if (!fk || fk.W !== W) fk = fkInit(W, H);
+    var v = fk, dt = Math.min(0.05, (now - (v.last || now)) / 1000);
+    v.last = now; v.t += dt;
+    var BR = Math.max(16, W * 0.17), CR = BR * 0.92;
+
+    for (var i = 0; i < v.motes.length; i++) {
+      var m = v.motes[i];
+      if (m.lit) continue;
+      m.x += m.vx * dt; m.y += m.vy * dt;
+      if (m.x < 6 || m.x > W - 6) m.vx *= -1;
+      if (m.y < 6 || m.y > H - 6) m.vy *= -1;
+    }
+
+    v.wait -= dt;
+    if (v.wait <= 0 && !v.bursts.length) {
+      // fire on the densest cluster, which is the whole skill of the cabinet
+      var bx = W / 2, by = H / 2, bn = -1;
+      for (var k = 0; k < v.motes.length; k++) {
+        var c = v.motes[k], n = 0;
+        for (var j = 0; j < v.motes.length; j++)
+          if (!v.motes[j].lit && Math.hypot(v.motes[j].x - c.x, v.motes[j].y - c.y) < BR) n++;
+        if (n > bn) { bn = n; bx = c.x; by = c.y; }
+      }
+      v.bursts.push({ x: bx, y: by, r: 0, max: BR, col: "#fdf0e0", t: 0 });
+      v.wait = 5;
+    }
+
+    for (var b = v.bursts.length - 1; b >= 0; b--) {
+      var bu = v.bursts[b];
+      bu.t += dt;
+      if (bu.t < 0) continue;
+      bu.r = bu.max * Math.min(1, bu.t / 0.2);
+      if (bu.t < 0.55) {
+        for (var q = 0; q < v.motes.length; q++) {
+          var mo = v.motes[q];
+          if (mo.lit) continue;
+          if (Math.hypot(mo.x - bu.x, mo.y - bu.y) <= bu.r) {
+            mo.lit = true;
+            v.bursts.push({ x: mo.x, y: mo.y, r: 0, max: CR, col: mo.col, t: -0.14 });
+          }
+        }
+      }
+      if (bu.t > 0.9) v.bursts.splice(b, 1);
+    }
+    if (!v.bursts.length && v.wait < 4.2) {
+      var anyLit = false;
+      for (var z = 0; z < v.motes.length; z++) if (v.motes[z].lit) anyLit = true;
+      if (anyLit && v.wait < 3.4) fk = fkInit(W, H);
+    }
+
+    var g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, "#0a0818"); g.addColorStop(1, "#231338");
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    for (var s2 = 0; s2 < 18; s2++) {
+      ctx.globalAlpha = 0.2 + ((s2 * 5) % 4) * 0.08;
+      ctx.fillStyle = "#fdf0e0";
+      ctx.fillRect((s2 * 71) % W, (s2 * 113) % H, 1, 1);
+    }
+    ctx.globalAlpha = 1;
+
+    for (var bb = 0; bb < v.bursts.length; bb++) {
+      var b2 = v.bursts[bb];
+      if (b2.t < 0) continue;
+      ctx.globalAlpha = Math.max(0, 1 - b2.t / 0.9) * 0.75;
+      ctx.strokeStyle = b2.col; ctx.lineWidth = 1.4;
+      ctx.beginPath(); ctx.arc(b2.x, b2.y, b2.r, 0, 6.2832); ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+    for (var mm = 0; mm < v.motes.length; mm++) {
+      var m2 = v.motes[mm];
+      if (m2.lit) continue;
+      ctx.fillStyle = m2.col;
+      ctx.beginPath(); ctx.arc(m2.x, m2.y, 2.6, 0, 6.2832); ctx.fill();
+    }
+  }
+
   /* ---------- wire up ---------- */
-  var painters = { snake: drawSnake, road: drawRoad, lander: drawLander, flap: drawFlap, brick: drawBrick, maze: drawMaze, arch: drawArch, rocks: drawRocks, loom: drawLoom, invade: drawInvade, fuse: drawFuse, pong: drawPong, lamps: drawLamps, climb: drawClimb, lanes: drawLanes, swing: drawSwing, mine: drawMine };
+  var painters = { snake: drawSnake, road: drawRoad, lander: drawLander, flap: drawFlap, brick: drawBrick, maze: drawMaze, arch: drawArch, rocks: drawRocks, loom: drawLoom, invade: drawInvade, fuse: drawFuse, pong: drawPong, lamps: drawLamps, climb: drawClimb, lanes: drawLanes, swing: drawSwing, mine: drawMine, sky: drawSky };
   Array.prototype.forEach.call(document.querySelectorAll("[data-demo]"), function (c) {
     var fn = painters[c.dataset.demo];
     if (fn) register(c, fn, c.dataset.demo === "flap" || c.dataset.demo === "brick" || c.dataset.demo === "maze" || c.dataset.demo === "arch" ||
                        c.dataset.demo === "rocks" || c.dataset.demo === "loom" ||
-                       c.dataset.demo === "invade" || c.dataset.demo === "fuse" || c.dataset.demo === "pong" || c.dataset.demo === "lamps" || c.dataset.demo === "climb" || c.dataset.demo === "lanes" || c.dataset.demo === "swing" || c.dataset.demo === "mine");
+                       c.dataset.demo === "invade" || c.dataset.demo === "fuse" || c.dataset.demo === "pong" || c.dataset.demo === "lamps" || c.dataset.demo === "climb" || c.dataset.demo === "lanes" || c.dataset.demo === "swing" || c.dataset.demo === "mine" || c.dataset.demo === "sky");
   });
 
   if (window.ResizeObserver) {
