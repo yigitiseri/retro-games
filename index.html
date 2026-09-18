@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
-<meta name="description" content="Eighteen hand-built arcade cabinets you can play in the browser on a phone: snake, a road racer, a lander, breakout, a night-market maze, archery, a salvage tug, two-player ping pong and more. No install, no accounts, no ads.">
+<meta name="description" content="Nineteen hand-built arcade cabinets you can play in the browser on a phone: snake, a road racer, a lander, breakout, a night-market maze, archery, a salvage tug, two-player ping pong and more. No install, no accounts, no ads.">
 <meta name="theme-color" content="#08090e">
 <style>
   :root {
@@ -21,14 +21,14 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Retro Games Arcade">
 <meta property="og:title" content="Retro Games Arcade">
-<meta property="og:description" content="Eighteen hand-built arcade cabinets you can play in the browser on a phone: snake, a road racer, a lander, breakout, a night-market maze, archery, a salvage tug, two-player ping pong and more. No install, no accounts, no ads.">
+<meta property="og:description" content="Nineteen hand-built arcade cabinets you can play in the browser on a phone: snake, a road racer, a lander, breakout, a night-market maze, archery, a salvage tug, two-player ping pong and more. No install, no accounts, no ads.">
 <meta property="og:url" content="https://yigitiseri.github.io/retro-games/">
 <meta property="og:image" content="https://yigitiseri.github.io/retro-games/assets/social-card.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Retro Games Arcade">
-<meta name="twitter:description" content="Eighteen hand-built arcade cabinets you can play in the browser on a phone: snake, a road racer, a lander, breakout, a night-market maze, archery, a salvage tug, two-player ping pong and more. No install, no accounts, no ads.">
+<meta name="twitter:description" content="Nineteen hand-built arcade cabinets you can play in the browser on a phone: snake, a road racer, a lander, breakout, a night-market maze, archery, a salvage tug, two-player ping pong and more. No install, no accounts, no ads.">
 <meta name="twitter:image" content="https://yigitiseri.github.io/retro-games/assets/social-card.png">
 <link rel="preload" href="assets/fonts/press-start-2p-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="assets/fonts/fonts.css">
@@ -62,6 +62,7 @@
     --sarkac:  #5fe4ff;
     --maden:   #ffc23d;
     --fisek:   #ff6ea8;
+    --cit:     #6fbf4a;
 
     --cell-font: "Press Start 2P", ui-monospace, "Courier New", monospace;
     --read-font: "VT323", ui-monospace, "Courier New", monospace;
@@ -252,6 +253,7 @@
   .sarkac { --accent: var(--sarkac); }
   .maden { --accent: var(--maden); }
   .fisek { --accent: var(--fisek); }
+  .cit { --accent: var(--cit); }
 
   /* ---------- footer ---------- */
   .foot {
@@ -571,6 +573,17 @@
         <h2>F&#304;&#350;EK</h2>
         <p>One shell a round, and it does not go off until you let go of it. Everything it catches bursts in turn and each one in the chain pays more than the last, so the whole cabinet is a single decision made once every few seconds: fire now, or wait for the drift to bring one more into the ring.</p>
         <span class="keys">Hold &amp; release &middot; Space</span>
+        <span class="play">&#9654; PLAY</span>
+      </div>
+    </a>
+
+    <a class="cab cit" href="games/cit/">
+      <div class="tube"><canvas data-demo="fence" aria-hidden="true"></canvas></div>
+      <div class="plate">
+        <span class="no">CABINET NO. 21 &mdash; 1982</span>
+        <h2>&Ccedil;&#304;T</h2>
+        <p>The only cabinet here where you take ground instead of surviving it. Step off your land and you drag a fence behind you; get back to your own edge and everything you closed off is yours. While the line is open it can be cut &mdash; and a beast fenced into a small enough pen belongs to you too.</p>
+        <span class="keys">Hold to walk &middot; Arrows</span>
         <span class="play">&#9654; PLAY</span>
       </div>
     </a>
@@ -2487,13 +2500,96 @@
     }
   }
 
+
+  /* ---------- cit: walk out, close the loop, the ground is yours ---------- */
+  var ci = null;
+  var CI_CROPS = ["#3f8f3a", "#8a8f2a", "#b58a24", "#2f7a4a"];
+  function ciInit(W, H) {
+    var T = 5, cols = Math.floor(W / T), rows = Math.floor(H / T);
+    var g = new Uint8Array(cols * rows);
+    for (var c = 0; c < cols; c++) for (var r = 0; r < rows; r++)
+      if (c === 0 || c === cols - 1 || r === 0 || r === rows - 1) g[r * cols + c] = 1;
+    return { T: T, cols: cols, rows: rows, g: g, c: cols >> 1, r: rows - 1,
+             out: false, trail: [], last: 0, step: 0, plan: null, W: W,
+             foe: { x: W * 0.5, y: H * 0.45, vx: 17, vy: 13 }, t: 0 };
+  }
+  function drawFence(ctx, W, H, now) {
+    if (!ci || ci.W !== W) ci = ciInit(W, H);
+    var v = ci, dt = Math.min(0.05, (now - (v.last || now)) / 1000);
+    v.last = now; v.t += dt;
+    var T = v.T, ix = function (c, r) { return r * v.cols + c; };
+    var at = function (c, r) { return (c < 0 || c >= v.cols || r < 0 || r >= v.rows) ? 1 : v.g[ix(c, r)]; };
+
+    v.step += dt;
+    while (v.step > 0.055) {
+      v.step -= 0.055;
+      if (!v.plan || !v.plan.length) {
+        // out, across, and home: one sortie at a time
+        var up = 5 + ((Math.random() * 7) | 0), across = 3 + ((Math.random() * 5) | 0);
+        v.plan = [];
+        for (var a = 0; a < up; a++) v.plan.push([0, -1]);
+        for (var bq = 0; bq < across; bq++) v.plan.push([Math.random() < 0.5 ? -1 : 1, 0]);
+        for (var d = 0; d < up + 2; d++) v.plan.push([0, 1]);
+      }
+      var mv = v.plan.shift();
+      var nc = v.c + mv[0], nr = v.r + mv[1];
+      if (nc < 0 || nc >= v.cols || nr < 0 || nr >= v.rows) { v.plan = null; continue; }
+      var cell = at(nc, nr);
+      if (cell === 2) { v.plan = null; continue; }
+      v.c = nc; v.r = nr;
+      if (cell === 0) { v.g[ix(nc, nr)] = 2; v.trail.push([nc, nr]); v.out = true; }
+      else if (v.out) {
+        // close: fill everything the beast cannot reach
+        var reach = new Uint8Array(v.cols * v.rows), st = [];
+        var fc = Math.floor(v.foe.x / T), fr = Math.floor(v.foe.y / T);
+        if (at(fc, fr) === 0) { reach[ix(fc, fr)] = 1; st.push(fc, fr); }
+        while (st.length) {
+          var rr = st.pop(), cc = st.pop();
+          var nb = [[cc + 1, rr], [cc - 1, rr], [cc, rr + 1], [cc, rr - 1]];
+          for (var k = 0; k < 4; k++) {
+            var xc = nb[k][0], xr = nb[k][1];
+            if (xc < 0 || xc >= v.cols || xr < 0 || xr >= v.rows) continue;
+            if (v.g[ix(xc, xr)] !== 0 || reach[ix(xc, xr)]) continue;
+            reach[ix(xc, xr)] = 1; st.push(xc, xr);
+          }
+        }
+        for (var q = 0; q < v.trail.length; q++) v.g[ix(v.trail[q][0], v.trail[q][1])] = 1;
+        v.trail = [];
+        for (var c2 = 0; c2 < v.cols; c2++) for (var r2 = 0; r2 < v.rows; r2++)
+          if (v.g[ix(c2, r2)] === 0 && !reach[ix(c2, r2)]) v.g[ix(c2, r2)] = 1;
+        v.out = false;
+        var open = 0;
+        for (var z = 0; z < v.g.length; z++) if (!v.g[z]) open++;
+        if (open < v.cols * v.rows * 0.22) ci = ciInit(W, H);
+      }
+    }
+
+    var f = v.foe;
+    var fx = f.x + f.vx * dt, fy = f.y + f.vy * dt;
+    if (at(Math.floor(fx / T), Math.floor(f.y / T)) !== 0) f.vx = -f.vx; else f.x = fx;
+    if (at(Math.floor(f.x / T), Math.floor(fy / T)) !== 0) f.vy = -f.vy; else f.y = fy;
+
+    ctx.fillStyle = "#0d1410"; ctx.fillRect(0, 0, W, H);
+    for (var r3 = 0; r3 < v.rows; r3++) for (var c3 = 0; c3 < v.cols; c3++) {
+      var g3 = v.g[ix(c3, r3)];
+      if (!g3) continue;
+      if (g3 === 2) ctx.fillStyle = "#ffe98a";
+      else ctx.fillStyle = CI_CROPS[((((c3 / 4) | 0) * 7 + ((r3 / 4) | 0) * 13) % 4)];
+      ctx.fillRect(c3 * T, r3 * T, T, T);
+    }
+    ctx.fillStyle = "#ff4d5a";
+    ctx.beginPath(); ctx.arc(f.x, f.y, 2.6, 0, 6.2832); ctx.fill();
+    ctx.fillStyle = "#eefae6";
+    ctx.fillRect(v.c * T - 1, v.r * T - 1, T + 2, T + 2);
+  }
+
   /* ---------- wire up ---------- */
-  var painters = { snake: drawSnake, road: drawRoad, lander: drawLander, flap: drawFlap, brick: drawBrick, maze: drawMaze, arch: drawArch, rocks: drawRocks, loom: drawLoom, invade: drawInvade, fuse: drawFuse, pong: drawPong, lamps: drawLamps, climb: drawClimb, lanes: drawLanes, swing: drawSwing, mine: drawMine, sky: drawSky };
+  var painters = { snake: drawSnake, road: drawRoad, lander: drawLander, flap: drawFlap, brick: drawBrick, maze: drawMaze, arch: drawArch, rocks: drawRocks, loom: drawLoom, invade: drawInvade, fuse: drawFuse, pong: drawPong, lamps: drawLamps, climb: drawClimb, lanes: drawLanes, swing: drawSwing, mine: drawMine, sky: drawSky, fence: drawFence };
   Array.prototype.forEach.call(document.querySelectorAll("[data-demo]"), function (c) {
     var fn = painters[c.dataset.demo];
     if (fn) register(c, fn, c.dataset.demo === "flap" || c.dataset.demo === "brick" || c.dataset.demo === "maze" || c.dataset.demo === "arch" ||
                        c.dataset.demo === "rocks" || c.dataset.demo === "loom" ||
-                       c.dataset.demo === "invade" || c.dataset.demo === "fuse" || c.dataset.demo === "pong" || c.dataset.demo === "lamps" || c.dataset.demo === "climb" || c.dataset.demo === "lanes" || c.dataset.demo === "swing" || c.dataset.demo === "mine" || c.dataset.demo === "sky");
+                       c.dataset.demo === "invade" || c.dataset.demo === "fuse" || c.dataset.demo === "pong" || c.dataset.demo === "lamps" || c.dataset.demo === "climb" || c.dataset.demo === "lanes" || c.dataset.demo === "swing" || c.dataset.demo === "mine" || c.dataset.demo === "sky" || c.dataset.demo === "fence");
   });
 
   if (window.ResizeObserver) {

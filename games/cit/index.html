@@ -1,0 +1,698 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="description" content="CIT - take the ground by fencing it off, and mind the open line.">
+<meta name="theme-color" content="#08090e">
+<style>
+  :root {
+    color-scheme: dark;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  body { margin: 0; }
+  img { max-width: 100%; }
+  [hidden] { display: none !important; }
+</style>
+<title>ÇİT — Retro Games Arcade</title>
+<link rel="preload" href="../../assets/fonts/press-start-2p-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../assets/fonts/fonts.css">
+<style>
+  :root {
+    --ink:    #0d1410;
+    --soil:   #16221a;
+    --field:  #6fbf4a;
+    --field2: #3f8f3a;
+    --wheat:  #ffc75a;
+    --trail:  #ffe98a;
+    --foe:    #ff4d5a;
+    --hunter: #ff8a3d;
+    --paper:  #eefae6;
+    --dim:    rgba(238, 250, 230, 0.45);
+    --hud: "Press Start 2P", monospace;
+    --ui: "VT323", ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; margin: 0; overflow: hidden; }
+  body {
+    background: var(--ink); color: var(--paper);
+    font-family: var(--ui); user-select: none; touch-action: none; overscroll-behavior: none;
+  }
+  #wrap { position: fixed; inset: 0; }
+  canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; }
+
+  .hud {
+    position: absolute; top: 0; left: 0; right: 0;
+    padding: calc(env(safe-area-inset-top, 0px) + 10px) 12px 0;
+    display: grid; grid-template-columns: 1fr auto 1fr;
+    align-items: start; pointer-events: none; z-index: 2; font-family: var(--hud);
+  }
+  .hud .k { font-size: 7px; letter-spacing: 0.16em; color: var(--dim); }
+  .hud .score { font-size: clamp(15px, 5vw, 21px); line-height: 1.5; }
+  .hud .best { font-size: 10px; color: var(--dim); line-height: 1.7; }
+  .hud .best.lead { color: var(--wheat); }
+  .hud .right { text-align: right; }
+  .pct { text-align: center; }
+  .pct .v { font-size: clamp(14px, 4.6vw, 19px); line-height: 1.5; color: var(--field); }
+  .pct .v.done { color: var(--wheat); }
+
+  .bar {
+    position: absolute; left: 12px; right: 12px;
+    top: calc(env(safe-area-inset-top, 0px) + 58px);
+    height: 5px; background: rgba(238,250,230,0.12); border-radius: 3px;
+    overflow: hidden; z-index: 2; pointer-events: none;
+  }
+  .bar i { display: block; height: 100%; width: 100%; transform-origin: left center;
+           background: linear-gradient(90deg, var(--field2), var(--field)); }
+  .bar u {
+    position: absolute; top: -3px; width: 2px; height: 11px;
+    background: var(--wheat); border-radius: 1px;
+  }
+
+  .screen {
+    position: absolute; inset: 0; display: grid; place-content: center; justify-items: center;
+    gap: 15px; text-align: center; padding: 26px; z-index: 3;
+    background: radial-gradient(120% 90% at 50% 42%, rgba(13,20,16,0.82), rgba(13,20,16,0.96));
+  }
+  .screen[hidden] { display: none; }
+  .title {
+    font-family: var(--hud); font-size: clamp(30px, 12vw, 50px); letter-spacing: 3px; line-height: 1.4;
+    background: linear-gradient(180deg, #fff, var(--field) 50%, var(--field2));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 0 22px rgba(111,191,74,0.45));
+  }
+  .sub { font-family: var(--hud); font-size: clamp(8px, 2.7vw, 10px); letter-spacing: 0.2em; color: var(--wheat); }
+  .lines { font-size: clamp(17px, 4.6vw, 20px); line-height: 1.5; color: #d9ead2; max-width: 33ch; }
+  .lines b { color: var(--wheat); }
+  .lines .bad { color: var(--foe); }
+  .btn {
+    margin-top: 4px; font-family: var(--hud); font-size: 11px; letter-spacing: 0.14em;
+    padding: 14px 28px; color: #0d1410; border: 0; border-radius: 4px; cursor: pointer;
+    background: linear-gradient(180deg, #b8f09a, var(--field));
+    box-shadow: 0 3px 0 #2d6b28, 0 0 26px rgba(111,191,74,0.35);
+  }
+  .btn:active { transform: translateY(2px); box-shadow: 0 1px 0 #2d6b28; }
+  .hintline { font-family: var(--hud); font-size: 7px; letter-spacing: 0.13em; color: var(--dim); line-height: 2; }
+  .over-title { font-family: var(--hud); font-size: clamp(13px, 4.6vw, 19px); color: var(--foe); letter-spacing: 0.1em; }
+  .over-title.best { color: var(--wheat); }
+  .final { font-family: var(--hud); font-size: clamp(22px, 8vw, 36px); line-height: 1.4; }
+  .stats { display: grid; grid-template-columns: repeat(3, auto); gap: 8px 20px; justify-content: center; font-family: var(--hud); }
+  .stats .k { font-size: 7px; letter-spacing: 0.15em; color: var(--dim); }
+  .stats .v { font-size: 12px; margin-top: 4px; }
+  .stats .v.gold { color: var(--wheat); }
+</style>
+<link rel="canonical" href="https://yigitiseri.github.io/retro-games/games/cit/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Retro Games Arcade">
+<meta property="og:title" content="ÇİT — Retro Games Arcade">
+<meta property="og:description" content="CIT - take the ground by fencing it off, and mind the open line.">
+<meta property="og:url" content="https://yigitiseri.github.io/retro-games/games/cit/">
+<meta property="og:image" content="https://yigitiseri.github.io/retro-games/assets/social-card.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="ÇİT — Retro Games Arcade">
+<meta name="twitter:description" content="CIT - take the ground by fencing it off, and mind the open line.">
+<meta name="twitter:image" content="https://yigitiseri.github.io/retro-games/assets/social-card.png">
+
+<!-- Cloudflare Web Analytics: no cookies, no client-side storage -->
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "aee6e644a3b74cb9bdaf4e1569d570e2"}'></script>
+<!-- End Cloudflare Web Analytics -->
+
+</head>
+<body>
+<div id="wrap">
+  <canvas id="c"></canvas>
+
+  <div class="hud">
+    <div>
+      <div class="k">SCORE</div>
+      <div class="score" id="hScore">0</div>
+      <div class="k" style="margin-top:5px">BEST</div>
+      <div class="best" id="hBest">0</div>
+    </div>
+    <div class="pct">
+      <div class="k">FENCED</div>
+      <div class="v" id="hPct">0%</div>
+    </div>
+    <div class="right">
+      <div class="k">FIELD</div>
+      <div class="best" id="hLevel">1</div>
+      <div class="k" style="margin-top:5px">LIVES</div>
+      <div class="best" id="hLives">3</div>
+    </div>
+  </div>
+  <div class="bar"><i id="hBar"></i><u id="hMark"></u></div>
+
+  <div class="screen" id="startScreen">
+    <div class="title">ÇİT</div>
+    <div class="sub">TAKE THE GROUND</div>
+    <div class="lines">
+      Step off your land and you start dragging a fence. Get back to your
+      own edge and <b>everything you closed off is yours</b>.
+    </div>
+    <div class="lines" style="font-size:16px;opacity:0.82">
+      While the fence is open it can be cut. <span class="bad">Anything out there</span>
+      that touches the line, or you, ends the run. Fence a beast into a
+      small enough pen and it is yours too.
+    </div>
+    <button class="btn" id="btnStart">GO OUT</button>
+    <div class="hintline">HOLD TO WALK &middot; ARROW KEYS</div>
+  </div>
+
+  <div class="screen" id="overScreen" hidden>
+    <div class="over-title" id="overTitle">FENCE CUT</div>
+    <div class="final" id="overScore">0</div>
+    <div class="stats">
+      <div><div class="k">BEST</div><div class="v gold" id="overBest">0</div></div>
+      <div><div class="k">FIELDS</div><div class="v" id="overFields">0</div></div>
+      <div><div class="k">PENNED</div><div class="v gold" id="overPenned">0</div></div>
+    </div>
+    <button class="btn" id="btnAgain">AGAIN</button>
+    <div class="hintline">TAP OR PRESS R</div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ============================================================
+     A field you take by walking round it. Standing on your own land
+     you cannot be touched; the risk is entirely in how much you try
+     to enclose before coming back.
+     ============================================================ */
+  var COLS = 32, CELL = 12.5;
+  var VW = COLS * CELL, VH = 700;
+  var ROWS = 56;
+
+  var OPEN = 0, MINE = 1, LINE = 2;
+
+  // four crops, so the ground you take is a quilt rather than a slab
+  var CROPS = [
+    ["#3f8f3a", "#478f3f", "rgba(111,191,74,0.38)"],   // green
+    ["#8a8f2a", "#94992f", "rgba(211,224,90,0.34)"],   // barley
+    ["#b58a24", "#c0952a", "rgba(255,199,90,0.32)"],   // wheat
+    ["#2f7a4a", "#357f50", "rgba(90,198,140,0.32)"]    // clover
+  ];
+
+  var STEP_T = 0.052;        // seconds per cell walked
+  var TARGET = 0.72;         // share of the field that clears it
+  var PEN_MAX = 26;          // a pen this small captures whatever is in it
+
+  var cv = document.getElementById("c");
+  var ctx = cv.getContext("2d");
+  var wrap = document.getElementById("wrap");
+  var hScore = document.getElementById("hScore");
+  var hBest = document.getElementById("hBest");
+  var hPct = document.getElementById("hPct");
+  var hLevel = document.getElementById("hLevel");
+  var hLives = document.getElementById("hLives");
+  var hBar = document.getElementById("hBar");
+  var hMark = document.getElementById("hMark");
+  var startScreen = document.getElementById("startScreen");
+  var overScreen = document.getElementById("overScreen");
+  var overTitle = document.getElementById("overTitle");
+  var overScore = document.getElementById("overScore");
+  var overBest = document.getElementById("overBest");
+  var overFields = document.getElementById("overFields");
+  var overPenned = document.getElementById("overPenned");
+
+  var state = "start";
+  var grid, p, foes, trail, parts, pops, score, best, level, lives, penned;
+  var claimed, total, tRun, shake, flash, beatBest, stepT, invuln, clearWait;
+
+  function loadNum(k) { try { return parseInt(localStorage.getItem(k), 10) || 0; } catch (e) { return 0; } }
+  function saveNum(k, v) { try { localStorage.setItem(k, String(Math.floor(v))); } catch (e) {} }
+
+  /* ---------------- audio ---------------- */
+  var actx = null;
+  function blip(freq, dur, type, vol, slide) {
+    try {
+      if (!actx) { var AC = window.AudioContext || window.webkitAudioContext; if (!AC) return; actx = new AC(); }
+      if (actx.state === "suspended") actx.resume();
+      var o = actx.createOscillator(), g = actx.createGain();
+      o.type = type || "sine";
+      o.frequency.setValueAtTime(freq, actx.currentTime);
+      if (slide) o.frequency.exponentialRampToValueAtTime(slide, actx.currentTime + dur);
+      g.gain.setValueAtTime(vol || 0.05, actx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.0001, actx.currentTime + dur);
+      o.connect(g); g.connect(actx.destination);
+      o.start(); o.stop(actx.currentTime + dur);
+    } catch (e) {}
+  }
+
+  /* ---------------- sizing ---------------- */
+  var dpr = 1, scale = 1;
+  function resize() {
+    var w = wrap.clientWidth, h = wrap.clientHeight;
+    if (!w || !h) return;
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    cv.width = Math.round(w * dpr);
+    cv.height = Math.round(h * dpr);
+    scale = (w * dpr) / VW;
+    VH = (h * dpr) / scale;
+  }
+
+  /* ---------------- grid ---------------- */
+  function idx(c, r) { return r * COLS + c; }
+  function at(c, r) {
+    if (c < 0 || c >= COLS || r < 0 || r >= ROWS) return MINE;   // outside is solid ground
+    return grid[idx(c, r)];
+  }
+  function set(c, r, v) { if (c >= 0 && c < COLS && r >= 0 && r < ROWS) grid[idx(c, r)] = v; }
+
+  function newField() {
+    ROWS = Math.max(34, Math.floor(VH / CELL));
+    grid = new Uint8Array(COLS * ROWS);
+    for (var c = 0; c < COLS; c++) for (var r = 0; r < ROWS; r++) {
+      var edge = (c < 1 || c >= COLS - 1 || r < 3 || r >= ROWS - 1);
+      grid[idx(c, r)] = edge ? MINE : OPEN;
+    }
+    total = 0;
+    for (var i = 0; i < grid.length; i++) if (grid[i] === OPEN) total++;
+    claimed = 0;
+
+    trail = [];
+    p = { c: COLS >> 1, r: ROWS - 1, out: false, dir: null };
+    stepT = 0;
+    invuln = 0;
+
+    foes = [];
+    var n = Math.min(5, 1 + Math.floor(level / 2));
+    for (var k = 0; k < n; k++) {
+      var a = Math.random() * 6.2832, sp = 44 + Math.min(58, level * 5);
+      foes.push({ x: (4 + Math.random() * (COLS - 8)) * CELL,
+                  y: (8 + Math.random() * (ROWS - 16)) * CELL,
+                  vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, kind: "drift" });
+    }
+    // from the third field on, one of them walks your fence line looking for you
+    if (level >= 3) foes[foes.length - 1].kind = "hunter";
+    clearWait = 0;
+    syncHud();
+  }
+
+  function reset() {
+    score = 0; level = 1; lives = 3; penned = 0;
+    parts = []; pops = [];
+    tRun = 0; shake = 0; flash = 0; beatBest = false;
+    best = loadNum("cit-best");
+    newField();
+  }
+  function startRun() {
+    reset(); state = "play";
+    startScreen.hidden = true; overScreen.hidden = true;
+    blip(360, 0.1, "triangle", 0.05, 640);
+  }
+  function gameOver() {
+    state = "over";
+    if (score > best) { best = score; saveNum("cit-best", best); }
+    saveNum("cit-fields", Math.max(loadNum("cit-fields"), level - 1));
+    overTitle.textContent = beatBest ? "NEW BEST" : "FENCE CUT";
+    overTitle.classList.toggle("best", beatBest);
+    overScore.textContent = fmt(Math.floor(score));
+    overBest.textContent = fmt(Math.floor(best));
+    overFields.textContent = level - 1;
+    overPenned.textContent = penned;
+    overScreen.hidden = false;
+    blip(190, 0.45, "sawtooth", 0.07, 50);
+  }
+  function fmt(n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
+
+  /* ---------------- claiming ----------------
+     Close the loop and every pocket of open ground that no beast can
+     reach becomes yours. A pocket small enough with a beast in it is a
+     pen: the beast is caught and the ground counts too. */
+  function closeLoop() {
+    var reach = new Uint8Array(COLS * ROWS);
+    var stack = [];
+    for (var f = 0; f < foes.length; f++) {
+      var fc = Math.floor(foes[f].x / CELL), fr = Math.floor(foes[f].y / CELL);
+      if (at(fc, fr) === OPEN && !reach[idx(fc, fr)]) { reach[idx(fc, fr)] = 1; stack.push(fc, fr); }
+    }
+    while (stack.length) {
+      var r0 = stack.pop(), c0 = stack.pop();
+      var nb = [[c0 + 1, r0], [c0 - 1, r0], [c0, r0 + 1], [c0, r0 - 1]];
+      for (var i = 0; i < 4; i++) {
+        var nc = nb[i][0], nr = nb[i][1];
+        if (nc < 0 || nc >= COLS || nr < 0 || nr >= ROWS) continue;
+        if (grid[idx(nc, nr)] !== OPEN || reach[idx(nc, nr)]) continue;
+        reach[idx(nc, nr)] = 1; stack.push(nc, nr);
+      }
+    }
+
+    var gained = 0;
+    for (var t = 0; t < trail.length; t++) { set(trail[t][0], trail[t][1], MINE); gained++; }
+    trail = [];
+    for (var c = 0; c < COLS; c++) for (var r = 0; r < ROWS; r++) {
+      if (grid[idx(c, r)] === OPEN && !reach[idx(c, r)]) { grid[idx(c, r)] = MINE; gained++; }
+    }
+
+    /* a beast whose remaining run is small enough is penned */
+    var seen = new Uint8Array(COLS * ROWS);
+    for (var q = foes.length - 1; q >= 0; q--) {
+      var fx = Math.floor(foes[q].x / CELL), fy = Math.floor(foes[q].y / CELL);
+      if (at(fx, fy) !== OPEN) continue;
+      if (seen[idx(fx, fy)]) continue;
+      var size = 0, st2 = [fx, fy], mark = [];
+      seen[idx(fx, fy)] = 1;
+      while (st2.length) {
+        var yy = st2.pop(), xx = st2.pop();
+        size++; mark.push(xx, yy);
+        var nb2 = [[xx + 1, yy], [xx - 1, yy], [xx, yy + 1], [xx, yy - 1]];
+        for (var j = 0; j < 4; j++) {
+          var ac = nb2[j][0], ar = nb2[j][1];
+          if (ac < 0 || ac >= COLS || ar < 0 || ar >= ROWS) continue;
+          if (grid[idx(ac, ar)] !== OPEN || seen[idx(ac, ar)]) continue;
+          seen[idx(ac, ar)] = 1; st2.push(ac, ar);
+        }
+      }
+      if (size <= PEN_MAX) {
+        for (var z = foes.length - 1; z >= 0; z--) {
+          var zc = Math.floor(foes[z].x / CELL), zr = Math.floor(foes[z].y / CELL);
+          if (at(zc, zr) === OPEN && seen[idx(zc, zr)]) {
+            spark(foes[z].x, foes[z].y, 22, "#ffc75a", 180);
+            pop(foes[z].x, foes[z].y, "PENNED +500", "#ffc75a");
+            score += 500; penned++;
+            foes.splice(z, 1);
+            blip(880, 0.25, "triangle", 0.07, 1500);
+            flash = 1;
+          }
+        }
+        for (var mm = 0; mm < mark.length; mm += 2) { grid[idx(mark[mm], mark[mm + 1])] = MINE; gained++; }
+      }
+    }
+
+    claimed += gained;
+    var add = gained * 4;
+    score += add;
+    pop(p.c * CELL, p.r * CELL, "+" + add, "#6fbf4a");
+    spark(p.c * CELL, p.r * CELL, 10, "#6fbf4a", 120);
+    blip(520, 0.14, "triangle", 0.05, 760);
+    if (!beatBest && score > best && best > 0) { beatBest = true; flash = 1; }
+
+    if (pct() >= TARGET && !clearWait) {
+      clearWait = 0.9;
+      var bonus = Math.round((pct() - TARGET) * 100) * 40 + 400;
+      score += bonus;
+      pop(VW / 2, VH * 0.4, "FIELD TAKEN +" + bonus, "#ffc75a");
+      blip(980, 0.3, "triangle", 0.07, 1600);
+    }
+    syncHud();
+  }
+
+  function pct() { return total ? claimed / total : 0; }
+
+  function cut(cx, cy) {
+    if (invuln > 0) return;
+    lives--;
+    shake = 0.6;
+    spark(cx, cy, 26, "#ff4d5a", 200);
+    for (var t = 0; t < trail.length; t++) set(trail[t][0], trail[t][1], OPEN);
+    trail = [];
+    p.out = false;
+    // put the walker back on solid ground
+    var bc = COLS >> 1, br = ROWS - 1;
+    p.c = bc; p.r = br;
+    invuln = 1.4;
+    blip(150, 0.3, "sawtooth", 0.06, 60);
+    if (lives <= 0) gameOver();
+    syncHud();
+  }
+
+  /* ---------------- particles ---------------- */
+  var MAX_PARTS = 150;
+  function spark(x, y, n, col, spread) {
+    for (var i = 0; i < n && parts.length < MAX_PARTS; i++) {
+      var a = Math.random() * 6.2832, s = spread * (0.3 + Math.random() * 0.8);
+      parts.push({ x: x, y: y, vx: Math.cos(a) * s, vy: Math.sin(a) * s,
+                   life: 0.32 + Math.random() * 0.36, max: 0.7, col: col, r: 1.5 + Math.random() * 2.2 });
+    }
+  }
+  var MAX_POPS = 10;
+  function pop(x, y, text, col) {
+    if (pops.length >= MAX_POPS) pops.shift();
+    pops.push({ x: x, y: y, text: text, col: col, life: 0.95, max: 0.95 });
+  }
+
+  /* ---------------- input ---------------- */
+  var keys = {}, pointer = null;
+  function wantDir() {
+    if (keys.up) return [0, -1];
+    if (keys.down) return [0, 1];
+    if (keys.left) return [-1, 0];
+    if (keys.right) return [1, 0];
+    if (pointer) {
+      var dx = pointer.x - (p.c * CELL + CELL / 2), dy = pointer.y - (p.r * CELL + CELL / 2);
+      if (Math.abs(dx) < 7 && Math.abs(dy) < 7) return null;
+      if (Math.abs(dx) > Math.abs(dy)) return [dx > 0 ? 1 : -1, 0];
+      return [0, dy > 0 ? 1 : -1];
+    }
+    return null;
+  }
+
+  /* ---------------- the loop ---------------- */
+  function update(dt) {
+    tRun += dt;
+    if (invuln > 0) invuln -= dt;
+
+    if (clearWait > 0) {
+      clearWait -= dt;
+      if (clearWait <= 0) { level++; newField(); }
+      return;
+    }
+
+    /* the walker */
+    stepT += dt;
+    while (stepT >= STEP_T) {
+      stepT -= STEP_T;
+      var d = wantDir();
+      if (!d) break;
+      var nc = p.c + d[0], nr = p.r + d[1];
+      if (nc < 0 || nc >= COLS || nr < 0 || nr >= ROWS) break;
+      var cellv = at(nc, nr);
+      if (cellv === LINE) break;                       // never cross your own fence
+      p.c = nc; p.r = nr;
+      if (cellv === OPEN) {
+        set(nc, nr, LINE);
+        trail.push([nc, nr]);
+        p.out = true;
+      } else if (p.out) {
+        closeLoop();
+        p.out = false;
+      }
+    }
+
+    /* the beasts, which live only on open ground */
+    for (var i = 0; i < foes.length; i++) {
+      var f = foes[i];
+      if (f.kind === "hunter") {
+        // walks the boundary of your land, hunting the fence rather than you
+        var tx = p.c * CELL + CELL / 2, ty = p.r * CELL + CELL / 2;
+        var dx = tx - f.x, dy = ty - f.y, L = Math.hypot(dx, dy) || 1;
+        var sp = 40 + Math.min(44, level * 3.5);
+        f.vx += (dx / L) * sp * dt * 2.4;
+        f.vy += (dy / L) * sp * dt * 2.4;
+        var cur = Math.hypot(f.vx, f.vy) || 1;
+        f.vx = f.vx / cur * sp; f.vy = f.vy / cur * sp;
+      }
+      var stepX = f.vx * dt, stepY = f.vy * dt;
+      if (!moveFoe(f, stepX, 0)) f.vx = -f.vx;
+      if (!moveFoe(f, 0, stepY)) f.vy = -f.vy;
+
+      // touching the open fence, or the walker while out, ends it
+      var fc = Math.floor(f.x / CELL), fr = Math.floor(f.y / CELL);
+      if (at(fc, fr) === LINE) { cut(f.x, f.y); return; }
+      if (p.out && fc === p.c && fr === p.r) { cut(f.x, f.y); return; }
+    }
+
+    for (var q = parts.length - 1; q >= 0; q--) {
+      var pa = parts[q];
+      pa.life -= dt;
+      if (pa.life <= 0) { parts.splice(q, 1); continue; }
+      pa.x += pa.vx * dt; pa.y += pa.vy * dt; pa.vy += 220 * dt;
+    }
+    for (var w = pops.length - 1; w >= 0; w--) {
+      var po = pops[w];
+      po.life -= dt;
+      if (po.life <= 0) { pops.splice(w, 1); continue; }
+      po.y -= 26 * dt;
+    }
+    if (shake > 0) shake = Math.max(0, shake - dt * 1.8);
+    if (flash > 0) flash = Math.max(0, flash - dt * 2);
+    syncHud();
+  }
+
+  /* a beast may never set foot on claimed ground: that is the promise that
+     makes standing on your own land safe, so it is enforced on every move */
+  function moveFoe(f, dx, dy) {
+    var nx = f.x + dx, ny = f.y + dy;
+    var c = Math.floor(nx / CELL), r = Math.floor(ny / CELL);
+    if (at(c, r) === MINE) return false;
+    f.x = nx; f.y = ny;
+    return true;
+  }
+
+  /* ---------------- drawing ---------------- */
+  function render() {
+    ctx.setTransform(scale, 0, 0, scale, 0, 0);
+    ctx.fillStyle = "#0d1410";
+    ctx.fillRect(0, 0, VW, VH);
+
+    ctx.save();
+    if (shake > 0) ctx.translate((Math.random() - 0.5) * shake * 12, (Math.random() - 0.5) * shake * 10);
+
+    for (var r = 0; r < ROWS; r++) {
+      for (var c = 0; c < COLS; c++) {
+        var v = grid[idx(c, r)], x = c * CELL, y = r * CELL;
+        if (v === OPEN) {
+          ctx.fillStyle = ((c + r) & 1) ? "#16221a" : "#131e18";
+          ctx.fillRect(x, y, CELL + 0.5, CELL + 0.5);
+        } else if (v === MINE) {
+          /* Your land comes up as a patchwork rather than one slab of green:
+             each block of ground takes a crop of its own, so a big claim reads
+             as fields you have taken instead of a filled rectangle. */
+          var blk = (((c / 5) | 0) * 7 + ((r / 5) | 0) * 13) % 4;
+          var crop = CROPS[blk];
+          ctx.fillStyle = ((c + r) & 1) ? crop[0] : crop[1];
+          ctx.fillRect(x, y, CELL + 0.5, CELL + 0.5);
+          ctx.fillStyle = crop[2];
+          ctx.fillRect(x, y + (r % 2 ? 3 : 7), CELL + 0.5, 2);
+        } else {
+          ctx.fillStyle = "#ffe98a";
+          ctx.fillRect(x, y, CELL + 0.5, CELL + 0.5);
+        }
+      }
+    }
+
+    for (var i = 0; i < foes.length; i++) {
+      var f = foes[i];
+      var col = f.kind === "hunter" ? "#ff8a3d" : "#ff4d5a";
+      ctx.shadowBlur = 12; ctx.shadowColor = col;
+      ctx.fillStyle = col;
+      ctx.beginPath(); ctx.arc(f.x, f.y, 6, 0, 6.2832); ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = "#0d1410";
+      ctx.fillRect(f.x - 3, f.y - 2, 2, 2);
+      ctx.fillRect(f.x + 1, f.y - 2, 2, 2);
+    }
+
+    var px = p.c * CELL + CELL / 2, py = p.r * CELL + CELL / 2;
+    if (invuln > 0 && ((tRun * 12) | 0) % 2) { /* blink after a cut */ }
+    else {
+      ctx.shadowBlur = 12; ctx.shadowColor = "#eefae6";
+      ctx.fillStyle = "#eefae6";
+      ctx.fillRect(px - 5, py - 5, 10, 10);
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = p.out ? "#ffc75a" : "#3f8f3a";
+      ctx.fillRect(px - 2.5, py - 2.5, 5, 5);
+    }
+
+    for (var q = 0; q < parts.length; q++) {
+      var pa = parts[q];
+      ctx.globalAlpha = Math.max(0, pa.life / pa.max);
+      ctx.fillStyle = pa.col;
+      ctx.fillRect(pa.x - pa.r / 2, pa.y - pa.r / 2, pa.r, pa.r);
+    }
+    ctx.globalAlpha = 1;
+
+    ctx.textAlign = "center";
+    ctx.font = "8px 'Press Start 2P', monospace";
+    for (var w = 0; w < pops.length; w++) {
+      var po = pops[w];
+      ctx.globalAlpha = Math.max(0, Math.min(1, po.life / po.max * 1.5));
+      ctx.fillStyle = po.col;
+      ctx.fillText(po.text, Math.max(40, Math.min(VW - 40, po.x)), po.y);
+    }
+    ctx.globalAlpha = 1;
+    ctx.restore();
+
+    // a scrim so the readouts survive a bright field behind them
+    var sc = ctx.createLinearGradient(0, 0, 0, 96);
+    sc.addColorStop(0, "rgba(13,20,16,0.82)");
+    sc.addColorStop(0.7, "rgba(13,20,16,0.4)");
+    sc.addColorStop(1, "rgba(13,20,16,0)");
+    ctx.fillStyle = sc;
+    ctx.fillRect(0, 0, VW, 96);
+
+    if (flash > 0) {
+      ctx.fillStyle = "rgba(255,199,90," + (flash * 0.13).toFixed(3) + ")";
+      ctx.fillRect(0, 0, VW, VH);
+    }
+  }
+
+  /* ---------------- hud ---------------- */
+  function syncHud() {
+    hScore.textContent = fmt(Math.floor(score));
+    hBest.textContent = fmt(Math.floor(Math.max(best, score)));
+    hBest.classList.toggle("lead", score > best && best > 0);
+    var k = pct();
+    hPct.textContent = Math.round(k * 100) + "%";
+    hPct.classList.toggle("done", k >= TARGET);
+    hLevel.textContent = level;
+    hLives.textContent = lives;
+    hBar.style.transform = "scaleX(" + Math.min(1, k).toFixed(3) + ")";
+    hMark.style.left = (TARGET * 100) + "%";
+  }
+
+  /* ---------------- events ---------------- */
+  function pt(ev) {
+    var r = cv.getBoundingClientRect();
+    return { x: ((ev.clientX - r.left) / r.width) * VW, y: ((ev.clientY - r.top) / r.height) * VH };
+  }
+  wrap.addEventListener("pointerdown", function (ev) {
+    ev.preventDefault();
+    if (state === "over") { startRun(); return; }
+    if (state === "start") { startRun(); return; }
+    pointer = pt(ev);
+    try { wrap.setPointerCapture(ev.pointerId); } catch (e) {}
+  });
+  wrap.addEventListener("pointermove", function (ev) { if (pointer) pointer = pt(ev); });
+  function release() { pointer = null; }
+  wrap.addEventListener("pointerup", release);
+  wrap.addEventListener("pointercancel", release);
+  window.addEventListener("pointerup", release);
+  document.addEventListener("visibilitychange", function () { if (document.hidden) { release(); keys = {}; } });
+
+  window.addEventListener("keydown", function (ev) {
+    var k = ev.key;
+    if (k === "ArrowLeft" || k === "a") { keys.left = true; ev.preventDefault(); }
+    else if (k === "ArrowRight" || k === "d") { keys.right = true; ev.preventDefault(); }
+    else if (k === "ArrowUp" || k === "w") { keys.up = true; ev.preventDefault(); }
+    else if (k === "ArrowDown" || k === "s") { keys.down = true; ev.preventDefault(); }
+    else if (k === " " || k === "Enter") { ev.preventDefault(); if (state !== "play") startRun(); }
+    else if (k === "r" || k === "R") { ev.preventDefault(); startRun(); }
+  });
+  window.addEventListener("keyup", function (ev) {
+    var k = ev.key;
+    if (k === "ArrowLeft" || k === "a") keys.left = false;
+    else if (k === "ArrowRight" || k === "d") keys.right = false;
+    else if (k === "ArrowUp" || k === "w") keys.up = false;
+    else if (k === "ArrowDown" || k === "s") keys.down = false;
+  });
+
+  document.getElementById("btnStart").addEventListener("click", function (e) { e.stopPropagation(); startRun(); });
+  document.getElementById("btnAgain").addEventListener("click", function (e) { e.stopPropagation(); startRun(); });
+  window.addEventListener("resize", function () { resize(); });
+
+  /* ---------------- boot ---------------- */
+  var last = 0;
+  function frame(now) {
+    requestAnimationFrame(frame);
+    var dt = last ? Math.min(0.032, (now - last) / 1000) : 0;
+    last = now;
+    if (state === "play") update(dt);
+    render();
+  }
+  resize();
+  best = loadNum("cit-best");
+  reset();
+  syncHud();
+  if (window.ResizeObserver) new ResizeObserver(resize).observe(wrap);
+  requestAnimationFrame(frame);
+
+})();
+</script>
+</body>
+</html>
