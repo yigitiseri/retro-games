@@ -344,6 +344,7 @@
   var POWER = 2;
   var MAX_BOMBS = 3;          // three from the start: the chain is the game, not a reward
   var PLAYER_SPEED = 40;
+  var FOE_CAP = 34;             // never faster than the runner: there is always an out
   var START = { c: 1, r: 1 };
 
   var DIRS = {
@@ -373,7 +374,7 @@
 
   var state = "idle";
   var grid, player, foes, bombs, fires, score, best, bestChain, lives, floorNo;
-  var respawning, invuln, shake, bannerEl, cleared, lastCause;
+  var respawning, invuln, shake, bannerEl, cleared, clearWait, lastCause;
   var soundOn = true;
   var held = { up: false, down: false, left: false, right: false };
 
@@ -515,11 +516,13 @@
       if (grid[r][c] !== EMPTY) continue;
       if (Math.abs(c - START.c) + Math.abs(r - START.r) < 6) continue;
       var kind = (foes.length % 3 === 2 && floorNo > 1) ? "hunter" : "walker";
-      var f = mover(c, r, kind === "hunter" ? 26 + floorNo * 1.5 : 20 + floorNo);
+      var sp = kind === "hunter" ? 26 + floorNo * 1.5 : 20 + floorNo;
+      var f = mover(c, r, Math.min(sp, FOE_CAP));
       f.kind = kind;
       foes.push(f);
     }
     cleared = false;
+    clearWait = 0;
   }
 
   /* ---------------- bombs, and the chain ---------------- */
@@ -688,9 +691,10 @@
     /* fire does not care whose bomb it was */
     if (burning(player.c, player.r) || burning(player.nc, player.nr)) return killPlayer();
 
-    if (!foes.length && !cleared) {
-      cleared = true;
-      setTimeout(function () { if (state === "running") nextFloor(); }, 700);
+    if (!foes.length && !cleared) { cleared = true; clearWait = 0.7; }
+    if (cleared) {
+      clearWait -= dt;
+      if (clearWait <= 0) nextFloor();
     }
   }
 

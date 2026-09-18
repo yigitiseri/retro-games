@@ -44,6 +44,25 @@ you unlock — it is the whole point.
   caught is a mistake rather than bad luck.
 - Clear the floor of them and the next one is denser.
 
+## The floors
+
+There is no last one. It runs until you lose your three lives, and the pressure
+rises and then **plateaus** rather than running away from you:
+
+| Floor | Chasers | Fastest | You | Brick |
+| --- | --- | --- | --- | --- |
+| 1 | 3, all wandering | 21 | 40 | lightest |
+| 2 | 4, the first hunter appears | 29 | 40 | ↑ |
+| 3 | 5 | 30.5 | 40 | ↑ |
+| 4 | **6 — the cap** | 32 | 40 | ↑ |
+| 6 and on | 6 | **34 — the cap** | 40 | densest |
+
+The speed ceiling is deliberate. Left ungoverned the hunter passed the runner
+around floor ten and kept going, which turns the game into something you cannot
+answer. Capped at 34 against your 40, dropping everything and running is always
+available — what actually gets harder is that there are six of them and less and
+less floor to run on.
+
 ## Fairness
 
 Some invariants are covered by tests rather than by hope:
