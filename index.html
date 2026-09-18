@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
-<meta name="description" content="Fifteen hand-built arcade cabinets you can play in the browser on a phone: snake, a road racer, a lander, breakout, a night-market maze, archery, a salvage tug, two-player ping pong and more. No install, no accounts, no ads.">
+<meta name="description" content="Sixteen hand-built arcade cabinets you can play in the browser on a phone: snake, a road racer, a lander, breakout, a night-market maze, archery, a salvage tug, two-player ping pong and more. No install, no accounts, no ads.">
 <meta name="theme-color" content="#08090e">
 <style>
   :root {
@@ -21,14 +21,14 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Retro Games Arcade">
 <meta property="og:title" content="Retro Games Arcade">
-<meta property="og:description" content="Fifteen hand-built arcade cabinets you can play in the browser on a phone: snake, a road racer, a lander, breakout, a night-market maze, archery, a salvage tug, two-player ping pong and more. No install, no accounts, no ads.">
+<meta property="og:description" content="Sixteen hand-built arcade cabinets you can play in the browser on a phone: snake, a road racer, a lander, breakout, a night-market maze, archery, a salvage tug, two-player ping pong and more. No install, no accounts, no ads.">
 <meta property="og:url" content="https://yigitiseri.github.io/retro-games/">
 <meta property="og:image" content="https://yigitiseri.github.io/retro-games/assets/social-card.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Retro Games Arcade">
-<meta name="twitter:description" content="Fifteen hand-built arcade cabinets you can play in the browser on a phone: snake, a road racer, a lander, breakout, a night-market maze, archery, a salvage tug, two-player ping pong and more. No install, no accounts, no ads.">
+<meta name="twitter:description" content="Sixteen hand-built arcade cabinets you can play in the browser on a phone: snake, a road racer, a lander, breakout, a night-market maze, archery, a salvage tug, two-player ping pong and more. No install, no accounts, no ads.">
 <meta name="twitter:image" content="https://yigitiseri.github.io/retro-games/assets/social-card.png">
 <link rel="preload" href="assets/fonts/press-start-2p-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="assets/fonts/fonts.css">
@@ -59,6 +59,7 @@
     --ezber:   #ffc75a;
     --zipla:   #4fe8ff;
     --serit:   #7d8cff;
+    --hookc:   #5fe4ff;
 
     --cell-font: "Press Start 2P", ui-monospace, "Courier New", monospace;
     --read-font: "VT323", ui-monospace, "Courier New", monospace;
@@ -246,6 +247,7 @@
   .ezber { --accent: var(--ezber); }
   .zipla { --accent: var(--zipla); }
   .serit { --accent: var(--serit); }
+  .hookc { --accent: var(--hookc); }
 
   /* ---------- footer ---------- */
   .foot {
@@ -532,6 +534,17 @@
         <h2>ŞERİT</h2>
         <p>Three lanes, one thumb, and a multiplier that dies if you play it safe. The gold is nearly always in the lane you would rather not be in &mdash; and at twelve times, every diamond is worth more than a whole minute of surviving.</p>
         <span class="keys">Tap a half &middot; A D</span>
+        <span class="play">&#9654; PLAY</span>
+      </div>
+    </a>
+
+    <a class="cab hookc" href="games/hook/">
+      <div class="tube"><canvas data-demo="swing" aria-hidden="true"></canvas></div>
+      <div class="plate">
+        <span class="no">CABINET NO. 18 &mdash; 1987</span>
+        <h2>HOOK</h2>
+        <p>Halkaya tutun, sallan, hız topla &mdash; ve tam yukarı giderken bırak. Doğru anda bırakan bir sonraki halkayı geçer, erken bırakan düşer. Zıplama yok, sadece savrulma var.</p>
+        <span class="keys">Sol &middot; Kanca &middot; Sag</span>
         <span class="play">&#9654; PLAY</span>
       </div>
     </a>
@@ -2172,13 +2185,102 @@
     ctx.beginPath(); ctx.arc(v.x, py, 1.7, 0, 6.2832); ctx.fill();
   }
 
+
+  /* ---------- hook: swing, and let go at the top of the arc ---------- */
+  var hk = null;
+  function hkInit(W, H) {
+    var v = { x: W / 2, y: H * 0.7, vx: 30, vy: 0, rope: null, hooks: [], cam: 0,
+              last: 0, W: W, flash: 0, topY: 0 };
+    for (var i = 0; i < 6; i++) v.hooks.push({ x: 12 + Math.random() * (W - 24), y: H * 0.55 - i * 34 });
+    v.topY = v.hooks[v.hooks.length - 1].y;
+    return v;
+  }
+  function drawSwing(ctx, W, H, now) {
+    if (!hk || hk.W !== W) hk = hkInit(W, H);
+    var v = hk, dt = Math.min(0.05, (now - (v.last || now)) / 1000);
+    v.last = now;
+    if (v.flash > 0) v.flash -= dt * 3;
+
+    var G = 250, ROPE = 30;
+
+    if (v.rope) {
+      var dx = v.x - v.rope.x, dy = v.y - v.rope.y, dl = Math.hypot(dx, dy) || 1;
+      // pump along the arc, exactly as the cabinet does
+      var tx = -dy / dl, ty = dx / dl, sgn = (tx * (v.vx >= 0 ? 1 : -1)) >= 0 ? 1 : -1;
+      v.vx += tx * sgn * 220 * dt; v.vy += ty * sgn * 220 * dt;
+      v.vy += G * dt;
+      v.x += v.vx * dt; v.y += v.vy * dt;
+      dx = v.x - v.rope.x; dy = v.y - v.rope.y; dl = Math.hypot(dx, dy) || 1;
+      if (dl > ROPE) {
+        var nx = dx / dl, ny = dy / dl;
+        v.x = v.rope.x + nx * ROPE; v.y = v.rope.y + ny * ROPE;
+        var rad = v.vx * nx + v.vy * ny;
+        if (rad > 0) { v.vx -= rad * nx; v.vy -= rad * ny; }
+      }
+      // let go when the swing is pointing up and moving well
+      var sp = Math.hypot(v.vx, v.vy);
+      if (sp > 70 && -v.vy / sp > 0.8) { v.rope = null; v.vx *= 1.6; v.vy *= 1.6; v.flash = 1; }
+    } else {
+      v.vy += G * dt;
+      v.x += v.vx * dt; v.y += v.vy * dt;
+      if (v.x < 6) { v.x = 6; v.vx = Math.abs(v.vx); }
+      if (v.x > W - 6) { v.x = W - 6; v.vx = -Math.abs(v.vx); }
+      // grab the nearest ring above
+      var best = null, bd = 1e9;
+      for (var i = 0; i < v.hooks.length; i++) {
+        var h = v.hooks[i], d = Math.hypot(h.x - v.x, h.y - v.y);
+        if (h.y > v.y - 4 || d > 46) continue;
+        if (d < bd) { bd = d; best = h; }
+      }
+      if (best && v.vy > -20) { v.rope = best; v.flash = 0.6; }
+    }
+
+    var wantCam = v.y - H * 0.6;
+    if (wantCam < v.cam) v.cam += (wantCam - v.cam) * Math.min(1, dt * 6);
+    while (v.topY > v.cam - 20) {
+      v.topY -= 30 + Math.random() * 12;
+      v.hooks.push({ x: 12 + Math.random() * (W - 24), y: v.topY });
+    }
+    v.hooks = v.hooks.filter(function (h) { return h.y < v.cam + H + 30; });
+    if (v.y > v.cam + H + 40) hk = hkInit(W, H);
+
+    // sky, warming downward
+    var g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, "#150c26"); g.addColorStop(1, "#4a2247");
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = "rgba(90,48,130,0.55)";
+    for (var t = 0; t < 4; t++) {
+      var bx = (t * 41 + 6) % (W - 20);
+      var by = H - 46 - ((t * 37 + v.cam * 0.25) % 40);
+      ctx.fillRect(bx, by, 16, 70);
+    }
+
+    for (var k = 0; k < v.hooks.length; k++) {
+      var hh = v.hooks[k], hy = hh.y - v.cam;
+      if (hy < -8 || hy > H + 8) continue;
+      ctx.strokeStyle = "#5fe4ff"; ctx.lineWidth = 1.6;
+      ctx.beginPath(); ctx.arc(hh.x, hy, 4.2, 0, 6.2832); ctx.stroke();
+      ctx.fillStyle = "#5fe4ff";
+      ctx.fillRect(hh.x - 1, hy - 1, 2, 2);
+    }
+
+    if (v.rope) {
+      ctx.strokeStyle = "rgba(255,230,222,0.8)"; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(v.rope.x, v.rope.y - v.cam); ctx.lineTo(v.x, v.y - v.cam); ctx.stroke();
+    }
+    ctx.fillStyle = v.flash > 0 ? "#ffc75a" : "#ffe6de";
+    ctx.beginPath(); ctx.arc(v.x, v.y - v.cam, 4, 0, 6.2832); ctx.fill();
+    ctx.fillStyle = "#ff8a7a";
+    ctx.beginPath(); ctx.arc(v.x, v.y - v.cam, 2, 0, 6.2832); ctx.fill();
+  }
+
   /* ---------- wire up ---------- */
-  var painters = { snake: drawSnake, road: drawRoad, lander: drawLander, flap: drawFlap, brick: drawBrick, maze: drawMaze, arch: drawArch, rocks: drawRocks, loom: drawLoom, invade: drawInvade, fuse: drawFuse, pong: drawPong, lamps: drawLamps, climb: drawClimb, lanes: drawLanes };
+  var painters = { snake: drawSnake, road: drawRoad, lander: drawLander, flap: drawFlap, brick: drawBrick, maze: drawMaze, arch: drawArch, rocks: drawRocks, loom: drawLoom, invade: drawInvade, fuse: drawFuse, pong: drawPong, lamps: drawLamps, climb: drawClimb, lanes: drawLanes, swing: drawSwing };
   Array.prototype.forEach.call(document.querySelectorAll("[data-demo]"), function (c) {
     var fn = painters[c.dataset.demo];
     if (fn) register(c, fn, c.dataset.demo === "flap" || c.dataset.demo === "brick" || c.dataset.demo === "maze" || c.dataset.demo === "arch" ||
                        c.dataset.demo === "rocks" || c.dataset.demo === "loom" ||
-                       c.dataset.demo === "invade" || c.dataset.demo === "fuse" || c.dataset.demo === "pong" || c.dataset.demo === "lamps" || c.dataset.demo === "climb" || c.dataset.demo === "lanes");
+                       c.dataset.demo === "invade" || c.dataset.demo === "fuse" || c.dataset.demo === "pong" || c.dataset.demo === "lamps" || c.dataset.demo === "climb" || c.dataset.demo === "lanes" || c.dataset.demo === "swing");
   });
 
   if (window.ResizeObserver) {
