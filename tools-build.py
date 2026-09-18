@@ -14,6 +14,11 @@ GOOGLE_FONT_LINKS = re.compile(
 
 src_path, out_path, desc = sys.argv[1], sys.argv[2], sys.argv[3]
 src = open(src_path, encoding='utf-8').read()
+
+# test hooks belong to the harness, not to the cabinet people play
+if not os.environ.get('KEEP_TEST_HOOK'):
+    src = re.sub(r'\n?[ \t]*/\* test-hook:start.*?test-hook:end \*/', '', src, flags=re.S)
+    assert 'test-hook' not in src, 'unbalanced test-hook markers in %s' % src_path
 split = src.index('</style>') + len('</style>')
 head, body = src[:split], src[split:].strip('\n')
 
@@ -24,9 +29,35 @@ depth = len(os.path.normpath(out_path).split(os.sep))
 rel = ''
 m = re.search(r'(^|/)(games/[^/]+)/[^/]+$', out_path.replace(os.sep, '/'))
 rel = '../../' if m else ''
-head, n = GOOGLE_FONT_LINKS.subn(
-    '<link rel="preload" href="%sassets/fonts/press-start-2p-latin.woff2" as="font" type="font/woff2" crossorigin>\n'
-    '<link rel="stylesheet" href="%sassets/fonts/fonts.css">' % (rel, rel), head)
+# each family the page asks Google for maps to a stylesheet we serve ourselves,
+# so a new font can never silently fall back to a system one in the built copy
+FAMILY_FILES = {
+    'Press Start 2P': ('fonts.css', 'press-start-2p-latin.woff2'),
+    'VT323':          ('fonts.css', None),
+    'Chakra Petch':   ('chakra-petch.css', 'chakra-petch-700-latin.woff2'),
+}
+
+m_fonts = GOOGLE_FONT_LINKS.search(head)
+assert m_fonts, 'expected exactly one Google Fonts block in %s' % src_path
+families = [f.split(':')[0].replace('+', ' ')
+            for f in re.findall(r'family=([^&"]+)', m_fonts.group(0))]
+assert families, 'no font families named in the Google Fonts block of %s' % src_path
+
+sheets, preloads = [], []
+for fam in families:
+    assert fam in FAMILY_FILES, (
+        '%s asks for "%s", which is not served from this site yet. Add the woff2 '
+        'files and a stylesheet under assets/fonts/ first.' % (src_path, fam))
+    sheet, preload = FAMILY_FILES[fam]
+    if sheet not in sheets: sheets.append(sheet)
+    if preload and preload not in preloads: preloads.append(preload)
+
+links = ''.join(
+    '<link rel="preload" href="%sassets/fonts/%s" as="font" type="font/woff2" crossorigin>\n' % (rel, f)
+    for f in preloads)
+links += '\n'.join('<link rel="stylesheet" href="%sassets/fonts/%s">' % (rel, f) for f in sheets)
+
+head, n = GOOGLE_FONT_LINKS.subn(links.replace('\\', '\\\\'), head)
 assert n == 1, 'expected exactly one Google Fonts block, found %d in %s' % (n, src_path)
 
 analytics = ''

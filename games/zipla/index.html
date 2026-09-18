@@ -1,0 +1,796 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="description" content="ZIPLA - a neon auto-jump climber. No jump button: you only steer.">
+<meta name="theme-color" content="#08090e">
+<style>
+  :root {
+    color-scheme: dark;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  body { margin: 0; }
+  img { max-width: 100%; }
+  [hidden] { display: none !important; }
+</style>
+<title>ZIPLA</title>
+<link rel="preload" href="../../assets/fonts/chakra-petch-700-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../assets/fonts/chakra-petch.css">
+<style>
+  :root {
+    --ink:   #05060f;
+    --pale:  #eaf2ff;
+    --cyan:  #4fe8ff;
+    --gold:  #ffc23d;
+    --rose:  #ff4d7a;
+    --dim:   rgba(234, 242, 255, 0.45);
+    --ui: "Chakra Petch", ui-sans-serif, system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; margin: 0; overflow: hidden; }
+  body {
+    background: var(--ink);
+    color: var(--pale);
+    font-family: var(--ui);
+    user-select: none;
+    touch-action: none;
+    overscroll-behavior: none;
+  }
+
+  #wrap { position: fixed; inset: 0; }
+  canvas { display: block; width: 100%; height: 100%; }
+
+  /* ---------- hud ---------- */
+  .hud {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    padding: calc(env(safe-area-inset-top, 0px) + 12px) 16px 0;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: start;
+    pointer-events: none;
+    z-index: 2;
+  }
+  .hud .k { font-size: 10px; letter-spacing: 0.18em; color: var(--dim); font-weight: 600; }
+  .hud .score {
+    font-size: clamp(26px, 8vw, 38px);
+    font-weight: 700;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    text-shadow: 0 0 18px rgba(79, 232, 255, 0.35);
+  }
+  .hud .height { font-size: 13px; color: var(--dim); font-variant-numeric: tabular-nums; margin-top: 2px; }
+  .hud .right { text-align: right; }
+  .hud .best { font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--dim); }
+  .hud .best.lead { color: var(--gold); text-shadow: 0 0 16px rgba(255, 194, 61, 0.5); }
+
+  .combo {
+    text-align: center;
+    font-weight: 700;
+    line-height: 1;
+    font-size: clamp(20px, 6.5vw, 30px);
+    color: var(--cyan);
+    opacity: 0;
+    transform: scale(0.8);
+    transition: opacity 140ms ease, transform 140ms ease, color 200ms ease;
+    text-shadow: 0 0 18px currentColor;
+  }
+  .combo.on { opacity: 1; transform: scale(1); }
+  .combo.pop { animation: pop 260ms ease-out 1; }
+  @keyframes pop { 40% { transform: scale(1.32); } }
+  .combo .lab { display: block; font-size: 9px; letter-spacing: 0.22em; color: var(--dim); text-shadow: none; }
+
+  /* combo fuse */
+  .fuse {
+    position: absolute;
+    top: calc(env(safe-area-inset-top, 0px) + 74px);
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(140px, 40vw);
+    height: 3px;
+    border-radius: 2px;
+    background: rgba(234, 242, 255, 0.12);
+    overflow: hidden;
+    opacity: 0;
+    transition: opacity 160ms ease;
+    z-index: 2;
+    pointer-events: none;
+  }
+  .fuse.on { opacity: 1; }
+  .fuse i { display: block; height: 100%; width: 100%; background: var(--cyan); transform-origin: left center; }
+
+  /* ---------- screens ---------- */
+  .screen {
+    position: absolute; inset: 0;
+    display: grid;
+    place-content: center;
+    justify-items: center;
+    gap: 18px;
+    text-align: center;
+    padding: 28px;
+    background: radial-gradient(120% 90% at 50% 40%, rgba(5, 6, 15, 0.72), rgba(5, 6, 15, 0.94));
+    z-index: 3;
+    backdrop-filter: blur(2px);
+  }
+  .screen[hidden] { display: none; }
+  .title {
+    font-size: clamp(38px, 13vw, 66px);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    line-height: 0.95;
+    background: linear-gradient(180deg, #ffffff, var(--cyan));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    filter: drop-shadow(0 0 22px rgba(79, 232, 255, 0.4));
+  }
+  .lines { font-size: clamp(15px, 4.4vw, 18px); line-height: 1.75; color: var(--pale); opacity: 0.86; }
+  .lines b { color: var(--cyan); font-weight: 700; }
+  .lines .gold { color: var(--gold); font-weight: 700; }
+
+  .btn {
+    margin-top: 6px;
+    font-family: var(--ui);
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    padding: 15px 34px;
+    color: #041018;
+    background: linear-gradient(180deg, #a6f4ff, var(--cyan));
+    border: 0;
+    border-radius: 999px;
+    cursor: pointer;
+    box-shadow: 0 0 28px rgba(79, 232, 255, 0.45);
+    transition: transform 120ms ease, box-shadow 160ms ease;
+  }
+  .btn:active { transform: scale(0.96); }
+  .btn.gold { background: linear-gradient(180deg, #ffe39a, var(--gold)); box-shadow: 0 0 28px rgba(255, 194, 61, 0.45); }
+  .hintline { font-size: 12px; letter-spacing: 0.14em; color: var(--dim); }
+
+  .over-title { font-size: clamp(26px, 8vw, 38px); font-weight: 700; letter-spacing: 0.08em; color: var(--rose); text-shadow: 0 0 22px rgba(255, 77, 122, 0.45); }
+  .over-title.best { color: var(--gold); text-shadow: 0 0 26px rgba(255, 194, 61, 0.55); }
+  .final { font-size: clamp(44px, 15vw, 72px); font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+  .stats { display: grid; grid-template-columns: repeat(3, auto); gap: 10px 26px; justify-content: center; }
+  .stats div { text-align: center; }
+  .stats .k { font-size: 9px; letter-spacing: 0.18em; color: var(--dim); font-weight: 600; }
+  .stats .v { font-size: 19px; font-weight: 700; font-variant-numeric: tabular-nums; margin-top: 2px; }
+  .stats .v.gold { color: var(--gold); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .combo.pop { animation: none; }
+    .btn { transition: none; }
+  }
+</style>
+<!-- Cloudflare Web Analytics: no cookies, no client-side storage -->
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "aee6e644a3b74cb9bdaf4e1569d570e2"}'></script>
+<!-- End Cloudflare Web Analytics -->
+
+</head>
+<body>
+<div id="wrap">
+  <canvas id="c"></canvas>
+
+  <div class="hud">
+    <div>
+      <div class="k">SCORE</div>
+      <div class="score" id="hScore">0</div>
+      <div class="height" id="hHeight">0 m</div>
+    </div>
+    <div class="combo" id="hCombo"><span class="lab">COMBO</span><span id="hComboV">x1</span></div>
+    <div class="right">
+      <div class="k">BEST</div>
+      <div class="best" id="hBest">0</div>
+    </div>
+  </div>
+  <div class="fuse" id="hFuse"><i id="hFuseBar"></i></div>
+
+  <div class="screen" id="startScreen">
+    <div class="title">ZIPLA</div>
+    <div class="lines">
+      <b>IT JUMPS FOR YOU.</b><br>
+      <b>YOU ONLY STEER.</b><br>
+      HOW HIGH CAN YOU GO?
+    </div>
+    <div class="lines" style="font-size:14px;opacity:0.7">
+      Hold left or right to steer &middot; <span class="gold">gold</span> pays five times
+    </div>
+    <button class="btn" id="btnStart">START CLIMB</button>
+    <div class="hintline">ARROWS / A D ON A KEYBOARD</div>
+  </div>
+
+  <div class="screen" id="overScreen" hidden>
+    <div class="over-title" id="overTitle">YOU FELL</div>
+    <div class="final" id="overScore">0</div>
+    <div class="stats">
+      <div><div class="k">BEST</div><div class="v" id="overBest">0</div></div>
+      <div><div class="k">HEIGHT</div><div class="v" id="overHeight">0 m</div></div>
+      <div><div class="k">TOP COMBO</div><div class="v gold" id="overCombo">x1</div></div>
+    </div>
+    <button class="btn gold" id="btnAgain">PLAY AGAIN</button>
+    <div class="hintline">TAP ANYWHERE TO GO AGAIN</div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ============================================================
+     Everything is simulated in reference units: the world is 400
+     wide and as tall as the screen's aspect makes it. That keeps the
+     game identical on a phone and a desktop instead of easier on one.
+     ============================================================ */
+  var VW = 400, VH = 700;
+
+  var GRAV    = 1500;
+  var JUMP_V  = 740;          // the bounce is automatic and always the same
+  var MOVE_V  = 360;
+  var ACCEL   = 2600;
+
+  /* What the physics actually allows, computed rather than guessed.
+     Two details decide every number below:
+       - you only land while falling, so the usable moment is the crossing
+         on the way DOWN, not the one on the way up;
+       - you start each bounce from whatever sideways speed you had, and the
+         worst case is a standstill, which costs MOVE_V^2 / 2*ACCEL of travel. */
+  function maxRise() { return (JUMP_V * JUMP_V) / (2 * GRAV); }
+  function timeToRise(dy) {
+    var disc = JUMP_V * JUMP_V - 2 * GRAV * dy;
+    if (disc < 0) return -1;                       // simply out of reach
+    return (JUMP_V - Math.sqrt(disc)) / GRAV;
+  }
+  function timeToLand(dy) {
+    var disc = JUMP_V * JUMP_V - 2 * GRAV * dy;
+    if (disc < 0) return -1;
+    return (JUMP_V + Math.sqrt(disc)) / GRAV;      // the falling crossing
+  }
+  function reachAt(dy) {
+    var t = timeToLand(dy);
+    if (t < 0) return -1;
+    var ta = MOVE_V / ACCEL;
+    if (t <= ta) return 0.5 * ACCEL * t * t;
+    return MOVE_V * t - (MOVE_V * MOVE_V) / (2 * ACCEL);
+  }
+
+  var SAFE_DY = 0.80;         // never ask for more than this much of the rise
+  var SAFE_DX = 0.78;         // nor more than this much of the sideways reach
+
+  var cv = document.getElementById("c");
+  var ctx = cv.getContext("2d");
+  var wrap = document.getElementById("wrap");
+  var hScore = document.getElementById("hScore");
+  var hHeight = document.getElementById("hHeight");
+  var hBest = document.getElementById("hBest");
+  var hCombo = document.getElementById("hCombo");
+  var hComboV = document.getElementById("hComboV");
+  var hFuse = document.getElementById("hFuse");
+  var hFuseBar = document.getElementById("hFuseBar");
+  var startScreen = document.getElementById("startScreen");
+  var overScreen = document.getElementById("overScreen");
+  var overTitle = document.getElementById("overTitle");
+  var overScore = document.getElementById("overScore");
+  var overBest = document.getElementById("overBest");
+  var overHeight = document.getElementById("overHeight");
+  var overCombo = document.getElementById("overCombo");
+
+  var state = "start";
+  var player, plats, parts, cam, score, best, combo, comboTop, comboFuse, height, maxHeight;
+  var shake, flash, beatBest, nextId, spawnY, lastLandId, tRun;
+  var keys = { left: false, right: false };
+  var pointerX = null, pointerDown = false;
+
+  /* ---------------- best score ---------------- */
+  function loadBest() { try { return parseInt(localStorage.getItem("zipla-best"), 10) || 0; } catch (e) { return 0; } }
+  function saveBest(v) { try { localStorage.setItem("zipla-best", String(Math.floor(v))); } catch (e) {} }
+
+  /* ---------------- audio ---------------- */
+  var actx = null;
+  function blip(freq, dur, type, vol) {
+    try {
+      if (!actx) {
+        var AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return;
+        actx = new AC();
+      }
+      if (actx.state === "suspended") actx.resume();
+      var o = actx.createOscillator(), g = actx.createGain();
+      o.type = type || "sine";
+      o.frequency.setValueAtTime(freq, actx.currentTime);
+      g.gain.setValueAtTime(vol || 0.05, actx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.0001, actx.currentTime + dur);
+      o.connect(g); g.connect(actx.destination);
+      o.start(); o.stop(actx.currentTime + dur);
+    } catch (e) {}
+  }
+
+  /* ---------------- sizing ---------------- */
+  var dpr = 1, scale = 1;
+  function resize() {
+    var w = wrap.clientWidth, h = wrap.clientHeight;
+    if (!w || !h) return;
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    cv.width = Math.round(w * dpr);
+    cv.height = Math.round(h * dpr);
+    scale = (w * dpr) / VW;
+    VH = (h * dpr) / scale;
+  }
+
+  /* ---------------- difficulty ---------------- */
+  // one number drives everything, and it climbs slowly on purpose
+  function diff() { return Math.min(1, maxHeight / 5200); }
+  function ease(a, b, d) { return a + (b - a) * d; }
+
+  /* ---------------- platforms ---------------- */
+  function makePlat(x, y, w, kind) {
+    return { id: nextId++, x: x, y: y, w: w, kind: kind,
+             vx: 0, range: 0, home: x, alive: true, fade: 1, touched: false };
+  }
+
+  function clampX(x, w) { return Math.max(w / 2 + 6, Math.min(VW - w / 2 - 6, x)); }
+
+  // Places one reachable platform above the given row, plus sometimes a gold one
+  // further out. The gold is always reachable too — it is narrower and nearer the
+  // edge of what the jump allows, never past it.
+  function growFrom(row) {
+    var d = diff();
+
+    /* how far up, capped so the rise is possible from the LOWEST platform
+       of the row below (a gold one may sit slightly under its neighbour) */
+    var lowest = row.plats[0].y;
+    for (var i = 1; i < row.plats.length; i++) lowest = Math.min(lowest, row.plats[i].y);
+    var dy = ease(82, 138, d) * (0.86 + Math.random() * 0.3);
+    var y = Math.min(row.y + dy, lowest + maxRise() * SAFE_DY);
+
+    /* the window of x values that can be reached from EVERY platform below,
+       counting a moving one at the worst point of its swing. This is the whole
+       fairness guarantee: nothing is ever placed outside this window. */
+    var lo = -1e9, hi = 1e9, budget = 1e9;
+    for (var k = 0; k < row.plats.length; k++) {
+      var p = row.plats[k];
+      var b = reachAt(y - p.y) * SAFE_DX;
+      if (b < 0) b = 0;
+      var far = p.range || 0;
+      lo = Math.max(lo, p.home + far - b);
+      hi = Math.min(hi, p.home - far + b);
+      budget = Math.min(budget, b);
+    }
+
+    var baseW = ease(78, 46, d);
+    var anchor = row.plats[0];
+
+    /* moving platforms swing, so they need that much slack inside the window */
+    var moving = d > 0.34 && Math.random() < ease(0, 0.3, (d - 0.34) / 0.66);
+    var range = moving ? Math.min(ease(26, 68, d), (hi - lo) * 0.28) : 0;
+    if (range < 12) { moving = false; range = 0; }
+
+    var edge = baseW / 2 + 6 + range;
+    var mLo = Math.max(lo + range, edge);
+    var mHi = Math.min(hi - range, VW - edge);
+    if (mHi < mLo) { var mid = (mLo + mHi) / 2; mLo = mHi = mid; }
+
+    // the safe route: a relaxed hop, well inside what the window allows
+    var want = anchor.x + (Math.random() * 2 - 1) * budget * ease(0.16, 0.34, d);
+    var main = makePlat(Math.max(mLo, Math.min(mHi, want)), y, baseW, "normal");
+    if (moving) {
+      main.range = range;
+      main.vx = (Math.random() < 0.5 ? -1 : 1) * ease(26, 56, d);
+      main.home = main.x;
+    } else if (d > 0.52 && Math.random() < ease(0, 0.24, (d - 0.52) / 0.48)) {
+      main.kind = "crumble";
+    }
+
+    var out = [main];
+
+    var goldChance = ease(0.1, 0.26, d);
+    if (Math.random() < goldChance) {
+      /* out near the edge of the window: a real sprint, narrow, worth five times.
+         It may sit a little lower than its row, never higher, so the jump up to
+         the next row from it is the one the window above already accounts for. */
+      var gw = baseW * 0.62;
+      var gEdge = gw / 2 + 6;
+      var gLo = Math.max(lo, gEdge), gHi = Math.min(hi, VW - gEdge);
+      if (gHi > gLo) {
+        var side = Math.random() < 0.5 ? -1 : 1;
+        var gx = anchor.x + side * budget * (0.52 + Math.random() * 0.34);
+        gx = Math.max(gLo, Math.min(gHi, gx));
+        if (Math.abs(gx - main.x) > (gw + main.w) / 2 + (main.range || 0) + 14) {
+          out.push(makePlat(gx, y - Math.random() * 8, gw, "gold"));
+        }
+      }
+    }
+
+    plats.push.apply(plats, out);
+    var res = { y: y, plats: out };
+    rowLog.push({ prev: row, next: res });
+    if (rowLog.length > 600) rowLog.shift();
+    return res;
+  }
+
+  var lastRow;
+  var rowLog = [];
+  function fillUp() {
+    while (lastRow.y < cam + VH + 240) lastRow = growFrom(lastRow);
+  }
+
+  /* ---------------- particles (bounded) ---------------- */
+  var MAX_PARTS = 140;
+  function spark(x, y, n, col, spread, up) {
+    for (var i = 0; i < n && parts.length < MAX_PARTS; i++) {
+      parts.push({
+        x: x, y: y,
+        vx: (Math.random() * 2 - 1) * spread,
+        vy: (Math.random() * 0.7 + 0.3) * up,
+        life: 0.42 + Math.random() * 0.3, max: 0.72,
+        col: col, r: 1.6 + Math.random() * 2.2
+      });
+    }
+  }
+
+  /* ---------------- run control ---------------- */
+  function reset() {
+    nextId = 1;
+    rowLog = [];
+    plats = [];
+    parts = [];
+    score = 0;
+    combo = 1;
+    comboTop = 1;
+    comboFuse = 1;
+    height = 0;
+    maxHeight = 0;
+    shake = 0;
+    flash = 0;
+    beatBest = false;
+    lastLandId = -1;
+    tRun = 0;
+    cam = 0;
+    best = loadBest();
+
+    var ground = makePlat(VW / 2, 120, 150, "normal");
+    plats.push(ground);
+    lastRow = { y: ground.y, plats: [ground] };
+    fillUp();
+
+    player = { x: VW / 2, y: ground.y + 30, vx: 0, vy: 0, sq: 1, face: 1 };
+    syncHud();
+  }
+
+  function startRun() {
+    reset();
+    state = "play";
+    startScreen.hidden = true;
+    overScreen.hidden = true;
+    blip(520, 0.08, "sine", 0.05);
+  }
+
+  function gameOver() {
+    state = "over";
+    if (score > best) { best = score; saveBest(best); }
+    overTitle.textContent = beatBest ? "NEW BEST" : "YOU FELL";
+    overTitle.classList.toggle("best", beatBest);
+    overScore.textContent = Math.floor(score);
+    overBest.textContent = Math.floor(best);
+    overHeight.textContent = Math.floor(maxHeight / 10) + " m";
+    overCombo.textContent = "x" + comboTop;
+    overScreen.hidden = false;
+    blip(180, 0.3, "sawtooth", 0.06);
+  }
+
+  /* ---------------- the loop ---------------- */
+  function bounce(p) {
+    player.vy = JUMP_V;
+    player.sq = 0.62;
+    lastLandId = p.id;
+
+    var gold = p.kind === "gold";
+    if (!p.touched) {
+      p.touched = true;
+      combo = Math.min(15, combo + (gold ? 3 : 1));
+      comboTop = Math.max(comboTop, combo);
+      score += (gold ? 250 : 50) * combo;
+      comboFuse = 1;
+      hCombo.classList.remove("pop"); void hCombo.offsetWidth; hCombo.classList.add("pop");
+      spark(p.x, p.y, gold ? 16 : 7, gold ? "#ffc23d" : "#4fe8ff", gold ? 150 : 90, gold ? 230 : 150);
+      if (gold) { shake = Math.min(0.5, 0.22 + combo * 0.012); blip(680 + combo * 22, 0.13, "triangle", 0.06); }
+      else blip(360 + combo * 16, 0.06, "sine", 0.04);
+      if (!beatBest && score > best && best > 0) {
+        beatBest = true; flash = 1; shake = Math.max(shake, 0.35);
+        blip(880, 0.22, "triangle", 0.07);
+      }
+    } else {
+      blip(300, 0.04, "sine", 0.03);
+    }
+    if (p.kind === "crumble") p.alive = false;
+    syncHud();
+  }
+
+  function update(dt) {
+    tRun += dt;
+    var d = diff();
+
+    /* steering: one rule covers keys, taps and dragging */
+    var want = 0;
+    if (keys.left) want -= 1;
+    if (keys.right) want += 1;
+    if (!want && pointerDown && pointerX !== null) {
+      var dx = pointerX - player.x;
+      want = Math.abs(dx) < 6 ? 0 : (dx > 0 ? 1 : -1);
+      if (Math.abs(dx) < 28) want *= Math.abs(dx) / 28;      // ease in close, no jitter
+    }
+    var target = want * MOVE_V;
+    var acc = ACCEL * dt;
+    if (player.vx < target) player.vx = Math.min(target, player.vx + acc);
+    else if (player.vx > target) player.vx = Math.max(target, player.vx - acc);
+    if (want !== 0) player.face = want > 0 ? 1 : -1;
+
+    player.x += player.vx * dt;
+    if (player.x < -14) player.x += VW + 28;                  // the sides wrap
+    if (player.x > VW + 14) player.x -= VW + 28;
+
+    var wasVy = player.vy;
+    player.vy -= GRAV * dt;
+    var prevY = player.y;
+    player.y += player.vy * dt;
+
+    /* landing: only while falling, and swept so fast drops cannot pass through */
+    if (player.vy < 0) {
+      for (var i = 0; i < plats.length; i++) {
+        var p = plats[i];
+        if (!p.alive) continue;
+        if (prevY >= p.y && player.y <= p.y) {
+          var px = p.x;
+          if (Math.abs(((player.x - px + VW * 1.5) % VW) - VW / 2) <= p.w / 2 + 7) {
+            player.y = p.y;
+            bounce(p);
+            break;
+          }
+        }
+      }
+    }
+
+    player.sq += (1 - player.sq) * Math.min(1, dt * 11);
+
+    /* camera follows upward only, and never drags you back down */
+    var want2 = player.y - VH * 0.42;
+    if (want2 > cam) cam += (want2 - cam) * Math.min(1, dt * 9);
+    var floorRise = ease(0, 34, d);                            // the drop closes slowly, late on
+    cam += floorRise * dt;
+
+    height = Math.max(0, player.y - 120);
+    if (height > maxHeight) { score += (height - maxHeight) * 0.35; maxHeight = height; }
+
+    if (!beatBest && score > best && best > 0) { beatBest = true; flash = 1; }
+
+    /* combo fuse: standing still costs you the multiplier */
+    if (combo > 1) {
+      comboFuse -= dt / ease(3.4, 2.1, d);
+      if (comboFuse <= 0) { combo = 1; comboFuse = 1; syncHud(); }
+    }
+
+    /* platforms */
+    for (var k = plats.length - 1; k >= 0; k--) {
+      var q = plats[k];
+      if (q.vx) {
+        q.x += q.vx * dt;
+        if (q.x > q.home + q.range) { q.x = q.home + q.range; q.vx *= -1; }
+        if (q.x < q.home - q.range) { q.x = q.home - q.range; q.vx *= -1; }
+      }
+      if (!q.alive) { q.fade -= dt * 2.6; if (q.fade <= 0) plats.splice(k, 1); continue; }
+      if (q.y < cam - 90) plats.splice(k, 1);
+    }
+    fillUp();
+
+    /* particles */
+    for (var j = parts.length - 1; j >= 0; j--) {
+      var pa = parts[j];
+      pa.life -= dt;
+      if (pa.life <= 0) { parts.splice(j, 1); continue; }
+      pa.x += pa.vx * dt;
+      pa.y += pa.vy * dt;
+      pa.vy -= 420 * dt;
+    }
+
+    if (shake > 0) shake = Math.max(0, shake - dt * 1.6);
+    if (flash > 0) flash = Math.max(0, flash - dt * 1.1);
+
+    if (player.y < cam - 40) gameOver();
+    syncHud();
+  }
+
+  /* ---------------- drawing ---------------- */
+  function bg(d) {
+    var g = ctx.createLinearGradient(0, 0, 0, VH);
+    var t = d;
+    g.addColorStop(0, "rgb(" + Math.round(8 + t * 40) + "," + Math.round(10 + t * 4) + "," + Math.round(28 + t * 34) + ")");
+    g.addColorStop(1, "rgb(" + Math.round(4 + t * 12) + "," + Math.round(5 + t * 2) + "," + Math.round(14 + t * 22) + ")");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, VW, VH);
+
+    // a slow star field that thickens as you climb
+    var n = 26 + Math.round(t * 26);
+    for (var i = 0; i < n; i++) {
+      var sx = ((i * 137.5) % VW);
+      var sy = VH - (((i * 211.3 + cam * (0.12 + (i % 3) * 0.05)) % (VH + 60)) - 30);
+      ctx.globalAlpha = 0.18 + (i % 4) * 0.07;
+      ctx.fillStyle = i % 7 === 0 ? "#ffc23d" : "#9fdcff";
+      ctx.fillRect(sx, sy, 1.6, 1.6);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function sy(worldY) { return VH - (worldY - cam); }
+
+  function render() {
+    var d = diff();
+    ctx.setTransform(scale, 0, 0, scale, 0, 0);
+    ctx.clearRect(0, 0, VW, VH);
+    bg(d);
+
+    ctx.save();
+    if (shake > 0) ctx.translate((Math.random() - 0.5) * shake * 14, (Math.random() - 0.5) * shake * 12);
+
+    // speed streaks once it is genuinely fast
+    if (d > 0.45) {
+      ctx.globalAlpha = (d - 0.45) * 0.5;
+      ctx.strokeStyle = "#4fe8ff";
+      ctx.lineWidth = 1;
+      for (var s = 0; s < 8; s++) {
+        var lx = ((s * 97 + (cam * 0.6) % VW) % VW);
+        ctx.beginPath(); ctx.moveTo(lx, 0); ctx.lineTo(lx, VH); ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    for (var i = 0; i < plats.length; i++) {
+      var p = plats[i];
+      var y = sy(p.y);
+      if (y < -40 || y > VH + 40) continue;
+      var gold = p.kind === "gold";
+      var col = gold ? "#ffc23d" : p.kind === "crumble" ? "#8f7bff" : "#4fe8ff";
+      ctx.globalAlpha = p.fade;
+
+      ctx.shadowBlur = gold ? 22 : 12;
+      ctx.shadowColor = col;
+      ctx.fillStyle = col;
+      roundRect(p.x - p.w / 2, y - 5, p.w, 9, 4.5);
+      ctx.fill();
+
+      if (gold) {
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = "rgba(255,255,255,0.75)";
+        roundRect(p.x - p.w / 2 + 3, y - 3.2, p.w - 6, 2, 1);
+        ctx.fill();
+      }
+      if (p.kind === "crumble") {
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = "rgba(5,6,15,0.55)";
+        for (var c = -1; c <= 1; c++) ctx.fillRect(p.x + c * p.w * 0.26 - 1, y - 5, 2, 9);
+      }
+      ctx.globalAlpha = 1;
+      ctx.shadowBlur = 0;
+    }
+
+    for (var j = 0; j < parts.length; j++) {
+      var pa = parts[j];
+      var py = sy(pa.y);
+      if (py < -20 || py > VH + 20) continue;
+      ctx.globalAlpha = Math.max(0, pa.life / pa.max);
+      ctx.fillStyle = pa.col;
+      ctx.fillRect(pa.x - pa.r / 2, py - pa.r / 2, pa.r, pa.r);
+    }
+    ctx.globalAlpha = 1;
+
+    drawPlayer();
+    ctx.restore();
+
+    if (flash > 0) {
+      ctx.fillStyle = "rgba(255,194,61," + (flash * 0.16).toFixed(3) + ")";
+      ctx.fillRect(0, 0, VW, VH);
+    }
+  }
+
+  function drawPlayer() {
+    var y = sy(player.y);
+    var sq = player.sq, w = 22 / sq, h = 22 * sq;
+    ctx.shadowBlur = 20;
+    ctx.shadowColor = "#ffffff";
+    ctx.fillStyle = "#ffffff";
+    roundRect(player.x - w / 2, y - h, w, h, 6);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = "#05060f";
+    var ex = player.x + player.face * 3.4;
+    ctx.fillRect(ex - 4.4, y - h * 0.68, 3, 4);
+    ctx.fillRect(ex + 1.4, y - h * 0.68, 3, 4);
+  }
+
+  function roundRect(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  /* ---------------- hud ---------------- */
+  var lastCombo = -1;
+  function syncHud() {
+    hScore.textContent = Math.floor(score);
+    hHeight.textContent = Math.floor(maxHeight / 10) + " m";
+    hBest.textContent = Math.floor(Math.max(best, score));
+    hBest.classList.toggle("lead", score > best && best > 0);
+    if (combo !== lastCombo) {
+      lastCombo = combo;
+      hComboV.textContent = "x" + combo;
+      hCombo.classList.toggle("on", combo > 1);
+      hFuse.classList.toggle("on", combo > 1);
+      hCombo.style.color = combo >= 10 ? "#ffc23d" : combo >= 5 ? "#ff9f4d" : "#4fe8ff";
+    }
+    hFuseBar.style.transform = "scaleX(" + Math.max(0, comboFuse).toFixed(3) + ")";
+  }
+
+  /* ---------------- input ---------------- */
+  function px(clientX) {
+    var r = cv.getBoundingClientRect();
+    return ((clientX - r.left) / r.width) * VW;
+  }
+  wrap.addEventListener("pointerdown", function (ev) {
+    if (state === "over") { startRun(); return; }
+    if (state === "start") return;
+    pointerDown = true;
+    pointerX = px(ev.clientX);
+    try { wrap.setPointerCapture(ev.pointerId); } catch (e) {}
+  });
+  wrap.addEventListener("pointermove", function (ev) {
+    if (!pointerDown) return;
+    pointerX = px(ev.clientX);
+  });
+  function release() { pointerDown = false; pointerX = null; }
+  wrap.addEventListener("pointerup", release);
+  wrap.addEventListener("pointercancel", release);
+
+  window.addEventListener("keydown", function (ev) {
+    var k = ev.key;
+    if (k === "ArrowLeft" || k === "a" || k === "A") { keys.left = true; ev.preventDefault(); }
+    else if (k === "ArrowRight" || k === "d" || k === "D") { keys.right = true; ev.preventDefault(); }
+    else if (k === " " || k === "Enter") {
+      ev.preventDefault();
+      if (state !== "play") startRun();
+    }
+  });
+  window.addEventListener("keyup", function (ev) {
+    var k = ev.key;
+    if (k === "ArrowLeft" || k === "a" || k === "A") keys.left = false;
+    else if (k === "ArrowRight" || k === "d" || k === "D") keys.right = false;
+  });
+
+  document.getElementById("btnStart").addEventListener("click", function (ev) { ev.stopPropagation(); startRun(); });
+  document.getElementById("btnAgain").addEventListener("click", function (ev) { ev.stopPropagation(); startRun(); });
+  window.addEventListener("resize", resize);
+  document.addEventListener("visibilitychange", function () { if (document.hidden) release(); });
+
+  /* ---------------- boot ---------------- */
+  var last = 0;
+  function frame(now) {
+    requestAnimationFrame(frame);
+    var dt = last ? Math.min(0.032, (now - last) / 1000) : 0;
+    last = now;
+    if (state === "play") update(dt);
+    render();
+  }
+
+  resize();
+  best = loadBest();
+  reset();
+  syncHud();
+  if (window.ResizeObserver) new ResizeObserver(resize).observe(wrap);
+  requestAnimationFrame(frame);
+
+})();
+</script>
+</body>
+</html>

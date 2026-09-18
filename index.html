@@ -43,6 +43,7 @@
     --fitil:   #6fd0ff;
     --pingpong: #ff4fa3;
     --ezber:   #ffc75a;
+    --zipla:   #4fe8ff;
 
     --cell-font: "Press Start 2P", ui-monospace, "Courier New", monospace;
     --read-font: "VT323", ui-monospace, "Courier New", monospace;
@@ -228,6 +229,7 @@
   .fitil { --accent: var(--fitil); }
   .pingpong { --accent: var(--pingpong); }
   .ezber { --accent: var(--ezber); }
+  .zipla { --accent: var(--zipla); }
 
   /* ---------- footer ---------- */
   .foot {
@@ -492,6 +494,17 @@
         <h2>EZBER</h2>
         <p>Five lamps fire and you play them back. Then five fire again &mdash; but one of them has changed, and nothing tells you which. The sequence never gets longer. It only ever moves.</p>
         <span class="keys">Tap a quarter &middot; 1&ndash;4</span>
+        <span class="play">&#9654; PLAY</span>
+      </div>
+    </a>
+
+    <a class="cab zipla" href="games/zipla/">
+      <div class="tube"><canvas data-demo="climb" aria-hidden="true"></canvas></div>
+      <div class="plate">
+        <span class="no">CABINET NO. 16 &mdash; 1984</span>
+        <h2>ZIPLA</h2>
+        <p>There is no jump button. The spring fires on its own, always with the same force, and all you ever do is steer. The gold ledges sit out at the far edge of what that spring can carry you &mdash; and they pay five times.</p>
+        <span class="keys">Hold left or right &middot; A D</span>
         <span class="play">&#9654; PLAY</span>
       </div>
     </a>
@@ -1957,13 +1970,102 @@
     }
   }
 
+
+  /* ---------- zipla: it jumps by itself, you only steer ---------- */
+  var zp = null;
+  function zpInit(W, H) {
+    var v = { plats: [], cam: 0, y: 26, x: W / 2, vy: 0, vx: 0, tgt: null, last: 0, W: W };
+    var y = 20;
+    for (var i = 0; i < 14; i++) {
+      v.plats.push({ x: 8 + Math.random() * (W - 16), y: y, w: 16 + Math.random() * 8,
+                     gold: i > 2 && Math.random() < 0.22 });
+      y += 20 + Math.random() * 8;
+    }
+    v.x = v.plats[0].x; v.y = v.plats[0].y; v.vy = 0;
+    return v;
+  }
+  function drawClimb(ctx, W, H, now) {
+    if (!zp || zp.W !== W) zp = zpInit(W, H);
+    var v = zp, dt = Math.min(0.05, (now - (v.last || now)) / 1000);
+    v.last = now;
+
+    var G = 220, J = 132, MV = 46;
+    var prevY = v.y;
+    v.vy -= G * dt;
+    v.y += v.vy * dt;
+
+    // pick a target at each bounce and hold it: exactly how the game is played
+    if (!v.tgt) {
+      var up = v.plats.filter(function (p) { return p.y > v.y + 2; })
+                      .sort(function (a, b) { return a.y - b.y; });
+      var row = up.filter(function (p) { return p.y - up[0].y < 6; });
+      var gold = row.filter(function (p) { return p.gold; })[0];
+      v.tgt = gold || up[0] || null;
+    }
+    if (v.tgt) {
+      var dx = v.tgt.x - v.x;
+      var want = Math.abs(dx) < 1 ? 0 : (dx > 0 ? 1 : -1);
+      if (Math.abs(dx) < 5) want *= Math.abs(dx) / 5;
+      var t2 = want * MV;
+      if (v.vx < t2) v.vx = Math.min(t2, v.vx + 300 * dt);
+      else v.vx = Math.max(t2, v.vx - 300 * dt);
+    }
+    v.x += v.vx * dt;
+
+    if (v.vy < 0) {
+      for (var i = 0; i < v.plats.length; i++) {
+        var p = v.plats[i];
+        if (prevY >= p.y && v.y <= p.y && Math.abs(v.x - p.x) <= p.w / 2 + 2) {
+          v.y = p.y; v.vy = J; p.hit = 1; v.tgt = null; break;
+        }
+      }
+    }
+    if (v.y < v.cam - 8) { zp = zpInit(W, H); return; }
+
+    var want3 = v.y - H * 0.45;
+    if (want3 > v.cam) v.cam += (want3 - v.cam) * Math.min(1, dt * 7);
+
+    // keep the ledges coming
+    var top = 0;
+    for (var k = 0; k < v.plats.length; k++) top = Math.max(top, v.plats[k].y);
+    while (top < v.cam + H + 30) {
+      top += 20 + Math.random() * 8;
+      v.plats.push({ x: 8 + Math.random() * (W - 16), y: top, w: 16 + Math.random() * 8,
+                     gold: Math.random() < 0.22 });
+    }
+    v.plats = v.plats.filter(function (p) { return p.y > v.cam - 12; });
+
+    ctx.fillStyle = "#0a0a16"; ctx.fillRect(0, 0, W, H);
+    for (var s2 = 0; s2 < 16; s2++) {
+      var sx = (s2 * 37) % W;
+      var syy = H - (((s2 * 53 + v.cam * 0.2) % (H + 10)) - 5);
+      ctx.fillStyle = s2 % 5 === 0 ? "#ffc23d" : "#9fdcff";
+      ctx.globalAlpha = 0.25;
+      ctx.fillRect(sx, syy, 1, 1);
+    }
+    ctx.globalAlpha = 1;
+
+    for (var j = 0; j < v.plats.length; j++) {
+      var q = v.plats[j], qy = H - (q.y - v.cam);
+      if (qy < -6 || qy > H + 6) continue;
+      ctx.fillStyle = q.gold ? "#ffc23d" : "#4fe8ff";
+      ctx.globalAlpha = q.hit ? 1 : 0.85;
+      ctx.fillRect(Math.round(q.x - q.w / 2), Math.round(qy) - 1, Math.round(q.w), 3);
+      ctx.globalAlpha = 1;
+    }
+
+    var py = H - (v.y - v.cam);
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(Math.round(v.x) - 3, Math.round(py) - 6, 6, 6);
+  }
+
   /* ---------- wire up ---------- */
-  var painters = { snake: drawSnake, road: drawRoad, lander: drawLander, flap: drawFlap, brick: drawBrick, maze: drawMaze, arch: drawArch, rocks: drawRocks, loom: drawLoom, invade: drawInvade, fuse: drawFuse, pong: drawPong, lamps: drawLamps };
+  var painters = { snake: drawSnake, road: drawRoad, lander: drawLander, flap: drawFlap, brick: drawBrick, maze: drawMaze, arch: drawArch, rocks: drawRocks, loom: drawLoom, invade: drawInvade, fuse: drawFuse, pong: drawPong, lamps: drawLamps, climb: drawClimb };
   Array.prototype.forEach.call(document.querySelectorAll("[data-demo]"), function (c) {
     var fn = painters[c.dataset.demo];
     if (fn) register(c, fn, c.dataset.demo === "flap" || c.dataset.demo === "brick" || c.dataset.demo === "maze" || c.dataset.demo === "arch" ||
                        c.dataset.demo === "rocks" || c.dataset.demo === "loom" ||
-                       c.dataset.demo === "invade" || c.dataset.demo === "fuse" || c.dataset.demo === "pong" || c.dataset.demo === "lamps");
+                       c.dataset.demo === "invade" || c.dataset.demo === "fuse" || c.dataset.demo === "pong" || c.dataset.demo === "lamps" || c.dataset.demo === "climb");
   });
 
   if (window.ResizeObserver) {
