@@ -40,6 +40,7 @@
     --goktasi: #7ce8ff;
     --blok:    #d8a12b;
     --istila:  #ff8a5c;
+    --fitil:   #6fd0ff;
 
     --cell-font: "Press Start 2P", ui-monospace, "Courier New", monospace;
     --read-font: "VT323", ui-monospace, "Courier New", monospace;
@@ -222,6 +223,7 @@
   .goktasi { --accent: var(--goktasi); }
   .blok  { --accent: var(--blok); }
   .istila { --accent: var(--istila); }
+  .fitil { --accent: var(--fitil); }
 
   /* ---------- footer ---------- */
   .foot {
@@ -452,6 +454,17 @@
         <h2>&#304;ST&#304;LA</h2>
         <p>The swarm is a structure. Shoot a stack low and everything above drops a row &mdash; and the one that lands can now shoot back. Thread a gap for the top and it holds.</p>
         <span class="keys">Arrows &middot; SPACE</span>
+        <span class="play">&#9654; PLAY</span>
+      </div>
+    </a>
+
+    <a class="cab fitil" href="games/fitil/">
+      <div class="tube"><canvas data-demo="fuse" aria-hidden="true"></canvas></div>
+      <div class="plate">
+        <span class="no">CABINET NO. 13 &mdash; 1985</span>
+        <h2>F&#304;T&#304;L</h2>
+        <p>One bomb is worth almost nothing. A bomb that sets off another pays the square of the chain, so you stop clearing the room and start arming it. Fire does not care whose bomb it was.</p>
+        <span class="keys">Arrows &middot; SPACE drops</span>
         <span class="play">&#9654; PLAY</span>
       </div>
     </a>
@@ -1647,13 +1660,137 @@
         if (IV_SHIP[r].charAt(c) === "X") ctx.fillRect(x + c * 2, y + r * 2, 2, 2);
   }
 
+  /* ---------- fitil: a chain going off on a blueprint ---------- */
+  var fz = null;
+  function fzInit(W, H) {
+    var CE = 11, C = Math.floor(W / CE), R = Math.floor(H / CE);
+    var v = { W: W, H: H, CE: CE, C: C, R: R, g: [], bombs: [], fires: [], t: 0, wait: 1.1, armed: false };
+    for (var r = 0; r < R; r++) {
+      var row = [];
+      for (var c = 0; c < C; c++) {
+        if (r === 0 || c === 0 || r === R - 1 || c === C - 1) row.push(1);
+        else if (r % 2 === 0 && c % 2 === 0) row.push(1);
+        else row.push(((c * 5 + r * 11) % 5 < 2) ? 2 : 0);
+      }
+      v.g.push(row);
+    }
+    // the lane must be an ODD row: the even ones carry the fixed blocks, and a
+    // block between two bombs stops the chain the tile exists to show
+    var mid = Math.floor(R / 2);
+    if (mid % 2 === 0) mid += 1;
+    if (mid >= R - 1) mid = R - 2 - ((R - 2) % 2 === 0 ? 1 : 0);
+    for (var c2 = 1; c2 < C - 1; c2++) v.g[mid][c2] = 0;
+    v.row = mid;
+    return v;
+  }
+  function fzBlast(v, b, out) {
+    out.push([b.c, b.r]);
+    var d = [[1,0],[-1,0],[0,1],[0,-1]];
+    for (var i = 0; i < 4; i++) {
+      for (var s = 1; s <= 2; s++) {
+        var cc = b.c + d[i][0] * s, rr = b.r + d[i][1] * s;
+        if (rr < 0 || cc < 0 || rr >= v.R || cc >= v.C || v.g[rr][cc] === 1) break;
+        out.push([cc, rr]);
+        if (v.g[rr][cc] === 2) break;
+      }
+    }
+  }
+  function drawFuse(ctx, W, H, now) {
+    if (!fz || fz.W !== W || fz.H !== H) fz = fzInit(W, H);
+    var v = fz, dt = Math.min(0.05, (now - (v.last || now)) / 1000);
+    v.last = now; v.t += dt;
+    var CE = v.CE, i, c, r;
+
+    ctx.fillStyle = "#08122a";
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = "rgba(111,208,255,0.05)";
+    for (r = 0; r < v.R; r++) ctx.fillRect(0, r * CE, W, 1);
+    for (c = 0; c < v.C; c++) ctx.fillRect(c * CE, 0, 1, H);
+
+    for (r = 0; r < v.R; r++) {
+      for (c = 0; c < v.C; c++) {
+        var g = v.g[r][c], x = c * CE, y = r * CE;
+        if (g === 1) {
+          ctx.fillStyle = "#0e1e3c"; ctx.fillRect(x + 1, y + 1, CE - 2, CE - 2);
+          ctx.strokeStyle = "#6fd0ff"; ctx.lineWidth = 1;
+          ctx.strokeRect(x + 1.5, y + 1.5, CE - 3, CE - 3);
+          ctx.beginPath(); ctx.moveTo(x + 2.5, y + 2.5); ctx.lineTo(x + CE - 2.5, y + CE - 2.5); ctx.stroke();
+        } else if (g === 2) {
+          ctx.fillStyle = "#16345e"; ctx.fillRect(x + 2, y + 2, CE - 4, CE - 4);
+          ctx.strokeStyle = "#54a8d8"; ctx.lineWidth = 1;
+          ctx.strokeRect(x + 2.5, y + 2.5, CE - 5, CE - 5);
+        }
+      }
+    }
+
+    v.wait -= dt;
+    if (!v.armed && v.wait <= 0) {
+      // three in a line, two apart, so each one reaches the next
+      var start = 3;
+      for (i = 0; i < 3; i++) {
+        var bc = start + i * 2;
+        if (bc < v.C - 1) v.bombs.push({ c: bc, r: v.row, fuse: i === 0 ? 1.1 : 9 });
+      }
+      v.armed = true;
+    }
+
+    for (i = v.bombs.length - 1; i >= 0; i--) {
+      var b = v.bombs[i];
+      b.fuse -= dt;
+      if (b.fuse > 0) continue;
+      var queue = [b];
+      v.bombs.splice(i, 1);
+      while (queue.length) {
+        var cur = queue.shift();
+        var cells = [];
+        fzBlast(v, cur, cells);
+        for (var k = 0; k < cells.length; k++) {
+          var cc = cells[k][0], rr = cells[k][1];
+          v.fires.push({ c: cc, r: rr, t: 0.5 });
+          if (v.g[rr][cc] === 2) v.g[rr][cc] = 0;
+          for (var m = v.bombs.length - 1; m >= 0; m--) {
+            if (v.bombs[m].c === cc && v.bombs[m].r === rr) { queue.push(v.bombs.splice(m, 1)[0]); }
+          }
+        }
+      }
+      v.wait = 2.4;
+    }
+
+    for (i = 0; i < v.bombs.length; i++) {
+      var bo = v.bombs[i];
+      var bx = bo.c * CE + CE / 2, by = bo.r * CE + CE / 2;
+      ctx.fillStyle = "#0a1730";
+      ctx.beginPath(); ctx.arc(bx, by, 4, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = "#eaf6ff"; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.arc(bx, by, 4, 0, Math.PI * 2); ctx.stroke();
+      ctx.fillStyle = Math.sin(v.t * 16) > 0 ? "#ffd86b" : "#ff8a5c";
+      ctx.fillRect(Math.round(bx) - 1, Math.round(by) - 6, 2, 2);
+    }
+
+    for (i = v.fires.length - 1; i >= 0; i--) {
+      var fi = v.fires[i];
+      fi.t -= dt;
+      if (fi.t <= 0) { v.fires.splice(i, 1); continue; }
+      var a = Math.max(0, Math.min(1, fi.t / 0.32));
+      ctx.globalAlpha = a;
+      ctx.fillStyle = "#9fe6ff";
+      ctx.fillRect(fi.c * CE + 1, fi.r * CE + 1, CE - 2, CE - 2);
+      ctx.fillStyle = "#ffffff";
+      var ins = 2 + Math.round((1 - a) * 3);
+      ctx.fillRect(fi.c * CE + ins, fi.r * CE + ins, CE - ins * 2, CE - ins * 2);
+      ctx.globalAlpha = 1;
+    }
+
+    if (!v.bombs.length && !v.fires.length && v.armed && v.wait <= 0) fz = fzInit(W, H);
+  }
+
   /* ---------- wire up ---------- */
-  var painters = { snake: drawSnake, road: drawRoad, lander: drawLander, flap: drawFlap, brick: drawBrick, maze: drawMaze, arch: drawArch, rocks: drawRocks, loom: drawLoom, invade: drawInvade };
+  var painters = { snake: drawSnake, road: drawRoad, lander: drawLander, flap: drawFlap, brick: drawBrick, maze: drawMaze, arch: drawArch, rocks: drawRocks, loom: drawLoom, invade: drawInvade, fuse: drawFuse };
   Array.prototype.forEach.call(document.querySelectorAll("[data-demo]"), function (c) {
     var fn = painters[c.dataset.demo];
     if (fn) register(c, fn, c.dataset.demo === "flap" || c.dataset.demo === "brick" || c.dataset.demo === "maze" || c.dataset.demo === "arch" ||
                        c.dataset.demo === "rocks" || c.dataset.demo === "loom" ||
-                       c.dataset.demo === "invade");
+                       c.dataset.demo === "invade" || c.dataset.demo === "fuse");
   });
 
   if (window.ResizeObserver) {

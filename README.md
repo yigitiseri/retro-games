@@ -1,6 +1,6 @@
 # Retro Games
 
-Ten arcade cabinets, each a single self-contained HTML file. No build step, no
+Eleven arcade cabinets, each a single self-contained HTML file. No build step, no
 dependencies, no framework — open any `index.html` in a browser and it runs.
 All of them are built for a phone first: touch controls, a screen that fills the
 space it is given, and a keyboard fallback on desktop.
@@ -17,6 +17,7 @@ space it is given, and a keyboard fallback on desktop.
 | [**GÖKTAŞI**](games/goktasi/) | A salvage tug with no guns. Push rocks into the collector; ram one and it shatters into pieces worth less. | [`games/goktasi/index.html`](games/goktasi/index.html) |
 | [**BLOK**](games/blok/) | Falling wool on a loom. Every row you clear is woven into a kilim, and a row that mirrors itself pays many times over. | [`games/blok/index.html`](games/blok/index.html) |
 | [**İSTİLA**](games/istila/) | Invaders that stand on each other. Shoot a stack low and it collapses — arming whatever lands on the bottom. | [`games/istila/index.html`](games/istila/index.html) |
+| [**FİTİL**](games/fitil/) | A bomb that sets off a bomb pays the square of the chain, so you arm the room instead of clearing it. | [`games/fitil/index.html`](games/fitil/index.html) |
 
 `index.html` at the root is the arcade menu: every cabinet in turn,
 each with a live attract-mode preview of the game running in miniature. It is
