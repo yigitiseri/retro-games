@@ -6,6 +6,11 @@ import sys, os, re
 # play sessions would only pollute the numbers.
 ANALYTICS_TOKEN = "aee6e644a3b74cb9bdaf4e1569d570e2"
 
+# Where the built copies are served from. Used for the canonical link and for the
+# share card, both of which have to be absolute URLs: a relative one is ignored.
+SITE_URL = "https://yigitiseri.github.io/retro-games/"
+SITE_NAME = "Retro Games Arcade"
+
 GOOGLE_FONT_LINKS = re.compile(
     r'<link rel="preconnect" href="https://fonts\.googleapis\.com">\s*'
     r'<link rel="preconnect" href="https://fonts\.gstatic\.com" crossorigin>\s*'
@@ -60,6 +65,34 @@ links += '\n'.join('<link rel="stylesheet" href="%sassets/fonts/%s">' % (rel, f)
 head, n = GOOGLE_FONT_LINKS.subn(links.replace('\\', '\\\\'), head)
 assert n == 1, 'expected exactly one Google Fonts block, found %d in %s' % (n, src_path)
 
+# the page's own address, derived from where it is being written
+page_rel = m.group(2) + '/' if m else ''
+page_url = SITE_URL + page_rel
+
+title_m = re.search(r'<title>(.*?)</title>', head, re.S)
+assert title_m, 'no <title> in %s' % src_path
+game_name = title_m.group(1).strip()
+# search results show the title: the cabinet name alone says nothing about what it is
+page_title = '%s \u2014 %s' % (game_name, SITE_NAME) if page_rel else game_name
+head = head[:title_m.start()] + '<title>%s</title>' % page_title + head[title_m.end():]
+
+social = """
+<link rel="canonical" href="{url}">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="{site}">
+<meta property="og:title" content="{title}">
+<meta property="og:description" content="{desc}">
+<meta property="og:url" content="{url}">
+<meta property="og:image" content="{root}assets/social-card.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{title}">
+<meta name="twitter:description" content="{desc}">
+<meta name="twitter:image" content="{root}assets/social-card.png">
+""".format(url=page_url, site=SITE_NAME, title=page_title,
+           desc=desc.replace('"', '&quot;'), root=SITE_URL)
+
 analytics = ''
 if ANALYTICS_TOKEN:
     analytics = (
@@ -85,7 +118,7 @@ doc = '''<!doctype html>
   img { max-width: 100%%; }
   [hidden] { display: none !important; }
 </style>
-''' % desc + head + analytics + '''
+''' % desc + head + social + analytics + '''
 </head>
 <body>
 ''' + body + '''
