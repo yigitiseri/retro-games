@@ -238,6 +238,43 @@
   }
   .foot a { color: var(--chrome); text-decoration: none; border-bottom: 1px solid var(--edge); }
 
+  /* the coffee chip: styled like a cabinet's own PLAY badge so it belongs here,
+     warm enough to find without shouting over the games */
+  .foot a.kofi-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 9px 14px;
+    border: 1px solid #6b4a1e;
+    border-bottom-color: #6b4a1e;
+    border-radius: 7px;
+    background: linear-gradient(180deg, rgba(255,176,46,0.16), rgba(255,176,46,0.05));
+    font-family: var(--cell-font);
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    color: #ffc75a;
+    line-height: 1;
+    transition: background 140ms ease, border-color 140ms ease, color 140ms ease;
+  }
+  .foot a.kofi-link:hover, .foot a.kofi-link:focus-visible {
+    background: linear-gradient(180deg, rgba(255,176,46,0.3), rgba(255,176,46,0.12));
+    border-color: #ffc75a;
+    color: #fff0cf;
+  }
+  /* a little pixel cup, drawn rather than an emoji so it matches the type */
+  .foot a.kofi-link::before {
+    content: "";
+    width: 11px;
+    height: 10px;
+    flex: 0 0 auto;
+    background:
+      linear-gradient(#ffc75a, #ffc75a) 0 3px / 8px 7px no-repeat,
+      linear-gradient(#ffc75a, #ffc75a) 8px 4px / 3px 3px no-repeat,
+      linear-gradient(#ff8a5c, #ff8a5c) 1px 0 / 2px 2px no-repeat,
+      linear-gradient(#ff8a5c, #ff8a5c) 4px 0 / 2px 2px no-repeat;
+  }
+  .foot a.kofi-link:hover::before, .foot a.kofi-link:focus-visible::before { filter: brightness(1.2); }
+
   /* The coffee panel. Nothing from ko-fi.com is fetched until this is opened,
      so a visitor who never clicks never contacts them at all. */
   .kofi-wrap {
@@ -421,9 +458,9 @@
   </nav>
 
   <footer class="foot">
+    <span><a class="kofi-link" href="https://ko-fi.com/yigiti" target="_blank" rel="noopener">BUY ME A COFFEE</a></span>
     <span>Single-file HTML &middot; no build step &middot; no frameworks</span>
     <span><a href="https://github.com/yigitiseri/retro-games">github.com/yigitiseri/retro-games</a></span>
-    <span><a class="kofi-link" href="https://ko-fi.com/yigiti" target="_blank" rel="noopener">Buy me a coffee</a></span>
     <span><a href="privacy.html">Privacy</a> &middot; <a href="datenschutz.html">Datenschutz</a></span>
   </footer>
 </div>
