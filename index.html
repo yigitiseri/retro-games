@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
-<meta name="description" content="Fourteen hand-built arcade cabinets you can play in the browser on a phone: snake, a road racer, a lander, breakout, a night-market maze, archery, a salvage tug, two-player ping pong and more. No install, no accounts, no ads.">
+<meta name="description" content="Fifteen hand-built arcade cabinets you can play in the browser on a phone: snake, a road racer, a lander, breakout, a night-market maze, archery, a salvage tug, two-player ping pong and more. No install, no accounts, no ads.">
 <meta name="theme-color" content="#08090e">
 <style>
   :root {
@@ -21,14 +21,14 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Retro Games Arcade">
 <meta property="og:title" content="Retro Games Arcade">
-<meta property="og:description" content="Fourteen hand-built arcade cabinets you can play in the browser on a phone: snake, a road racer, a lander, breakout, a night-market maze, archery, a salvage tug, two-player ping pong and more. No install, no accounts, no ads.">
+<meta property="og:description" content="Fifteen hand-built arcade cabinets you can play in the browser on a phone: snake, a road racer, a lander, breakout, a night-market maze, archery, a salvage tug, two-player ping pong and more. No install, no accounts, no ads.">
 <meta property="og:url" content="https://yigitiseri.github.io/retro-games/">
 <meta property="og:image" content="https://yigitiseri.github.io/retro-games/assets/social-card.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Retro Games Arcade">
-<meta name="twitter:description" content="Fourteen hand-built arcade cabinets you can play in the browser on a phone: snake, a road racer, a lander, breakout, a night-market maze, archery, a salvage tug, two-player ping pong and more. No install, no accounts, no ads.">
+<meta name="twitter:description" content="Fifteen hand-built arcade cabinets you can play in the browser on a phone: snake, a road racer, a lander, breakout, a night-market maze, archery, a salvage tug, two-player ping pong and more. No install, no accounts, no ads.">
 <meta name="twitter:image" content="https://yigitiseri.github.io/retro-games/assets/social-card.png">
 <link rel="preload" href="assets/fonts/press-start-2p-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="assets/fonts/fonts.css">
@@ -58,6 +58,7 @@
     --pingpong: #ff4fa3;
     --ezber:   #ffc75a;
     --zipla:   #4fe8ff;
+    --neon:    #7d8cff;
 
     --cell-font: "Press Start 2P", ui-monospace, "Courier New", monospace;
     --read-font: "VT323", ui-monospace, "Courier New", monospace;
@@ -244,6 +245,7 @@
   .pingpong { --accent: var(--pingpong); }
   .ezber { --accent: var(--ezber); }
   .zipla { --accent: var(--zipla); }
+  .neon { --accent: var(--neon); }
 
   /* ---------- footer ---------- */
   .foot {
@@ -519,6 +521,17 @@
         <h2>ZIPLA</h2>
         <p>There is no jump button. The spring fires on its own, always with the same force, and all you ever do is steer. The gold ledges sit out at the far edge of what that spring can carry you &mdash; and they pay five times.</p>
         <span class="keys">Hold left or right &middot; A D</span>
+        <span class="play">&#9654; PLAY</span>
+      </div>
+    </a>
+
+    <a class="cab neon" href="games/neonrush/">
+      <div class="tube"><canvas data-demo="lanes" aria-hidden="true"></canvas></div>
+      <div class="plate">
+        <span class="no">CABINET NO. 17 &mdash; 1986</span>
+        <h2>NEON RUSH</h2>
+        <p>Three lanes, one thumb, and a multiplier that dies if you play it safe. The gold is nearly always in the lane you would rather not be in &mdash; and at twelve times, every diamond is worth more than a whole minute of surviving.</p>
+        <span class="keys">Tap a half &middot; A D</span>
         <span class="play">&#9654; PLAY</span>
       </div>
     </a>
@@ -2073,13 +2086,99 @@
     ctx.fillRect(Math.round(v.x) - 3, Math.round(py) - 6, 6, 6);
   }
 
+
+  /* ---------- neon rush: three lanes, and the gold is never in the safe one ---------- */
+  var nr = null;
+  function nrInit(W, H) {
+    return { rows: [], lane: 1, x: W / 2, to: W / 2, tw: 1, t: 0, gap: 0, last: 0, W: W, flash: 0 };
+  }
+  function nrLane(W, i) { return W * (0.5 + (i - 1) * 0.28); }
+  function drawLanes(ctx, W, H, now) {
+    if (!nr || nr.W !== W) nr = nrInit(W, H);
+    var v = nr, dt = Math.min(0.05, (now - (v.last || now)) / 1000);
+    v.last = now; v.t += dt;
+    if (v.flash > 0) v.flash -= dt * 3;
+
+    var sp = 34, py = H - 14;
+
+    v.gap -= dt;
+    if (v.gap <= 0) {
+      v.gap = 0.92;
+      // always leave one lane open, and put the gold somewhere it costs a move
+      var open = (Math.random() * 3) | 0;
+      var cells = [1, 1, 1];
+      cells[open] = 0;
+      if (Math.random() < 0.5) { var other = (open + 1 + ((Math.random() * 2) | 0)) % 3; cells[other] = 0; }
+      var gold = Math.random() < 0.6 ? open : -1;
+      v.rows.push({ y: -6, cells: cells, gold: gold, took: false });
+    }
+
+    // steer for the gold when there is one, otherwise for the gap
+    var target = v.lane, near = null;
+    for (var i = 0; i < v.rows.length; i++) {
+      var r = v.rows[i];
+      if (r.y < py - 6 && (!near || r.y > near.y)) near = r;
+    }
+    if (near) {
+      if (near.gold >= 0) target = near.gold;
+      else { for (var k = 0; k < 3; k++) if (!near.cells[k]) { target = k; break; } }
+    }
+    if (target !== v.lane && v.tw >= 1) { v.lane = target; v.to = nrLane(W, target); v.tw = 0; }
+    if (v.tw < 1) { v.tw = Math.min(1, v.tw + dt / 0.14); }
+    v.x += (v.to - v.x) * Math.min(1, dt * 14);
+
+    for (var j = v.rows.length - 1; j >= 0; j--) {
+      var q = v.rows[j];
+      q.y += sp * dt;
+      if (!q.took && q.gold >= 0 && Math.abs(q.y - py) < 6 && Math.abs(v.x - nrLane(W, q.gold)) < 8) {
+        q.took = true; v.flash = 1;
+      }
+      if (q.y > H + 8) v.rows.splice(j, 1);
+    }
+
+    ctx.fillStyle = "#07070f"; ctx.fillRect(0, 0, W, H);
+    var scroll = (v.t * sp) % 18;
+    ctx.strokeStyle = "rgba(125,140,255,0.12)"; ctx.lineWidth = 1;
+    for (var y = -18 + scroll; y < H; y += 18) {
+      ctx.beginPath(); ctx.moveTo(4, Math.round(y) + 0.5); ctx.lineTo(W - 4, Math.round(y) + 0.5); ctx.stroke();
+    }
+    ctx.strokeStyle = "rgba(125,140,255,0.26)";
+    for (var d = 0; d < 2; d++) {
+      var dx = Math.round((nrLane(W, d) + nrLane(W, d + 1)) / 2) + 0.5;
+      ctx.beginPath(); ctx.moveTo(dx, 0); ctx.lineTo(dx, H); ctx.stroke();
+    }
+
+    var bw = Math.min(20, W * 0.22);
+    for (var m = 0; m < v.rows.length; m++) {
+      var w2 = v.rows[m];
+      for (var l = 0; l < 3; l++) {
+        var x = nrLane(W, l);
+        if (w2.cells[l]) {
+          ctx.fillStyle = "#ff3d6e";
+          ctx.fillRect(Math.round(x - bw / 2), Math.round(w2.y) - 3, Math.round(bw), 7);
+        }
+      }
+      if (w2.gold >= 0 && !w2.took) {
+        var gx = nrLane(W, w2.gold);
+        ctx.save(); ctx.translate(gx, w2.y); ctx.rotate(Math.PI / 4);
+        ctx.fillStyle = "#ffc23d"; ctx.fillRect(-3.4, -3.4, 6.8, 6.8);
+        ctx.restore();
+      }
+    }
+
+    ctx.fillStyle = v.flash > 0 ? "#ffffff" : "#8f9bff";
+    ctx.beginPath(); ctx.arc(v.x, py, 4.6, 0, 6.2832); ctx.fill();
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath(); ctx.arc(v.x, py, 1.7, 0, 6.2832); ctx.fill();
+  }
+
   /* ---------- wire up ---------- */
-  var painters = { snake: drawSnake, road: drawRoad, lander: drawLander, flap: drawFlap, brick: drawBrick, maze: drawMaze, arch: drawArch, rocks: drawRocks, loom: drawLoom, invade: drawInvade, fuse: drawFuse, pong: drawPong, lamps: drawLamps, climb: drawClimb };
+  var painters = { snake: drawSnake, road: drawRoad, lander: drawLander, flap: drawFlap, brick: drawBrick, maze: drawMaze, arch: drawArch, rocks: drawRocks, loom: drawLoom, invade: drawInvade, fuse: drawFuse, pong: drawPong, lamps: drawLamps, climb: drawClimb, lanes: drawLanes };
   Array.prototype.forEach.call(document.querySelectorAll("[data-demo]"), function (c) {
     var fn = painters[c.dataset.demo];
     if (fn) register(c, fn, c.dataset.demo === "flap" || c.dataset.demo === "brick" || c.dataset.demo === "maze" || c.dataset.demo === "arch" ||
                        c.dataset.demo === "rocks" || c.dataset.demo === "loom" ||
-                       c.dataset.demo === "invade" || c.dataset.demo === "fuse" || c.dataset.demo === "pong" || c.dataset.demo === "lamps" || c.dataset.demo === "climb");
+                       c.dataset.demo === "invade" || c.dataset.demo === "fuse" || c.dataset.demo === "pong" || c.dataset.demo === "lamps" || c.dataset.demo === "climb" || c.dataset.demo === "lanes");
   });
 
   if (window.ResizeObserver) {
