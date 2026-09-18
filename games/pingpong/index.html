@@ -1,0 +1,669 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="description" content="PING PONG - two thumbs, one phone, and a rally worth more the longer it lasts.">
+<meta name="theme-color" content="#08090e">
+<style>
+  :root {
+    color-scheme: dark;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  body { margin: 0; }
+  img { max-width: 100%; }
+  [hidden] { display: none !important; }
+</style>
+<title>PING PONG</title>
+<link rel="preload" href="../../assets/fonts/press-start-2p-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../assets/fonts/fonts.css">
+<style>
+  :root {
+    --ink:    #07060f;
+    --bezel:  #241f3d;
+    --dim:    #2f2a48;
+    --pale:   #f2f4ff;
+    --cool:   #4fe3ff;
+    --hot:    #ff4fa3;
+    --gold:   #ffc75a;
+
+    --cell-font: "Press Start 2P", ui-monospace, "Courier New", monospace;
+    --read-font: "VT323", ui-monospace, "Courier New", monospace;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+
+  body {
+    margin: 0;
+    background:
+      radial-gradient(125% 90% at 50% 0%, #241f45 0%, var(--ink) 62%),
+      var(--ink);
+    color: var(--pale);
+    font-family: var(--read-font);
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+
+  .cabinet {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    padding: 12px 16px;
+    padding-block: 10px 12px;
+    max-width: 640px;
+    margin-inline: auto;
+  }
+
+  .marquee { text-align: center; flex: 0 0 auto; }
+  .marquee h1 {
+    margin: 0;
+    font-family: var(--cell-font);
+    font-size: clamp(14px, 5vw, 25px);
+    letter-spacing: 0.12em;
+    color: var(--hot);
+    text-shadow: 0 0 8px rgba(255, 79, 163, 0.5), 0 0 24px rgba(79, 227, 255, 0.28);
+    text-wrap: balance;
+  }
+  .marquee p {
+    margin: 4px 0 0;
+    font-size: clamp(13px, 3.6vw, 17px);
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--cool);
+    opacity: 0.7;
+  }
+
+  .hud {
+    flex: 0 0 auto;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 5px;
+    border: 1px solid var(--dim);
+    background: linear-gradient(180deg, rgba(255,79,163,0.07), transparent);
+    padding: 6px 3px;
+  }
+  .hud div { text-align: center; }
+  .hud .k {
+    display: block;
+    font-family: var(--cell-font);
+    font-size: 7px;
+    letter-spacing: 0.1em;
+    color: var(--cool);
+    opacity: 0.8;
+  }
+  .hud .them .k { color: var(--cool); }
+  .hud .you .k { color: var(--hot); }
+  .hud .v {
+    display: block;
+    margin-top: 5px;
+    font-size: clamp(18px, 5.2vw, 23px);
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    color: var(--pale);
+  }
+  .hud .them .v { color: var(--cool); }
+  .hud .you .v { color: var(--hot); }
+  .hud .pot .v { color: var(--gold); }
+  .hud .v.bump { animation: bump 240ms steps(3) 1; }
+  @keyframes bump { 50% { transform: scale(1.22); } }
+
+  .stage { flex: 1 1 0; min-height: 0; display: flex; align-items: center; justify-content: center; }
+  .screen {
+    position: relative;
+    border: 2px solid var(--bezel);
+    border-radius: 10px;
+    background: #0b0a16;
+    box-shadow:
+      0 0 0 4px #14112a,
+      0 0 40px rgba(255, 79, 163, 0.1) inset,
+      0 10px 34px rgba(0, 0, 0, 0.62);
+    overflow: hidden;
+    touch-action: none;
+    cursor: pointer;
+  }
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+  }
+
+  .scan, .vignette { position: absolute; inset: 0; pointer-events: none; }
+  .scan {
+    background: repeating-linear-gradient(to bottom, rgba(0,0,0,0.24) 0 1px, rgba(0,0,0,0) 1px 3px);
+    mix-blend-mode: multiply;
+  }
+  .vignette {
+    background: radial-gradient(112% 112% at 50% 45%, transparent 54%, rgba(0,0,0,0.68) 100%);
+  }
+
+  .overlay {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-content: center;
+    gap: 11px;
+    text-align: center;
+    padding: 18px;
+    background: rgba(7, 6, 15, 0.9);
+    z-index: 3;
+  }
+  .overlay h2 {
+    margin: 0;
+    font-family: var(--cell-font);
+    font-size: clamp(12px, 4.2vw, 18px);
+    letter-spacing: 0.05em;
+    color: var(--hot);
+    text-shadow: 0 0 10px rgba(255, 79, 163, 0.45);
+  }
+  .overlay h2.cool { color: var(--cool); text-shadow: 0 0 10px rgba(79, 227, 255, 0.45); }
+  .overlay p { margin: 0; font-size: clamp(16px, 4.2vw, 20px); letter-spacing: 0.06em; color: var(--cool); }
+  .overlay p em { font-style: normal; color: var(--pale); }
+  .blink { animation: blink 1.05s steps(2, start) infinite; }
+  @keyframes blink { 50% { opacity: 0.15; } }
+
+  .banner {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    top: 42%;
+    z-index: 2;
+    padding: 7px 12px;
+    background: rgba(5, 4, 12, 0.88);
+    border-block: 1px solid var(--gold);
+    white-space: nowrap;
+    font-family: var(--cell-font);
+    font-size: clamp(10px, 3.1vw, 14px);
+    letter-spacing: 0.06em;
+    color: var(--gold);
+    text-shadow: 0 2px 0 #000;
+    animation: banner 1.5s ease-out 1 forwards;
+    pointer-events: none;
+  }
+  @keyframes banner {
+    0%   { opacity: 0; transform: translateX(-50%) scale(0.9); }
+    18%  { opacity: 1; transform: translateX(-50%) scale(1); }
+    74%  { opacity: 1; }
+    100% { opacity: 0; }
+  }
+
+  .sidekeys { flex: 0 0 auto; display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; }
+  .sidekeys button {
+    font-family: var(--cell-font);
+    font-size: 7px;
+    letter-spacing: 0.08em;
+    padding: 9px 11px;
+    color: var(--cool);
+    background: #141130;
+    border: 1px solid var(--dim);
+    border-radius: 5px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .sidekeys button:active, .sidekeys button[aria-pressed="true"] { color: var(--pale); border-color: var(--hot); }
+  .sidekeys .mode { color: var(--gold); border-color: #5a4320; }
+
+  button:focus-visible, .screen:focus-visible { outline: 2px solid var(--pale); outline-offset: 2px; }
+
+  .hint {
+    flex: 0 0 auto;
+    margin: 0;
+    text-align: center;
+    font-size: 15px;
+    letter-spacing: 0.06em;
+    color: var(--cool);
+    opacity: 0.62;
+  }
+
+  @media (max-height: 700px) {
+    .marquee p, .hint { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .blink, .hud .v.bump, .banner { animation: none; }
+  }
+</style>
+<!-- Cloudflare Web Analytics: no cookies, no client-side storage -->
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "aee6e644a3b74cb9bdaf4e1569d570e2"}'></script>
+<!-- End Cloudflare Web Analytics -->
+
+</head>
+<body>
+<div class="cabinet">
+  <header class="marquee">
+    <h1>PING PONG</h1>
+    <p>Cabinet No. 14 &mdash; 1972</p>
+  </header>
+
+  <div class="hud">
+    <div class="them"><span class="k">CYAN</span><span class="v" id="hTop">0</span></div>
+    <div class="pot"><span class="k">POT</span><span class="v" id="hPot">10</span></div>
+    <div><span class="k">RALLY</span><span class="v" id="hRally">0</span></div>
+    <div class="you"><span class="k">PINK</span><span class="v" id="hBot">0</span></div>
+  </div>
+
+  <div class="stage" id="stage">
+    <div class="screen" id="screen" tabindex="0" aria-label="Ping pong court">
+      <canvas id="view" width="140" height="180"></canvas>
+      <div class="scan"></div>
+      <div class="vignette"></div>
+      <div class="overlay" id="overlay">
+        <h2 id="ovTitle">INSERT COIN</h2>
+        <p id="ovBody">Two thumbs, one phone.</p>
+        <p class="blink" id="ovBlink">&#9654; PRESS START</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="sidekeys">
+    <button class="mode" id="btnMode">1 PLAYER</button>
+    <button id="btnPause">PAUSE</button>
+    <button id="btnSound" aria-pressed="true">SOUND ON</button>
+    <button id="btnReset">RESTART</button>
+  </div>
+
+  <p class="hint">Drag in your half of the court &middot; A / D up top, arrows below &middot; first to 300</p>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var VW = 140, VH = 180;
+  var PW = 30, PH = 5, EDGE = 14;
+  var BASE = 104, GROW = 1.06, CAP = 250;
+  var KEY_SPEED = 150;
+  var TARGET = 300;
+
+  var canvas = document.getElementById("view");
+  var ctx = canvas.getContext("2d");
+  var screenEl = document.getElementById("screen");
+  var stageEl = document.getElementById("stage");
+  var overlay = document.getElementById("overlay");
+  var ovTitle = document.getElementById("ovTitle");
+  var ovBody = document.getElementById("ovBody");
+  var ovBlink = document.getElementById("ovBlink");
+  var hTop = document.getElementById("hTop");
+  var hBot = document.getElementById("hBot");
+  var hPot = document.getElementById("hPot");
+  var hRally = document.getElementById("hRally");
+  var btnMode = document.getElementById("btnMode");
+  var btnPause = document.getElementById("btnPause");
+  var btnSound = document.getElementById("btnSound");
+  var btnReset = document.getElementById("btnReset");
+
+  ctx.imageSmoothingEnabled = false;
+
+  var state = "idle";
+  var top_, bot, ball, pot, rally, sTop, sBot, serve, lastTouch, flash, award, winner, bannerEl;
+  var soundOn = true, onePlayer = true;
+  var held = { tl: false, tr: false, bl: false, br: false };
+  var touches = {};                 // pointerId -> "top" | "bot"
+
+  /* ---------------- persistence ---------------- */
+  function loadMode() {
+    try { var v = localStorage.getItem("pingpong-1p"); return v === null ? true : v === "1"; }
+    catch (e) { return true; }
+  }
+  function saveMode(v) { try { localStorage.setItem("pingpong-1p", v ? "1" : "0"); } catch (e) {} }
+  function loadSound() {
+    try { var v = localStorage.getItem("pingpong-sound"); return v === null ? true : v === "1"; }
+    catch (e) { return true; }
+  }
+  function saveSound(v) { try { localStorage.setItem("pingpong-sound", v ? "1" : "0"); } catch (e) {} }
+
+  /* ---------------- audio ---------------- */
+  var actx = null;
+  function blip(freq, dur, type, vol) {
+    if (!soundOn) return;
+    try {
+      if (!actx) {
+        var AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return;
+        actx = new AC();
+      }
+      if (actx.state === "suspended") actx.resume();
+      var o = actx.createOscillator(), g = actx.createGain();
+      o.type = type || "square";
+      o.frequency.setValueAtTime(freq, actx.currentTime);
+      g.gain.setValueAtTime(vol || 0.05, actx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.0001, actx.currentTime + dur);
+      o.connect(g); g.connect(actx.destination);
+      o.start(); o.stop(actx.currentTime + dur);
+    } catch (e) {}
+  }
+
+  /* ---------------- layout ---------------- */
+  function fit() {
+    var r = stageEl.getBoundingClientRect();
+    var availW = r.width - 4, availH = r.height - 4;
+    if (availW < 40 || availH < 40) return;
+    var ratio = VW / VH;
+    var w = Math.min(availW, availH * ratio);
+    screenEl.style.width = Math.round(w) + 4 + "px";
+    screenEl.style.height = Math.round(w / ratio) + 4 + "px";
+  }
+
+  /* ---------------- game ---------------- */
+  function newPoint(towards) {
+    top_.x = clampPad(top_.x);
+    bot.x = clampPad(bot.x);
+    pot = 10;
+    rally = 0;
+    lastTouch = null;
+    var a = (Math.random() - 0.5) * 0.6;
+    ball = { x: VW / 2, y: VH / 2, vx: Math.sin(a) * BASE, vy: Math.cos(a) * BASE * towards, r: 3 };
+    serve = 0.9;
+    syncHud();
+  }
+
+  function clampPad(x) { return Math.max(PW / 2, Math.min(VW - PW / 2, x)); }
+
+  function reset(startNow) {
+    sTop = 0; sBot = 0;
+    winner = null;
+    flash = 0;
+    award = null;
+    top_ = { x: VW / 2 };
+    bot = { x: VW / 2 };
+    newPoint(Math.random() < 0.5 ? 1 : -1);
+    fit();
+    setState(startNow ? "running" : "idle");
+    syncHud();
+    render(0);
+  }
+
+  function hitPaddle(pad, dirSign, who) {
+    var off = (ball.x - pad.x) / (PW / 2);
+    off = Math.max(-1, Math.min(1, off));
+    var sp = Math.min(CAP, Math.hypot(ball.vx, ball.vy) * GROW);
+    var ang = off * 0.74;                     // the end of the bat throws it wide
+    ball.vx = Math.sin(ang) * sp;
+    ball.vy = Math.cos(ang) * sp * dirSign;
+    rally++;
+    pot += 5 + Math.floor(rally / 3) * 5;     // the longer it runs the better it pays
+    lastTouch = who;
+    flash = 0.1;
+    blip(320 + rally * 18, 0.035, "square", 0.04);
+    bump(hPot);
+    syncHud();
+  }
+
+  function takePoint(who) {
+    var amount = pot;
+    if (who === "top") sTop += amount; else sBot += amount;
+    award = { who: who, amount: amount, t: 1.4 };
+    blip(220, 0.1); setTimeout(function () { blip(150, 0.16, "sawtooth", 0.05); }, 90);
+    newPoint(who === "top" ? 1 : -1);         // loser gets served at
+    award.t = 1.4;
+    syncHud();
+    if (sTop >= TARGET || sBot >= TARGET) {
+      winner = sTop >= TARGET ? "top" : "bot";
+      setState("over");
+    }
+  }
+
+  function update(dt) {
+    if (flash > 0) flash -= dt;
+    if (award) { award.t -= dt; if (award.t <= 0) award = null; }
+
+    /* paddles: keys move, touch is handled directly by the pointer events */
+    if (held.tl) top_.x -= KEY_SPEED * dt;
+    if (held.tr) top_.x += KEY_SPEED * dt;
+    if (held.bl) bot.x -= KEY_SPEED * dt;
+    if (held.br) bot.x += KEY_SPEED * dt;
+
+    if (onePlayer) {
+      // the machine takes the far bat, good but not perfect
+      var aim = ball.vy < 0 ? ball.x : VW / 2;
+      var wobble = Math.sin(performance.now() / 420) * 7;
+      var d = (aim + wobble) - top_.x;
+      var lim = 108 * dt;
+      top_.x += Math.max(-lim, Math.min(lim, d));
+    }
+    top_.x = clampPad(top_.x);
+    bot.x = clampPad(bot.x);
+
+    if (serve > 0) { serve -= dt; return; }
+
+    ball.x += ball.vx * dt;
+    ball.y += ball.vy * dt;
+
+    if (ball.x < ball.r + 2) { ball.x = ball.r + 2; ball.vx = Math.abs(ball.vx); blip(500, 0.02, "square", 0.025); }
+    if (ball.x > VW - ball.r - 2) { ball.x = VW - ball.r - 2; ball.vx = -Math.abs(ball.vx); blip(500, 0.02, "square", 0.025); }
+
+    if (ball.vy < 0 && ball.y - ball.r <= EDGE + PH && ball.y - ball.r >= EDGE - 5) {
+      if (Math.abs(ball.x - top_.x) <= PW / 2 + 2) { ball.y = EDGE + PH + ball.r; hitPaddle(top_, 1, "top"); }
+    }
+    if (ball.vy > 0 && ball.y + ball.r >= VH - EDGE - PH && ball.y + ball.r <= VH - EDGE + 5) {
+      if (Math.abs(ball.x - bot.x) <= PW / 2 + 2) { ball.y = VH - EDGE - PH - ball.r; hitPaddle(bot, -1, "bot"); }
+    }
+
+    if (ball.y < -8) { takePoint("bot"); return; }
+    if (ball.y > VH + 8) { takePoint("top"); return; }
+  }
+
+  /* ---------------- rendering ---------------- */
+  function render(now) {
+    if (!ball) return;
+    ctx.fillStyle = "#0b0a16";
+    ctx.fillRect(0, 0, VW, VH);
+
+    // each player owns a half, tinted just enough to tell them apart
+    var g1 = ctx.createLinearGradient(0, 0, 0, VH / 2);
+    g1.addColorStop(0, "rgba(79,227,255,0.10)");
+    g1.addColorStop(1, "rgba(79,227,255,0)");
+    ctx.fillStyle = g1;
+    ctx.fillRect(0, 0, VW, VH / 2);
+    var g2 = ctx.createLinearGradient(0, VH, 0, VH / 2);
+    g2.addColorStop(0, "rgba(255,79,163,0.10)");
+    g2.addColorStop(1, "rgba(255,79,163,0)");
+    ctx.fillStyle = g2;
+    ctx.fillRect(0, VH / 2, VW, VH / 2);
+
+    ctx.fillStyle = "rgba(210,220,255,0.18)";
+    for (var i = 4; i < VW - 4; i += 9) ctx.fillRect(i, VH / 2 - 1, 5, 1);
+
+    // the pot, sitting on the centre line
+    if (award) {
+      var a = Math.max(0, Math.min(1, award.t / 0.6));
+      ctx.globalAlpha = a;
+      ctx.fillStyle = award.who === "top" ? "#4fe3ff" : "#ff4fa3";
+      ctx.font = '11px "Press Start 2P", monospace';
+      ctx.textAlign = "center";
+      ctx.fillText("+" + award.amount, VW / 2, award.who === "top" ? VH / 2 - 16 : VH / 2 + 26);
+      ctx.globalAlpha = 1;
+    } else {
+      ctx.textAlign = "center";
+      ctx.font = '6px "Press Start 2P", monospace';
+      ctx.fillStyle = "rgba(242,244,255,0.5)";
+      ctx.fillText("POT", VW / 2, VH / 2 - 9);
+      ctx.font = '12px "Press Start 2P", monospace';
+      ctx.fillStyle = "#ffc75a";
+      ctx.globalAlpha = flash > 0 ? 1 : 0.9;
+      ctx.fillText(String(pot), VW / 2, VH / 2 + 8);
+      ctx.globalAlpha = 1;
+    }
+    ctx.textAlign = "left";
+
+    ctx.shadowBlur = 8;
+    ctx.shadowColor = "#4fe3ff";
+    ctx.fillStyle = "#4fe3ff";
+    ctx.fillRect(Math.round(top_.x - PW / 2), EDGE, PW, PH);
+    ctx.shadowColor = "#ff4fa3";
+    ctx.fillStyle = "#ff4fa3";
+    ctx.fillRect(Math.round(bot.x - PW / 2), VH - EDGE - PH, PW, PH);
+
+    var bc = lastTouch === "top" ? "#4fe3ff" : lastTouch === "bot" ? "#ff4fa3" : "#ffffff";
+    ctx.shadowColor = bc;
+    ctx.fillStyle = bc;
+    if (serve > 0 && Math.floor(now / 110) % 2 === 0) {
+      // blink while it waits to be served
+    } else {
+      ctx.fillRect(Math.round(ball.x) - 2, Math.round(ball.y) - 2, 4, 4);
+    }
+    ctx.shadowBlur = 0;
+  }
+
+  /* ---------------- hud + overlay ---------------- */
+  function bump(el) { el.classList.remove("bump"); void el.offsetWidth; el.classList.add("bump"); }
+
+  function syncHud() {
+    hTop.textContent = sTop;
+    hBot.textContent = sBot;
+    hPot.textContent = pot;
+    hRally.textContent = rally;
+  }
+
+  function banner(text) {
+    if (bannerEl && bannerEl.parentNode) bannerEl.parentNode.removeChild(bannerEl);
+    bannerEl = document.createElement("div");
+    bannerEl.className = "banner";
+    bannerEl.textContent = text;
+    screenEl.appendChild(bannerEl);
+    var mine = bannerEl;
+    setTimeout(function () { if (mine.parentNode) mine.parentNode.removeChild(mine); }, 1600);
+  }
+
+  function setState(next) {
+    state = next;
+    btnPause.textContent = state === "paused" ? "RESUME" : "PAUSE";
+    if (state === "running") { overlay.hidden = true; return; }
+    overlay.hidden = false;
+    ovTitle.classList.toggle("cool", state === "over" && winner === "top");
+
+    if (state === "idle") {
+      ovTitle.textContent = "INSERT COIN";
+      ovBody.innerHTML = "A rally is worth more the longer it lasts. Every return " +
+                         "raises the <em>pot</em> and speeds the ball, and whoever wins the " +
+                         "point takes all of it &mdash; so you both want it to continue, and " +
+                         "you are both getting more frightened as it does. First to " + TARGET + ".";
+      ovBlink.innerHTML = "&#9654; PRESS START";
+    } else if (state === "paused") {
+      ovTitle.textContent = "PAUSED";
+      ovBody.textContent = "The ball waits.";
+      ovBlink.innerHTML = "&#9654; TAP OR PRESS P";
+    } else {
+      ovTitle.textContent = winner === "top" ? "CYAN WINS" : "PINK WINS";
+      ovBody.innerHTML = "<em>" + sTop + "</em> to <em>" + sBot + "</em>";
+      ovBlink.innerHTML = "&#9654; TAP TO PLAY AGAIN";
+    }
+  }
+
+  function start() { lastTs = 0; setState("running"); }
+  function togglePause() {
+    if (state === "running") setState("paused");
+    else if (state === "paused") start();
+  }
+  function primary() {
+    if (state === "idle" || state === "paused") start();
+    else if (state === "over") reset(true);
+    else setState("paused");
+  }
+
+  /* ---------------- loop ---------------- */
+  var lastTs = 0;
+  function frame(now) {
+    requestAnimationFrame(frame);        // queued first: one bad frame is not fatal
+    var dt = lastTs ? Math.min(0.05, (now - lastTs) / 1000) : 0;
+    lastTs = now;
+    if (state === "running") update(dt);
+    render(now);
+  }
+
+  /* ---------------- input ---------------- */
+  // the court itself is the control surface: a thumb in your half moves your bat,
+  // and both thumbs work at once
+  function courtX(clientX) {
+    var r = screenEl.getBoundingClientRect();
+    return ((clientX - r.left) / r.width) * VW;
+  }
+  function whichHalf(clientY) {
+    var r = screenEl.getBoundingClientRect();
+    return (clientY - r.top) < r.height / 2 ? "top" : "bot";
+  }
+
+  screenEl.addEventListener("pointerdown", function (ev) {
+    ev.preventDefault();
+    if (state === "idle" || state === "paused") { start(); }
+    else if (state === "over") { reset(true); return; }
+    var half = whichHalf(ev.clientY);
+    if (onePlayer && half === "top") return;      // the machine owns that bat
+    touches[ev.pointerId] = half;
+    (half === "top" ? top_ : bot).x = clampPad(courtX(ev.clientX));
+    try { screenEl.setPointerCapture(ev.pointerId); } catch (e) {}
+  });
+  screenEl.addEventListener("pointermove", function (ev) {
+    var half = touches[ev.pointerId];
+    if (!half) return;
+    ev.preventDefault();
+    (half === "top" ? top_ : bot).x = clampPad(courtX(ev.clientX));
+  });
+  function lift(ev) { delete touches[ev.pointerId]; }
+  screenEl.addEventListener("pointerup", lift);
+  screenEl.addEventListener("pointercancel", lift);
+  screenEl.addEventListener("contextmenu", function (ev) { ev.preventDefault(); });
+
+  var KEYS = {
+    a: "tl", d: "tr", A: "tl", D: "tr",
+    ArrowLeft: "bl", ArrowRight: "br"
+  };
+  window.addEventListener("keydown", function (ev) {
+    var k = KEYS[ev.key];
+    if (k) { ev.preventDefault(); if (state === "idle" || state === "paused") start(); held[k] = true; return; }
+    if (ev.key === " " || ev.key === "Enter") { ev.preventDefault(); primary(); }
+    else if (ev.key === "p" || ev.key === "P") { ev.preventDefault(); togglePause(); }
+    else if (ev.key === "r" || ev.key === "R") { ev.preventDefault(); reset(true); }
+  });
+  window.addEventListener("keyup", function (ev) {
+    var k = KEYS[ev.key];
+    if (k) held[k] = false;
+  });
+
+  btnMode.addEventListener("click", function () {
+    onePlayer = !onePlayer;
+    saveMode(onePlayer);
+    btnMode.textContent = onePlayer ? "1 PLAYER" : "2 PLAYERS";
+    banner(onePlayer ? "VS MACHINE" : "TWO THUMBS");
+    reset(state === "running");
+  });
+  btnPause.addEventListener("click", togglePause);
+  btnReset.addEventListener("click", function () { reset(true); });
+  btnSound.addEventListener("click", function () {
+    soundOn = !soundOn;
+    saveSound(soundOn);
+    btnSound.textContent = soundOn ? "SOUND ON" : "SOUND OFF";
+    btnSound.setAttribute("aria-pressed", soundOn ? "true" : "false");
+    if (soundOn) blip(620, 0.05);
+  });
+
+  document.addEventListener("visibilitychange", function () {
+    if (document.hidden && state === "running") setState("paused");
+  });
+
+  /* ---------------- boot ---------------- */
+  function boot() {
+    soundOn = loadSound();
+    onePlayer = loadMode();
+    btnSound.textContent = soundOn ? "SOUND ON" : "SOUND OFF";
+    btnSound.setAttribute("aria-pressed", soundOn ? "true" : "false");
+    btnMode.textContent = onePlayer ? "1 PLAYER" : "2 PLAYERS";
+    fit();
+    if (window.ResizeObserver) new ResizeObserver(fit).observe(stageEl);
+    window.addEventListener("resize", fit);
+    reset(false);
+    requestAnimationFrame(frame);
+  }
+
+  if (window.claude && window.claude.hot && window.claude.hot.ready) {
+    window.claude.hot.ready(boot);
+  } else {
+    boot();
+  }
+})();
+</script>
+</body>
+</html>

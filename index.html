@@ -41,6 +41,7 @@
     --blok:    #d8a12b;
     --istila:  #ff8a5c;
     --fitil:   #6fd0ff;
+    --pingpong: #ff4fa3;
 
     --cell-font: "Press Start 2P", ui-monospace, "Courier New", monospace;
     --read-font: "VT323", ui-monospace, "Courier New", monospace;
@@ -224,6 +225,7 @@
   .blok  { --accent: var(--blok); }
   .istila { --accent: var(--istila); }
   .fitil { --accent: var(--fitil); }
+  .pingpong { --accent: var(--pingpong); }
 
   /* ---------- footer ---------- */
   .foot {
@@ -465,6 +467,17 @@
         <h2>F&#304;T&#304;L</h2>
         <p>One bomb is worth almost nothing. A bomb that sets off another pays the square of the chain, so you stop clearing the room and start arming it. Fire does not care whose bomb it was.</p>
         <span class="keys">Arrows &middot; SPACE drops</span>
+        <span class="play">&#9654; PLAY</span>
+      </div>
+    </a>
+
+    <a class="cab pingpong" href="games/pingpong/">
+      <div class="tube"><canvas data-demo="pong" aria-hidden="true"></canvas></div>
+      <div class="plate">
+        <span class="no">CABINET NO. 14 &mdash; 1972</span>
+        <h2>PING PONG</h2>
+        <p>The one you can hand to someone else: two thumbs, one phone. Every return raises the pot and speeds the ball, and whoever wins the point takes all of it &mdash; so you both want the rally to go on.</p>
+        <span class="keys">Drag your half &middot; A/D &middot; arrows</span>
         <span class="play">&#9654; PLAY</span>
       </div>
     </a>
@@ -1784,13 +1797,98 @@
     if (!v.bombs.length && !v.fires.length && v.armed && v.wait <= 0) fz = fzInit(W, H);
   }
 
+  /* ---------- ping pong: the pot climbing through a rally ---------- */
+  var pg = null;
+  function pgInit(W, H) {
+    return { W: W, H: H, pw: Math.round(W * 0.26), ph: 4, edge: 10,
+             top: W / 2, bot: W / 2, pot: 10, rally: 0, last: null,
+             ball: { x: W / 2, y: H / 2, vx: (Math.random() - 0.5) * 40, vy: (Math.random() < 0.5 ? -1 : 1) * 66 },
+             award: null, serve: 0.7 };
+  }
+  function drawPong(ctx, W, H, now) {
+    if (!pg || pg.W !== W || pg.H !== H) pg = pgInit(W, H);
+    var v = pg, dt = Math.min(0.05, (now - (v.last2 || now)) / 1000);
+    v.last2 = now;
+
+    ctx.fillStyle = "#0b0a16";
+    ctx.fillRect(0, 0, W, H);
+    var g1 = ctx.createLinearGradient(0, 0, 0, H / 2);
+    g1.addColorStop(0, "rgba(79,227,255,0.12)"); g1.addColorStop(1, "rgba(79,227,255,0)");
+    ctx.fillStyle = g1; ctx.fillRect(0, 0, W, H / 2);
+    var g2 = ctx.createLinearGradient(0, H, 0, H / 2);
+    g2.addColorStop(0, "rgba(255,79,163,0.12)"); g2.addColorStop(1, "rgba(255,79,163,0)");
+    ctx.fillStyle = g2; ctx.fillRect(0, H / 2, W, H / 2);
+    ctx.fillStyle = "rgba(210,220,255,0.18)";
+    for (var i = 4; i < W - 4; i += 9) ctx.fillRect(i, H / 2 - 1, 5, 1);
+
+    if (v.award) { v.award.t -= dt; if (v.award.t <= 0) v.award = null; }
+
+    // both bats chase the ball, well but not perfectly, so rallies end
+    function chase(cur, skill) {
+      var want = v.ball.x + Math.sin(now / 300 + skill * 9) * (1 - skill) * 46;
+      var lim = (70 + skill * 40) * dt;
+      return cur + Math.max(-lim, Math.min(lim, want - cur));
+    }
+    v.top = Math.max(v.pw / 2, Math.min(W - v.pw / 2, chase(v.top, 0.56)));
+    v.bot = Math.max(v.pw / 2, Math.min(W - v.pw / 2, chase(v.bot, 0.6)));
+
+    if (v.serve > 0) { v.serve -= dt; }
+    else {
+      var b = v.ball;
+      b.x += b.vx * dt; b.y += b.vy * dt;
+      if (b.x < 3) { b.x = 3; b.vx = Math.abs(b.vx); }
+      if (b.x > W - 3) { b.x = W - 3; b.vx = -Math.abs(b.vx); }
+      function smack(px, sign, who) {
+        var off = Math.max(-1, Math.min(1, (b.x - px) / (v.pw / 2)));
+        var sp = Math.min(190, Math.hypot(b.vx, b.vy) * 1.07);
+        var a = off * 0.72;
+        b.vx = Math.sin(a) * sp; b.vy = Math.cos(a) * sp * sign;
+        v.rally++; v.pot += 5 + Math.floor(v.rally / 3) * 5; v.last = who;
+      }
+      if (b.vy < 0 && b.y <= v.edge + v.ph + 2 && Math.abs(b.x - v.top) <= v.pw / 2 + 2) { b.y = v.edge + v.ph + 3; smack(v.top, 1, "top"); }
+      if (b.vy > 0 && b.y >= H - v.edge - v.ph - 2 && Math.abs(b.x - v.bot) <= v.pw / 2 + 2) { b.y = H - v.edge - v.ph - 3; smack(v.bot, -1, "bot"); }
+      if (b.y < -6 || b.y > H + 6) {
+        var won = v.pot, who = b.y < 0 ? "bot" : "top";
+        var keepTop = v.top, keepBot = v.bot;
+        pg = pgInit(W, H);
+        pg.top = keepTop; pg.bot = keepBot;
+        pg.award = { who: who, amount: won, t: 1.3 };
+        return;
+      }
+    }
+
+    ctx.textAlign = "center";
+    if (v.award) {
+      ctx.globalAlpha = Math.min(1, v.award.t / 0.5);
+      ctx.fillStyle = v.award.who === "top" ? "#4fe3ff" : "#ff4fa3";
+      ctx.font = '10px "Press Start 2P", monospace';
+      ctx.fillText("+" + v.award.amount, W / 2, v.award.who === "top" ? H / 2 - 14 : H / 2 + 24);
+      ctx.globalAlpha = 1;
+    } else {
+      ctx.font = '11px "Press Start 2P", monospace';
+      ctx.fillStyle = "#ffc75a";
+      ctx.fillText(String(v.pot), W / 2, H / 2 + 7);
+    }
+    ctx.textAlign = "left";
+
+    ctx.shadowBlur = 7;
+    ctx.shadowColor = "#4fe3ff"; ctx.fillStyle = "#4fe3ff";
+    ctx.fillRect(Math.round(v.top - v.pw / 2), v.edge, v.pw, v.ph);
+    ctx.shadowColor = "#ff4fa3"; ctx.fillStyle = "#ff4fa3";
+    ctx.fillRect(Math.round(v.bot - v.pw / 2), H - v.edge - v.ph, v.pw, v.ph);
+    var bc = v.last === "top" ? "#4fe3ff" : v.last === "bot" ? "#ff4fa3" : "#ffffff";
+    ctx.shadowColor = bc; ctx.fillStyle = bc;
+    ctx.fillRect(Math.round(v.ball.x) - 2, Math.round(v.ball.y) - 2, 4, 4);
+    ctx.shadowBlur = 0;
+  }
+
   /* ---------- wire up ---------- */
-  var painters = { snake: drawSnake, road: drawRoad, lander: drawLander, flap: drawFlap, brick: drawBrick, maze: drawMaze, arch: drawArch, rocks: drawRocks, loom: drawLoom, invade: drawInvade, fuse: drawFuse };
+  var painters = { snake: drawSnake, road: drawRoad, lander: drawLander, flap: drawFlap, brick: drawBrick, maze: drawMaze, arch: drawArch, rocks: drawRocks, loom: drawLoom, invade: drawInvade, fuse: drawFuse, pong: drawPong };
   Array.prototype.forEach.call(document.querySelectorAll("[data-demo]"), function (c) {
     var fn = painters[c.dataset.demo];
     if (fn) register(c, fn, c.dataset.demo === "flap" || c.dataset.demo === "brick" || c.dataset.demo === "maze" || c.dataset.demo === "arch" ||
                        c.dataset.demo === "rocks" || c.dataset.demo === "loom" ||
-                       c.dataset.demo === "invade" || c.dataset.demo === "fuse");
+                       c.dataset.demo === "invade" || c.dataset.demo === "fuse" || c.dataset.demo === "pong");
   });
 
   if (window.ResizeObserver) {
