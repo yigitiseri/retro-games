@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
-<meta name="description" content="HOOK - swing from a grappling hook, release at the top of the arc and climb.">
+<meta name="description" content="SARKAC - catch a ring, swing, and release at the top of the arc.">
 <meta name="theme-color" content="#08090e">
 <style>
   :root {
@@ -15,7 +15,7 @@
   img { max-width: 100%; }
   [hidden] { display: none !important; }
 </style>
-<title>HOOK — Retro Games Arcade</title>
+<title>SARKAÇ — Retro Games Arcade</title>
 <link rel="preload" href="../../assets/fonts/press-start-2p-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="../../assets/fonts/fonts.css">
 <style>
@@ -135,18 +135,18 @@
   .stats .v.gold { color: var(--gold); }
   .stats .v.cyan { color: var(--cyan); }
 </style>
-<link rel="canonical" href="https://yigitiseri.github.io/retro-games/games/hook/">
+<link rel="canonical" href="https://yigitiseri.github.io/retro-games/games/sarkac/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Retro Games Arcade">
-<meta property="og:title" content="HOOK — Retro Games Arcade">
-<meta property="og:description" content="HOOK - swing from a grappling hook, release at the top of the arc and climb.">
-<meta property="og:url" content="https://yigitiseri.github.io/retro-games/games/hook/">
+<meta property="og:title" content="SARKAÇ — Retro Games Arcade">
+<meta property="og:description" content="SARKAC - catch a ring, swing, and release at the top of the arc.">
+<meta property="og:url" content="https://yigitiseri.github.io/retro-games/games/sarkac/">
 <meta property="og:image" content="https://yigitiseri.github.io/retro-games/assets/social-card.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="HOOK — Retro Games Arcade">
-<meta name="twitter:description" content="HOOK - swing from a grappling hook, release at the top of the arc and climb.">
+<meta name="twitter:title" content="SARKAÇ — Retro Games Arcade">
+<meta name="twitter:description" content="SARKAC - catch a ring, swing, and release at the top of the arc.">
 <meta name="twitter:image" content="https://yigitiseri.github.io/retro-games/assets/social-card.png">
 
 <!-- Cloudflare Web Analytics: no cookies, no client-side storage -->
@@ -173,39 +173,40 @@
       </div>
     </div>
     <div class="mom" id="hMom"><i id="hMomBar"></i></div>
-    <button class="sound" id="btnSound">SES: ACIK</button>
+    <button class="sound" id="btnSound">SOUND: ON</button>
 
     <div class="screen" id="startScreen">
-      <div class="title">HOOK</div>
-      <div class="sub">SALLAN &middot; BIRAK &middot; TIRMAN</div>
+      <div class="title">SARKAÇ</div>
+      <div class="sub">SWING &middot; RELEASE &middot; CLIMB</div>
       <div class="lines">
-        <b>KANCA</b>'ya bas, yukarıdaki halkaya tutun. Sallan, hız topla,
-        tam yukarı giderken <b>bırak</b>.
+        Press <b>HOOK</b> to catch the ring above. Swing, build speed, and
+        <b>let go</b> while the swing is carrying you upward.
       </div>
       <div class="lines" style="font-size:16px;opacity:0.8">
-        Doğru anda bırakırsan <b>PERFECT</b> &mdash; çok daha yükseğe uçarsın.
+        Time the release right and it counts as <b>PERFECT</b> &mdash; you fly
+        far higher.
       </div>
-      <button class="btn" id="btnStart">BASLA</button>
-      <div class="hintline">SOL / SAG &middot; BOSLUK = KANCA &middot; R = YENIDEN</div>
+      <button class="btn" id="btnStart">PLAY</button>
+      <div class="hintline">LEFT / RIGHT &middot; SPACE = HOOK &middot; R = RESTART</div>
     </div>
 
     <div class="screen" id="overScreen" hidden>
-      <div class="over-title" id="overTitle">DUSTUN</div>
+      <div class="over-title" id="overTitle">YOU FELL</div>
       <div class="final" id="overScore">0</div>
       <div class="stats">
         <div><div class="k">BEST</div><div class="v gold" id="overBest">0</div></div>
-        <div><div class="k">YUKSEKLIK</div><div class="v cyan" id="overHeight">0 m</div></div>
-        <div><div class="k">KANCA</div><div class="v" id="overHooks">0</div></div>
+        <div><div class="k">HEIGHT</div><div class="v cyan" id="overHeight">0 m</div></div>
+        <div><div class="k">HOOKS</div><div class="v" id="overHooks">0</div></div>
         <div><div class="k">PERFECT</div><div class="v gold" id="overPerf">0</div></div>
       </div>
-      <button class="btn" id="btnAgain">TEKRAR</button>
-      <div class="hintline">DOKUN VEYA R</div>
+      <button class="btn" id="btnAgain">AGAIN</button>
+      <div class="hintline">TAP OR PRESS R</div>
     </div>
   </div>
 
   <div class="pad">
     <button id="btnLeft" aria-label="sol">&#9664;</button>
-    <button id="btnHook" class="act">KANCA</button>
+    <button id="btnHook" class="act">HOOK</button>
     <button id="btnRight" aria-label="sag">&#9654;</button>
   </div>
 </div>
@@ -427,7 +428,7 @@
     height = 0; maxHeight = 0; hookCount = 0; perfCount = 0;
     tRun = 0; shake = 0; flash = 0; beatBest = false;
     shot = null; rope = null; lastRelease = 0;
-    best = loadNum("hook-best");
+    best = loadNum("sarkac-best");
 
     cam = 0;
     // the first hook is deliberately off to one side: hanging straight below a
@@ -447,11 +448,11 @@
   }
   function gameOver() {
     state = "over";
-    if (score > best) { best = score; saveNum("hook-best", best); }
-    saveNum("hook-height", Math.max(loadNum("hook-height"), Math.round(maxHeight / 10)));
-    saveNum("hook-combo", Math.max(loadNum("hook-combo"), comboTop));
-    saveNum("hook-perfect", Math.max(loadNum("hook-perfect"), perfCount));
-    overTitle.textContent = beatBest ? "YENI REKOR" : "DUSTUN";
+    if (score > best) { best = score; saveNum("sarkac-best", best); }
+    saveNum("sarkac-height", Math.max(loadNum("sarkac-height"), Math.round(maxHeight / 10)));
+    saveNum("sarkac-combo", Math.max(loadNum("sarkac-combo"), comboTop));
+    saveNum("sarkac-perfect", Math.max(loadNum("sarkac-perfect"), perfCount));
+    overTitle.textContent = beatBest ? "NEW BEST" : "YOU FELL";
     overTitle.classList.toggle("best", beatBest);
     overScore.textContent = fmt(Math.floor(score));
     overBest.textContent = fmt(Math.floor(best));
@@ -937,7 +938,7 @@
   btnSound.addEventListener("click", function (e) {
     e.stopPropagation();
     soundOn = !soundOn;
-    btnSound.textContent = "SES: " + (soundOn ? "ACIK" : "KAPALI");
+    btnSound.textContent = "SOUND: " + (soundOn ? "ON" : "OFF");
   });
   window.addEventListener("resize", resize);
   document.addEventListener("visibilitychange", function () { if (document.hidden) clearPad(); });
@@ -962,7 +963,7 @@
     render();
   }
   resize();
-  best = loadNum("hook-best");
+  best = loadNum("sarkac-best");
   reset();
   syncHud();
   if (window.ResizeObserver) new ResizeObserver(resize).observe(stage);
