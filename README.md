@@ -1,6 +1,6 @@
 # Retro Games
 
-Twelve arcade cabinets, each a single self-contained HTML file. No build step, no
+Thirteen arcade cabinets, each a single self-contained HTML file. No build step, no
 dependencies, no framework — open any `index.html` in a browser and it runs.
 All of them are built for a phone first: touch controls, a screen that fills the
 space it is given, and a keyboard fallback on desktop.
@@ -19,6 +19,7 @@ space it is given, and a keyboard fallback on desktop.
 | [**İSTİLA**](games/istila/) | Invaders that stand on each other. Shoot a stack low and it collapses — arming whatever lands on the bottom. | [`games/istila/index.html`](games/istila/index.html) |
 | [**FİTİL**](games/fitil/) | A bomb that sets off a bomb pays the square of the chain, so you arm the room instead of clearing it. | [`games/fitil/index.html`](games/fitil/index.html) |
 | [**PING PONG**](games/pingpong/) | Two thumbs on one phone. Every return raises the pot, and the winner of the point takes all of it. | [`games/pingpong/index.html`](games/pingpong/index.html) |
+| [**EZBER**](games/ezber/) | Five lamps that never grow in number — but one of them changes every round, and nothing says which. | [`games/ezber/index.html`](games/ezber/index.html) |
 
 `index.html` at the root is the arcade menu: every cabinet in turn,
 each with a live attract-mode preview of the game running in miniature. It is

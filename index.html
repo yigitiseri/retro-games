@@ -42,6 +42,7 @@
     --istila:  #ff8a5c;
     --fitil:   #6fd0ff;
     --pingpong: #ff4fa3;
+    --ezber:   #ffc75a;
 
     --cell-font: "Press Start 2P", ui-monospace, "Courier New", monospace;
     --read-font: "VT323", ui-monospace, "Courier New", monospace;
@@ -226,6 +227,7 @@
   .istila { --accent: var(--istila); }
   .fitil { --accent: var(--fitil); }
   .pingpong { --accent: var(--pingpong); }
+  .ezber { --accent: var(--ezber); }
 
   /* ---------- footer ---------- */
   .foot {
@@ -481,10 +483,21 @@
         <span class="play">&#9654; PLAY</span>
       </div>
     </a>
+
+    <a class="cab ezber" href="games/ezber/">
+      <div class="tube"><canvas data-demo="lamps" aria-hidden="true"></canvas></div>
+      <div class="plate">
+        <span class="no">CABINET NO. 15 &mdash; 1978</span>
+        <h2>EZBER</h2>
+        <p>Five lamps fire and you play them back. Then five fire again &mdash; but one of them has changed, and nothing tells you which. The sequence never gets longer. It only ever moves.</p>
+        <span class="keys">Tap a quarter &middot; 1&ndash;4</span>
+        <span class="play">&#9654; PLAY</span>
+      </div>
+    </a>
   </nav>
 
   <footer class="foot">
-    <span><a class="kofi-link" href="https://ko-fi.com/yigiti" target="_blank" rel="noopener">BUY ME A COFFEE</a></span>
+    <span><a class="kofi-link" href="https://ko-fi.com/yigiti" target="_blank" rel="noopener">SUPPORT THE ARCADE</a></span>
     <span>Single-file HTML &middot; no build step &middot; no frameworks</span>
     <span><a href="https://github.com/yigitiseri/retro-games">github.com/yigitiseri/retro-games</a></span>
     <span><a href="privacy.html">Privacy</a> &middot; <a href="datenschutz.html">Datenschutz</a></span>
@@ -1882,13 +1895,73 @@
     ctx.shadowBlur = 0;
   }
 
+  /* ---------- ezber: four lamps, and one step that moves ---------- */
+  var ez = null;
+  var EZ_OFF = ["#1d2a22", "#2a1d20", "#2a271c", "#1c2530"];
+  var EZ_ON  = ["#6ee36e", "#ff5f6b", "#ffc75a", "#4fb8ff"];
+  function ezInit() {
+    var v = { seq: [], i: 0, lit: -1, t: 0.5, gap: 0.34, phase: "play", changed: -1, flash: 0 };
+    for (var k = 0; k < 5; k++) v.seq.push((Math.random() * 4) | 0);
+    return v;
+  }
+  function drawLamps(ctx, W, H, now) {
+    if (!ez) ez = ezInit();
+    var v = ez, dt = Math.min(0.05, (now - (v.last || now)) / 1000);
+    v.last = now;
+    if (v.flash > 0) v.flash -= dt;
+
+    v.t -= dt;
+    if (v.t <= 0) {
+      if (v.phase === "play") {
+        if (v.lit >= 0) {
+          v.lit = -1; v.i++; v.t = v.gap * 0.28;
+          if (v.i >= v.seq.length) { v.i = 0; v.phase = "mutate"; v.t = 0.5; }
+        } else { v.lit = v.seq[v.i]; v.t = v.gap; }
+      } else {
+        var at = (Math.random() * v.seq.length) | 0, was = v.seq[at], now2 = was;
+        while (now2 === was) now2 = (Math.random() * 4) | 0;
+        v.seq[at] = now2; v.changed = at; v.flash = 1.0;
+        v.gap = Math.max(0.19, v.gap * 0.96);
+        v.phase = "play"; v.i = 0; v.t = 0.55;
+      }
+    }
+
+    ctx.fillStyle = "#0b0d12"; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = "#14171f"; ctx.fillRect(3, 3, W - 6, H - 6);
+
+    var pad = Math.min(W, H) * 0.5 - 12;
+    var cx = W / 2, cy = (H - 14) / 2 + 2;
+    for (var i = 0; i < 4; i++) {
+      var px = cx + (i % 2 === 0 ? -pad - 2 : 2);
+      var py = cy + (i < 2 ? -pad - 2 : 2);
+      ctx.fillStyle = v.lit === i ? EZ_ON[i] : EZ_OFF[i];
+      ctx.fillRect(px, py, pad, pad);
+      if (v.lit === i) { ctx.fillStyle = "rgba(255,255,255,0.4)"; ctx.fillRect(px, py, pad, 2); }
+      ctx.strokeStyle = "#0a0d13"; ctx.lineWidth = 1;
+      ctx.strokeRect(px + 0.5, py + 0.5, pad - 1, pad - 1);
+    }
+    ctx.fillStyle = "#1b1f29";
+    ctx.fillRect(cx - 2, 6, 4, H - 26);
+    ctx.fillRect(6, cy - 2, W - 12, 4);
+
+    // the strip along the bottom, showing which step just moved
+    var n = v.seq.length, cw = Math.min(16, (W - 20) / n), sx = (W - cw * n) / 2;
+    for (var k = 0; k < n; k++) {
+      var isCh = v.changed === k && v.flash > 0;
+      ctx.fillStyle = isCh ? "#ffffff" : EZ_ON[v.seq[k]];
+      ctx.globalAlpha = isCh ? 1 : 0.8;
+      ctx.fillRect(sx + k * cw + 2, H - 11, cw - 4, 6);
+      ctx.globalAlpha = 1;
+    }
+  }
+
   /* ---------- wire up ---------- */
-  var painters = { snake: drawSnake, road: drawRoad, lander: drawLander, flap: drawFlap, brick: drawBrick, maze: drawMaze, arch: drawArch, rocks: drawRocks, loom: drawLoom, invade: drawInvade, fuse: drawFuse, pong: drawPong };
+  var painters = { snake: drawSnake, road: drawRoad, lander: drawLander, flap: drawFlap, brick: drawBrick, maze: drawMaze, arch: drawArch, rocks: drawRocks, loom: drawLoom, invade: drawInvade, fuse: drawFuse, pong: drawPong, lamps: drawLamps };
   Array.prototype.forEach.call(document.querySelectorAll("[data-demo]"), function (c) {
     var fn = painters[c.dataset.demo];
     if (fn) register(c, fn, c.dataset.demo === "flap" || c.dataset.demo === "brick" || c.dataset.demo === "maze" || c.dataset.demo === "arch" ||
                        c.dataset.demo === "rocks" || c.dataset.demo === "loom" ||
-                       c.dataset.demo === "invade" || c.dataset.demo === "fuse" || c.dataset.demo === "pong");
+                       c.dataset.demo === "invade" || c.dataset.demo === "fuse" || c.dataset.demo === "pong" || c.dataset.demo === "lamps");
   });
 
   if (window.ResizeObserver) {

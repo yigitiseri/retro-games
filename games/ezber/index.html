@@ -1,0 +1,645 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="description" content="EZBER - five lamps, and one of them changes every round.">
+<meta name="theme-color" content="#08090e">
+<style>
+  :root {
+    color-scheme: dark;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  body { margin: 0; }
+  img { max-width: 100%; }
+  [hidden] { display: none !important; }
+</style>
+<title>EZBER</title>
+<link rel="preload" href="../../assets/fonts/press-start-2p-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../assets/fonts/fonts.css">
+<style>
+  :root {
+    --ink:    #07080d;
+    --bezel:  #1f2430;
+    --dim:    #262c39;
+    --pale:   #e9edf7;
+    --steel:  #8b96ad;
+    --lime:   #6ee36e;
+    --rose:   #ff5f6b;
+    --amber:  #ffc75a;
+    --sky:    #4fb8ff;
+
+    --cell-font: "Press Start 2P", ui-monospace, "Courier New", monospace;
+    --read-font: "VT323", ui-monospace, "Courier New", monospace;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+
+  body {
+    margin: 0;
+    background:
+      radial-gradient(125% 90% at 50% 0%, #1b2130 0%, var(--ink) 62%),
+      var(--ink);
+    color: var(--pale);
+    font-family: var(--read-font);
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+
+  .cabinet {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    padding: 12px 16px;
+    padding-block: 10px 12px;
+    max-width: 640px;
+    margin-inline: auto;
+  }
+
+  .marquee { text-align: center; flex: 0 0 auto; }
+  .marquee h1 {
+    margin: 0;
+    font-family: var(--cell-font);
+    font-size: clamp(15px, 5.4vw, 26px);
+    letter-spacing: 0.12em;
+    color: var(--amber);
+    text-shadow: 0 0 8px rgba(255, 199, 90, 0.42), 0 0 22px rgba(79, 184, 255, 0.18);
+    text-wrap: balance;
+  }
+  .marquee p {
+    margin: 4px 0 0;
+    font-size: clamp(13px, 3.6vw, 17px);
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--sky);
+    opacity: 0.62;
+  }
+
+  .hud {
+    flex: 0 0 auto;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 5px;
+    border: 1px solid var(--dim);
+    background: linear-gradient(180deg, rgba(79,184,255,0.06), transparent);
+    padding: 6px 3px;
+  }
+  .hud div { text-align: center; }
+  .hud .k {
+    display: block;
+    font-family: var(--cell-font);
+    font-size: 7px;
+    letter-spacing: 0.1em;
+    color: var(--steel);
+  }
+  .hud .v {
+    display: block;
+    margin-top: 5px;
+    font-size: clamp(18px, 5.2vw, 23px);
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    color: var(--pale);
+  }
+  .hud .round .v { color: var(--amber); }
+  .hud .lives .v { color: var(--rose); letter-spacing: 0.08em; }
+  .hud .best .v { color: var(--sky); }
+  .hud .v.bump { animation: bump 240ms steps(3) 1; }
+  @keyframes bump { 50% { transform: scale(1.22); } }
+
+  .stage { flex: 1 1 0; min-height: 0; display: flex; align-items: center; justify-content: center; }
+  .screen {
+    position: relative;
+    border: 2px solid var(--bezel);
+    border-radius: 10px;
+    background: #0b0d12;
+    box-shadow:
+      0 0 0 4px #11141c,
+      0 0 40px rgba(79, 184, 255, 0.08) inset,
+      0 10px 34px rgba(0, 0, 0, 0.62);
+    overflow: hidden;
+    touch-action: none;
+    cursor: pointer;
+  }
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+  }
+
+  .scan, .vignette { position: absolute; inset: 0; pointer-events: none; }
+  .scan {
+    background: repeating-linear-gradient(to bottom, rgba(0,0,0,0.22) 0 1px, rgba(0,0,0,0) 1px 3px);
+    mix-blend-mode: multiply;
+  }
+  .vignette {
+    background: radial-gradient(112% 112% at 50% 45%, transparent 56%, rgba(0,0,0,0.66) 100%);
+  }
+
+  .overlay {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-content: center;
+    gap: 11px;
+    text-align: center;
+    padding: 18px;
+    background: rgba(7, 8, 13, 0.92);
+    z-index: 3;
+  }
+  .overlay h2 {
+    margin: 0;
+    font-family: var(--cell-font);
+    font-size: clamp(13px, 4.4vw, 19px);
+    letter-spacing: 0.05em;
+    color: var(--amber);
+    text-shadow: 0 0 10px rgba(255, 199, 90, 0.4);
+  }
+  .overlay h2.over { color: var(--rose); text-shadow: 0 0 12px rgba(255, 95, 107, 0.5); }
+  .overlay p { margin: 0; font-size: clamp(16px, 4.2vw, 20px); letter-spacing: 0.06em; color: var(--sky); }
+  .overlay p em { font-style: normal; color: var(--pale); }
+  .blink { animation: blink 1.05s steps(2, start) infinite; }
+  @keyframes blink { 50% { opacity: 0.15; } }
+
+  .banner {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    top: 45%;                 /* the spine, not the WATCH label it used to cover */
+    z-index: 2;
+    padding: 7px 12px;
+    background: rgba(5, 6, 11, 0.9);
+    border-block: 1px solid var(--amber);
+    white-space: nowrap;
+    font-family: var(--cell-font);
+    font-size: clamp(10px, 3.1vw, 13px);
+    letter-spacing: 0.06em;
+    color: var(--amber);
+    text-shadow: 0 2px 0 #000;
+    animation: banner 1.5s ease-out 1 forwards;
+    pointer-events: none;
+  }
+  @keyframes banner {
+    0%   { opacity: 0; transform: translateX(-50%) translateY(-6px); }
+    18%  { opacity: 1; transform: translateX(-50%) translateY(0); }
+    74%  { opacity: 1; }
+    100% { opacity: 0; }
+  }
+
+  .sidekeys { flex: 0 0 auto; display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; }
+  .sidekeys button {
+    font-family: var(--cell-font);
+    font-size: 7px;
+    letter-spacing: 0.08em;
+    padding: 9px 11px;
+    color: var(--sky);
+    background: #121722;
+    border: 1px solid var(--dim);
+    border-radius: 5px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .sidekeys button:active, .sidekeys button[aria-pressed="true"] { color: var(--pale); border-color: var(--amber); }
+
+  button:focus-visible, .screen:focus-visible { outline: 2px solid var(--pale); outline-offset: 2px; }
+
+  .hint {
+    flex: 0 0 auto;
+    margin: 0;
+    text-align: center;
+    font-size: 15px;
+    letter-spacing: 0.06em;
+    color: var(--sky);
+    opacity: 0.6;
+  }
+
+  @media (max-height: 700px) { .marquee p, .hint { display: none; } }
+  @media (prefers-reduced-motion: reduce) { .blink, .hud .v.bump, .banner { animation: none; } }
+</style>
+<!-- Cloudflare Web Analytics: no cookies, no client-side storage -->
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "aee6e644a3b74cb9bdaf4e1569d570e2"}'></script>
+<!-- End Cloudflare Web Analytics -->
+
+</head>
+<body>
+<div class="cabinet">
+  <header class="marquee">
+    <h1>EZBER</h1>
+    <p>Cabinet No. 15 &mdash; 1978</p>
+  </header>
+
+  <div class="hud">
+    <div class="round"><span class="k">ROUND</span><span class="v" id="hRound">1</span></div>
+    <div><span class="k">SCORE</span><span class="v" id="hScore">0</span></div>
+    <div class="lives"><span class="k">TRIES</span><span class="v" id="hLives">&#9679;&#9679;&#9679;</span></div>
+    <div class="best"><span class="k">BEST</span><span class="v" id="hBest">0</span></div>
+  </div>
+
+  <div class="stage" id="stage">
+    <div class="screen" id="screen" tabindex="0" aria-label="Memory panel">
+      <canvas id="view" width="150" height="150"></canvas>
+      <div class="scan"></div>
+      <div class="vignette"></div>
+      <div class="overlay" id="overlay">
+        <h2 id="ovTitle">INSERT COIN</h2>
+        <p id="ovBody">Watch the panel.</p>
+        <p class="blink" id="ovBlink">&#9654; PRESS START</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="sidekeys">
+    <button id="btnReplay">REPLAY</button>
+    <button id="btnPause">PAUSE</button>
+    <button id="btnSound" aria-pressed="true">SOUND ON</button>
+    <button id="btnReset">RESTART</button>
+  </div>
+
+  <p class="hint">Five lamps, always five &middot; one of them changes every round &mdash; find it &middot; 1&ndash;4 or tap</p>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var VW = 150, VH = 150;
+  var LEN = 5;                       // never grows: the length is not the difficulty
+  var TONES = [262, 330, 392, 523];
+
+  var PAD_OFF = ["#1d2a22", "#2a1d20", "#2a271c", "#1c2530"];
+  var PAD_ON  = ["#6ee36e", "#ff5f6b", "#ffc75a", "#4fb8ff"];
+  var PAD_NAME = ["GREEN", "RED", "AMBER", "BLUE"];
+
+  var canvas = document.getElementById("view");
+  var ctx = canvas.getContext("2d");
+  var screenEl = document.getElementById("screen");
+  var stageEl = document.getElementById("stage");
+  var overlay = document.getElementById("overlay");
+  var ovTitle = document.getElementById("ovTitle");
+  var ovBody = document.getElementById("ovBody");
+  var ovBlink = document.getElementById("ovBlink");
+  var hRound = document.getElementById("hRound");
+  var hScore = document.getElementById("hScore");
+  var hLives = document.getElementById("hLives");
+  var hBest = document.getElementById("hBest");
+  var btnReplay = document.getElementById("btnReplay");
+  var btnPause = document.getElementById("btnPause");
+  var btnSound = document.getElementById("btnSound");
+  var btnReset = document.getElementById("btnReset");
+
+  ctx.imageSmoothingEnabled = false;
+
+  var state = "idle";
+  var seq, phase, idx, timer, lit, gap, round, score, best, lives;
+  var wrongPad, wrongT, rightT, bannerEl, replays;
+  var soundOn = true;
+
+  /* ---------------- persistence ---------------- */
+  function loadBest() { try { return parseInt(localStorage.getItem("ezber-best"), 10) || 0; } catch (e) { return 0; } }
+  function saveBest(v) { try { localStorage.setItem("ezber-best", String(v)); } catch (e) {} }
+  function loadSound() {
+    try { var v = localStorage.getItem("ezber-sound"); return v === null ? true : v === "1"; }
+    catch (e) { return true; }
+  }
+  function saveSound(v) { try { localStorage.setItem("ezber-sound", v ? "1" : "0"); } catch (e) {} }
+
+  /* ---------------- audio ---------------- */
+  var actx = null;
+  function tone(freq, dur, type, vol) {
+    if (!soundOn) return;
+    try {
+      if (!actx) {
+        var AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return;
+        actx = new AC();
+      }
+      if (actx.state === "suspended") actx.resume();
+      var o = actx.createOscillator(), g = actx.createGain();
+      o.type = type || "sine";
+      o.frequency.setValueAtTime(freq, actx.currentTime);
+      g.gain.setValueAtTime(vol || 0.07, actx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.0001, actx.currentTime + dur);
+      o.connect(g); g.connect(actx.destination);
+      o.start(); o.stop(actx.currentTime + dur);
+    } catch (e) {}
+  }
+
+  /* ---------------- layout ---------------- */
+  function fit() {
+    var r = stageEl.getBoundingClientRect();
+    var availW = r.width - 4, availH = r.height - 4;
+    if (availW < 40 || availH < 40) return;
+    var side = Math.min(availW, availH);
+    screenEl.style.width = Math.round(side) + 4 + "px";
+    screenEl.style.height = Math.round(side) + 4 + "px";
+  }
+
+  /* ---------------- the sequence ---------------- */
+  function freshSequence() {
+    seq = [];
+    for (var i = 0; i < LEN; i++) seq.push((Math.random() * 4) | 0);
+  }
+
+  // exactly one step moves, and never to the note it already was
+  function mutate() {
+    var at = (Math.random() * seq.length) | 0;
+    var was = seq[at], now = was;
+    while (now === was) now = (Math.random() * 4) | 0;
+    seq[at] = now;
+    return at;
+  }
+
+  function playFrom(delay) {
+    phase = "play";
+    idx = 0;
+    lit = -1;
+    timer = delay === undefined ? 0.55 : delay;
+  }
+
+  function reset(startNow) {
+    round = 1;
+    score = 0;
+    lives = 3;
+    gap = 0.46;
+    wrongPad = -1; wrongT = 0; rightT = 0;
+    replays = 1;
+    best = loadBest();
+    freshSequence();
+    playFrom(0.7);
+    fit();
+    setState(startNow ? "running" : "idle");
+    syncHud();
+    render(0);
+  }
+
+  function nextRound() {
+    round++;
+    score += 10 * round;
+    if (score > best) { best = score; saveBest(best); }
+    gap = Math.max(0.17, gap * 0.955);
+    replays = 1;
+    mutate();
+    banner("ROUND " + round);
+    bump(hRound); bump(hScore);
+    syncHud();
+    playFrom(0.8);
+  }
+
+  function wrong(pad) {
+    lives--;
+    wrongPad = pad;
+    wrongT = 0.7;
+    tone(90, 0.4, "sawtooth", 0.08);
+    syncHud();
+    if (lives <= 0) { setState("over"); return; }
+    banner("AGAIN");
+    playFrom(0.9);                    // same sequence, one more go
+  }
+
+  function tap(pad) {
+    if (state !== "running" || phase !== "echo") return;
+    lit = pad;
+    timer = Math.max(0.09, gap * 0.45);
+    tone(TONES[pad], 0.16, "sine", 0.08);
+    if (seq[idx] !== pad) { wrong(pad); return; }
+    idx++;
+    rightT = 0.18;
+    if (idx >= seq.length) { phase = "done"; timer = 0.42; }
+  }
+
+  function update(dt) {
+    if (wrongT > 0) wrongT -= dt;
+    if (rightT > 0) rightT -= dt;
+    timer -= dt;
+    if (timer > 0) return;
+
+    if (phase === "play") {
+      if (lit >= 0) {
+        lit = -1;
+        idx++;
+        timer = gap * 0.3;
+        if (idx >= seq.length) { phase = "echo"; idx = 0; timer = 0.1; }
+        return;
+      }
+      lit = seq[idx];
+      tone(TONES[lit], gap * 0.9, "sine", 0.07);
+      timer = gap;
+      return;
+    }
+
+    if (phase === "echo") { lit = -1; timer = 0.1; return; }
+    if (phase === "done") { nextRound(); return; }
+  }
+
+  /* ---------------- drawing: a dark console with four lamps ---------------- */
+  function render(now) {
+    if (!seq) return;
+    ctx.fillStyle = "#0b0d12";
+    ctx.fillRect(0, 0, VW, VH);
+
+    ctx.fillStyle = "#14171f";
+    ctx.fillRect(3, 3, VW - 6, VH - 6);
+    ctx.strokeStyle = "#232936";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(3.5, 3.5, VW - 7, VH - 7);
+
+    var R = (VW - 20) / 2;
+    var cx = VW / 2, cy = VH / 2;
+    for (var i = 0; i < 4; i++) {
+      var px = cx + (i % 2 === 0 ? -R : 3);
+      var py = cy + (i < 2 ? -R : 3);
+      var on = lit === i;
+      var bad = wrongPad === i && wrongT > 0 && Math.floor(now / 70) % 2 === 0;
+
+      ctx.fillStyle = bad ? "#ff8d96" : on ? PAD_ON[i] : PAD_OFF[i];
+      ctx.fillRect(px, py, R - 3, R - 3);
+
+      if (on || bad) {
+        ctx.fillStyle = "rgba(255,255,255,0.4)";
+        ctx.fillRect(px, py, R - 3, 2);
+        ctx.fillStyle = "rgba(255,255,255,0.14)";
+        ctx.fillRect(px, py, 2, R - 3);
+      } else {
+        ctx.fillStyle = "rgba(255,255,255,0.05)";
+        ctx.fillRect(px, py, R - 3, 1);
+      }
+      ctx.strokeStyle = "#0a0d13";
+      ctx.strokeRect(px + 0.5, py + 0.5, R - 4, R - 4);
+    }
+
+    // the console spine
+    ctx.fillStyle = "#1b1f29";
+    ctx.fillRect(cx - 2, 6, 4, VH - 12);
+    ctx.fillRect(6, cy - 2, VW - 12, 4);
+    ctx.fillStyle = "#0e1118";
+    ctx.fillRect(cx - 1, 6, 1, VH - 12);
+    ctx.fillRect(6, cy - 1, VW - 12, 1);
+
+    // a row of lamps for how far through the echo you are
+    var n = seq.length, cw = 9, sx = cx - (cw * n) / 2;
+    for (var k = 0; k < n; k++) {
+      var doneStep = phase === "echo" && k < idx;
+      ctx.fillStyle = doneStep ? (rightT > 0 && k === idx - 1 ? "#ffffff" : "#4fb8ff") : "#232936";
+      ctx.fillRect(sx + k * cw + 1, VH - 11, cw - 3, 3);
+    }
+
+    // a small word for what the machine wants
+    ctx.font = '6px "Press Start 2P", monospace';
+    ctx.textAlign = "center";
+    ctx.fillStyle = phase === "echo" ? "#ffc75a" : "#5d6779";
+    ctx.fillText(phase === "echo" ? "YOUR TURN" : phase === "play" ? "WATCH" : "", cx, 13);
+    ctx.textAlign = "left";
+  }
+
+  /* ---------------- hud + overlay ---------------- */
+  function bump(el) { el.classList.remove("bump"); void el.offsetWidth; el.classList.add("bump"); }
+
+  function syncHud() {
+    hRound.textContent = round;
+    hScore.textContent = score;
+    hBest.textContent = best;
+    var d = "";
+    for (var i = 0; i < Math.max(0, lives); i++) d += "●";
+    hLives.textContent = d || "–";
+  }
+
+  function banner(text) {
+    if (bannerEl && bannerEl.parentNode) bannerEl.parentNode.removeChild(bannerEl);
+    bannerEl = document.createElement("div");
+    bannerEl.className = "banner";
+    bannerEl.textContent = text;
+    screenEl.appendChild(bannerEl);
+    var mine = bannerEl;
+    setTimeout(function () { if (mine.parentNode) mine.parentNode.removeChild(mine); }, 1600);
+  }
+
+  function setState(next) {
+    state = next;
+    btnPause.textContent = state === "paused" ? "RESUME" : "PAUSE";
+    if (state === "running") { overlay.hidden = true; return; }
+    overlay.hidden = false;
+    ovTitle.classList.toggle("over", state === "over");
+
+    if (state === "idle") {
+      ovTitle.textContent = "INSERT COIN";
+      ovBody.innerHTML = "Five lamps fire, and you play them back. Then five fire again " +
+                         "&mdash; but <em>one of them has changed</em>, and nothing tells you " +
+                         "which. The sequence <em>never gets longer</em>. It only ever moves.";
+      ovBlink.innerHTML = "&#9654; PRESS START";
+    } else if (state === "paused") {
+      ovTitle.textContent = "PAUSED";
+      ovBody.textContent = "The panel waits.";
+      ovBlink.innerHTML = "&#9654; TAP OR PRESS P";
+    } else {
+      ovTitle.textContent = "FORGOTTEN";
+      ovBody.innerHTML = "Round <em>" + round + "</em> &middot; <em>" + score + "</em> points" +
+                         (score >= best && score > 0 ? " &middot; <em>BEST RUN</em>" : " &middot; best <em>" + best + "</em>");
+      ovBlink.innerHTML = "&#9654; TAP TO PLAY AGAIN";
+    }
+  }
+
+  function start() { lastTs = 0; setState("running"); }
+  function togglePause() {
+    if (state === "running") setState("paused");
+    else if (state === "paused") start();
+  }
+
+  /* ---------------- loop ---------------- */
+  var lastTs = 0;
+  function frame(now) {
+    requestAnimationFrame(frame);        // queued first: one bad frame is not fatal
+    var dt = lastTs ? Math.min(0.05, (now - lastTs) / 1000) : 0;
+    lastTs = now;
+    if (state === "running") update(dt);
+    render(now);
+  }
+
+  /* ---------------- input ---------------- */
+  function padAt(clientX, clientY) {
+    var r = screenEl.getBoundingClientRect();
+    var x = (clientX - r.left) / r.width;
+    var y = (clientY - r.top) / r.height;
+    if (x < 0 || x > 1 || y < 0 || y > 1) return -1;
+    return (y < 0.5 ? 0 : 2) + (x < 0.5 ? 0 : 1);
+  }
+
+  screenEl.addEventListener("pointerdown", function (ev) {
+    ev.preventDefault();
+    if (state === "idle" || state === "paused") { start(); return; }
+    if (state === "over") { reset(true); return; }
+    var pad = padAt(ev.clientX, ev.clientY);
+    if (pad >= 0) tap(pad);
+  });
+  screenEl.addEventListener("contextmenu", function (ev) { ev.preventDefault(); });
+
+  window.addEventListener("keydown", function (ev) {
+    if (ev.key >= "1" && ev.key <= "4") {
+      ev.preventDefault();
+      if (state === "idle" || state === "paused") { start(); return; }
+      if (state === "over") { reset(true); return; }
+      tap(parseInt(ev.key, 10) - 1);
+      return;
+    }
+    if (ev.key === " " || ev.key === "Enter") {
+      ev.preventDefault();
+      if (state === "idle" || state === "paused") start();
+      else if (state === "over") reset(true);
+      return;
+    }
+    if (ev.key === "p" || ev.key === "P") { ev.preventDefault(); togglePause(); }
+    else if (ev.key === "r" || ev.key === "R") { ev.preventDefault(); reset(true); }
+  });
+
+  btnReplay.addEventListener("click", function () {
+    // one replay per round, and it costs you the round's points
+    if (state !== "running" || phase !== "echo" || replays <= 0) return;
+    replays--;
+    score = Math.max(0, score - 10 * round);
+    banner("REPLAY");
+    syncHud();
+    playFrom(0.3);
+  });
+  btnPause.addEventListener("click", togglePause);
+  btnReset.addEventListener("click", function () { reset(true); });
+  btnSound.addEventListener("click", function () {
+    soundOn = !soundOn;
+    saveSound(soundOn);
+    btnSound.textContent = soundOn ? "SOUND ON" : "SOUND OFF";
+    btnSound.setAttribute("aria-pressed", soundOn ? "true" : "false");
+    if (soundOn) tone(520, 0.08);
+  });
+
+  document.addEventListener("visibilitychange", function () {
+    if (document.hidden && state === "running") setState("paused");
+  });
+
+  /* ---------------- boot ---------------- */
+  function boot(saved) {
+    soundOn = loadSound();
+    btnSound.textContent = soundOn ? "SOUND ON" : "SOUND OFF";
+    btnSound.setAttribute("aria-pressed", soundOn ? "true" : "false");
+    fit();
+    if (window.ResizeObserver) new ResizeObserver(fit).observe(stageEl);
+    window.addEventListener("resize", fit);
+    reset(false);
+    if (saved && saved.best > best) { best = saved.best; saveBest(best); }
+    syncHud();
+    requestAnimationFrame(frame);
+  }
+
+  if (window.claude && window.claude.hot) {
+    try { window.claude.hot.snapshot(function () { return { best: best || 0 }; }); } catch (e) {}
+  }
+  if (window.claude && window.claude.hot && window.claude.hot.ready) {
+    window.claude.hot.ready(boot);
+  } else {
+    boot({});
+  }
+})();
+</script>
+</body>
+</html>
