@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
-<meta name="description" content="Sixteen hand-built arcade cabinets you can play in the browser on a phone: snake, a road racer, a lander, breakout, a night-market maze, archery, a salvage tug, two-player ping pong and more. No install, no accounts, no ads.">
+<meta name="description" content="Seventeen hand-built arcade cabinets you can play in the browser on a phone: snake, a road racer, a lander, breakout, a night-market maze, archery, a salvage tug, two-player ping pong and more. No install, no accounts, no ads.">
 <meta name="theme-color" content="#08090e">
 <style>
   :root {
@@ -21,14 +21,14 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Retro Games Arcade">
 <meta property="og:title" content="Retro Games Arcade">
-<meta property="og:description" content="Sixteen hand-built arcade cabinets you can play in the browser on a phone: snake, a road racer, a lander, breakout, a night-market maze, archery, a salvage tug, two-player ping pong and more. No install, no accounts, no ads.">
+<meta property="og:description" content="Seventeen hand-built arcade cabinets you can play in the browser on a phone: snake, a road racer, a lander, breakout, a night-market maze, archery, a salvage tug, two-player ping pong and more. No install, no accounts, no ads.">
 <meta property="og:url" content="https://yigitiseri.github.io/retro-games/">
 <meta property="og:image" content="https://yigitiseri.github.io/retro-games/assets/social-card.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Retro Games Arcade">
-<meta name="twitter:description" content="Sixteen hand-built arcade cabinets you can play in the browser on a phone: snake, a road racer, a lander, breakout, a night-market maze, archery, a salvage tug, two-player ping pong and more. No install, no accounts, no ads.">
+<meta name="twitter:description" content="Seventeen hand-built arcade cabinets you can play in the browser on a phone: snake, a road racer, a lander, breakout, a night-market maze, archery, a salvage tug, two-player ping pong and more. No install, no accounts, no ads.">
 <meta name="twitter:image" content="https://yigitiseri.github.io/retro-games/assets/social-card.png">
 <link rel="preload" href="assets/fonts/press-start-2p-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="assets/fonts/fonts.css">
@@ -60,6 +60,7 @@
     --zipla:   #4fe8ff;
     --serit:   #7d8cff;
     --hookc:   #5fe4ff;
+    --maden:   #ffc23d;
 
     --cell-font: "Press Start 2P", ui-monospace, "Courier New", monospace;
     --read-font: "VT323", ui-monospace, "Courier New", monospace;
@@ -248,6 +249,7 @@
   .zipla { --accent: var(--zipla); }
   .serit { --accent: var(--serit); }
   .hookc { --accent: var(--hookc); }
+  .maden { --accent: var(--maden); }
 
   /* ---------- footer ---------- */
   .foot {
@@ -545,6 +547,17 @@
         <h2>HOOK</h2>
         <p>Halkaya tutun, sallan, hız topla &mdash; ve tam yukarı giderken bırak. Doğru anda bırakan bir sonraki halkayı geçer, erken bırakan düşer. Zıplama yok, sadece savrulma var.</p>
         <span class="keys">Sol &middot; Kanca &middot; Sag</span>
+        <span class="play">&#9654; PLAY</span>
+      </div>
+    </a>
+
+    <a class="cab maden" href="games/maden/">
+      <div class="tube"><canvas data-demo="mine" aria-hidden="true"></canvas></div>
+      <div class="plate">
+        <span class="no">CABINET NO. 19 &mdash; 1981</span>
+        <h2>MADEN</h2>
+        <p>The tunnel you dig is the tunnel you have to climb back out of. Ore in the cart is not yours until you reach daylight &mdash; and every wide gallery you cut to reach a seam is a roof waiting to come down on you.</p>
+        <span class="keys">Hold to dig &middot; Arrows</span>
         <span class="play">&#9654; PLAY</span>
       </div>
     </a>
@@ -2274,13 +2287,109 @@
     ctx.beginPath(); ctx.arc(v.x, v.y - v.cam, 2, 0, 6.2832); ctx.fill();
   }
 
+
+  /* ---------- maden: dig down, and the roof remembers ---------- */
+  var md = null;
+  function mdInit(W, H) {
+    var T = Math.max(7, Math.round(W / 13));
+    var cols = Math.floor(W / T), rows = Math.ceil(H / T) + 14;
+    var g = [];
+    for (var r = 0; r < rows; r++) {
+      var row = [];
+      for (var c = 0; c < cols; c++) row.push(r < 2 ? 0 : (Math.random() < 0.09 ? 2 : 1));
+      g.push(row);
+    }
+    return { T: T, cols: cols, rows: rows, g: g, c: cols >> 1, r: 2, cam: 0,
+             dig: 0, last: 0, W: W, cracks: {}, falls: [], cart: 0, want: null, t: 0 };
+  }
+  function drawMine(ctx, W, H, now) {
+    if (!md || md.W !== W) md = mdInit(W, H);
+    var v = md, dt = Math.min(0.05, (now - (v.last || now)) / 1000);
+    v.last = now; v.t += dt;
+    var T = v.T;
+
+    // dig down, stepping aside for ore, which cuts the galleries that crack
+    v.dig -= dt;
+    if (v.dig <= 0) {
+      v.dig = 0.34;
+      var nc = v.c, nr = v.r + 1;
+      if (v.g[v.r] && v.g[v.r][v.c - 1] === 2) nc = v.c - 1, nr = v.r;
+      else if (v.g[v.r] && v.g[v.r][v.c + 1] === 2) nc = v.c + 1, nr = v.r;
+      if (nc > 0 && nc < v.cols - 1 && nr < v.rows) {
+        if (v.g[nr][nc] === 2) v.cart++;
+        v.g[nr][nc] = 0;
+        v.c = nc; v.r = nr;
+        // the tile above an opening starts to take stress
+        if (nr - 1 >= 0 && v.g[nr - 1][nc]) v.cracks[nc + "," + (nr - 1)] = 0.01;
+      }
+    }
+
+    // stress grows over wide openings only, then the rock lets go
+    for (var key in v.cracks) {
+      var pr = key.split(","), cc = +pr[0], rr = +pr[1];
+      if (!v.g[rr] || !v.g[rr][cc]) { delete v.cracks[key]; continue; }
+      var span = 0;
+      for (var k = cc - 3; k <= cc + 3; k++) if (v.g[rr + 1] && v.g[rr + 1][k] === 0) span++;
+      if (span < 3) { delete v.cracks[key]; continue; }
+      v.cracks[key] += dt * 0.32;
+      if (v.cracks[key] >= 1) {
+        v.g[rr][cc] = 0;
+        v.falls.push({ c: cc, y: rr * T, vy: 40 });
+        delete v.cracks[key];
+      }
+    }
+    for (var f = v.falls.length - 1; f >= 0; f--) {
+      var fl = v.falls[f];
+      fl.vy += 420 * dt; fl.y += fl.vy * dt;
+      var lr = Math.floor((fl.y + T - 1) / T);
+      if (!v.g[lr] || v.g[lr][fl.c]) { if (v.g[lr - 1]) v.g[lr - 1][fl.c] = 1; v.falls.splice(f, 1); }
+    }
+
+    var wantCam = v.r * T - H * 0.5;
+    v.cam += (wantCam - v.cam) * Math.min(1, dt * 3);
+    if (v.r > v.rows - 10) md = mdInit(W, H);
+
+    ctx.fillStyle = "#0b0a08"; ctx.fillRect(0, 0, W, H);
+    for (var r2 = 0; r2 < v.rows; r2++) {
+      var y = r2 * T - v.cam;
+      if (y < -T || y > H) continue;
+      for (var c2 = 0; c2 < v.cols; c2++) {
+        var t2 = v.g[r2][c2], x = c2 * T;
+        if (r2 < 2) { ctx.fillStyle = "#16233a"; ctx.fillRect(x, y, T, T); continue; }
+        if (!t2) { ctx.fillStyle = "#151210"; ctx.fillRect(x, y, T, T); continue; }
+        if (c2 === 0 || c2 === v.cols - 1) { ctx.fillStyle = "#26211b"; ctx.fillRect(x, y, T, T); continue; }
+        ctx.fillStyle = t2 === 2 ? "#6a5730" : "#544739";
+        ctx.fillRect(x, y, T - 1, T - 1);
+        if (t2 === 2) { ctx.fillStyle = "#ffc23d"; ctx.fillRect(x + 3, y + 3, 3, 3); }
+        var st = v.cracks[c2 + "," + r2];
+        if (st > 0.34) {
+          ctx.strokeStyle = "rgba(255,90,61," + Math.min(1, st).toFixed(2) + ")";
+          ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.moveTo(x + 2, y + T - 2); ctx.lineTo(x + T * 0.6, y + 2); ctx.stroke();
+        }
+      }
+    }
+    for (var q = 0; q < v.falls.length; q++) {
+      ctx.fillStyle = "#544739";
+      ctx.fillRect(v.falls[q].c * T + 1, v.falls[q].y - v.cam + 1, T - 3, T - 3);
+    }
+
+    // the lamp, and the miner under it
+    var mx = v.c * T + T / 2, my = v.r * T - v.cam + T / 2;
+    var lg = ctx.createRadialGradient(mx, my, 2, mx, my, T * 3);
+    lg.addColorStop(0, "rgba(255,207,90,0.24)"); lg.addColorStop(1, "rgba(255,207,90,0)");
+    ctx.fillStyle = lg; ctx.beginPath(); ctx.arc(mx, my, T * 3, 0, 6.2832); ctx.fill();
+    ctx.fillStyle = "#2f3f5c"; ctx.fillRect(mx - 3, my - 1, 6, 6);
+    ctx.fillStyle = "#ffcf5a"; ctx.fillRect(mx - 3, my - 5, 6, 3);
+  }
+
   /* ---------- wire up ---------- */
-  var painters = { snake: drawSnake, road: drawRoad, lander: drawLander, flap: drawFlap, brick: drawBrick, maze: drawMaze, arch: drawArch, rocks: drawRocks, loom: drawLoom, invade: drawInvade, fuse: drawFuse, pong: drawPong, lamps: drawLamps, climb: drawClimb, lanes: drawLanes, swing: drawSwing };
+  var painters = { snake: drawSnake, road: drawRoad, lander: drawLander, flap: drawFlap, brick: drawBrick, maze: drawMaze, arch: drawArch, rocks: drawRocks, loom: drawLoom, invade: drawInvade, fuse: drawFuse, pong: drawPong, lamps: drawLamps, climb: drawClimb, lanes: drawLanes, swing: drawSwing, mine: drawMine };
   Array.prototype.forEach.call(document.querySelectorAll("[data-demo]"), function (c) {
     var fn = painters[c.dataset.demo];
     if (fn) register(c, fn, c.dataset.demo === "flap" || c.dataset.demo === "brick" || c.dataset.demo === "maze" || c.dataset.demo === "arch" ||
                        c.dataset.demo === "rocks" || c.dataset.demo === "loom" ||
-                       c.dataset.demo === "invade" || c.dataset.demo === "fuse" || c.dataset.demo === "pong" || c.dataset.demo === "lamps" || c.dataset.demo === "climb" || c.dataset.demo === "lanes" || c.dataset.demo === "swing");
+                       c.dataset.demo === "invade" || c.dataset.demo === "fuse" || c.dataset.demo === "pong" || c.dataset.demo === "lamps" || c.dataset.demo === "climb" || c.dataset.demo === "lanes" || c.dataset.demo === "swing" || c.dataset.demo === "mine");
   });
 
   if (window.ResizeObserver) {
