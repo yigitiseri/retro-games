@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
-<meta name="description" content="NEON RUSH - three lanes, and the combo is what pushes you into the dangerous one.">
+<meta name="description" content="SERIT - three lanes, and the combo is what pushes you into the dangerous one.">
 <meta name="theme-color" content="#08090e">
 <style>
   :root {
@@ -15,7 +15,7 @@
   img { max-width: 100%; }
   [hidden] { display: none !important; }
 </style>
-<title>NEON RUSH — Retro Games Arcade</title>
+<title>ŞERİT — Retro Games Arcade</title>
 <link rel="preload" href="../../assets/fonts/chakra-petch-700-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="../../assets/fonts/chakra-petch.css">
 <style>
@@ -165,18 +165,18 @@
     .btn { transition: none; }
   }
 </style>
-<link rel="canonical" href="https://yigitiseri.github.io/retro-games/games/neonrush/">
+<link rel="canonical" href="https://yigitiseri.github.io/retro-games/games/serit/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Retro Games Arcade">
-<meta property="og:title" content="NEON RUSH — Retro Games Arcade">
-<meta property="og:description" content="NEON RUSH - three lanes, and the combo is what pushes you into the dangerous one.">
-<meta property="og:url" content="https://yigitiseri.github.io/retro-games/games/neonrush/">
+<meta property="og:title" content="ŞERİT — Retro Games Arcade">
+<meta property="og:description" content="SERIT - three lanes, and the combo is what pushes you into the dangerous one.">
+<meta property="og:url" content="https://yigitiseri.github.io/retro-games/games/serit/">
 <meta property="og:image" content="https://yigitiseri.github.io/retro-games/assets/social-card.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="NEON RUSH — Retro Games Arcade">
-<meta name="twitter:description" content="NEON RUSH - three lanes, and the combo is what pushes you into the dangerous one.">
+<meta name="twitter:title" content="ŞERİT — Retro Games Arcade">
+<meta name="twitter:description" content="SERIT - three lanes, and the combo is what pushes you into the dangerous one.">
 <meta name="twitter:image" content="https://yigitiseri.github.io/retro-games/assets/social-card.png">
 
 <!-- Cloudflare Web Analytics: no cookies, no client-side storage -->
@@ -203,8 +203,8 @@
   <div class="newbest" id="hNewBest">NEW BEST</div>
 
   <div class="screen" id="startScreen">
-    <div class="title">NEON RUSH</div>
-    <div class="sub">DODGE &middot; COLLECT &middot; SURVIVE</div>
+    <div class="title">ŞERİT</div>
+    <div class="sub">THREE LANES &middot; ONE CHOICE</div>
     <div class="legend">
       <div><span class="orb"></span>YOU</div>
       <div><span class="blk"></span>AVOID</div>
@@ -275,8 +275,8 @@
   var tRun, shake, flash, slowmo, beatBest, nextId, spawnGap, lastRowT, arrivals, rowLog;
 
   /* ---------------- best score ---------------- */
-  function loadBest() { try { return parseInt(localStorage.getItem("neon-rush-best"), 10) || 0; } catch (e) { return 0; } }
-  function saveBest(v) { try { localStorage.setItem("neon-rush-best", String(Math.floor(v))); } catch (e) {} }
+  function loadBest() { try { return parseInt(localStorage.getItem("serit-best"), 10) || 0; } catch (e) { return 0; } }
+  function saveBest(v) { try { localStorage.setItem("serit-best", String(Math.floor(v))); } catch (e) {} }
 
   /* ---------------- audio ---------------- */
   var actx = null;
