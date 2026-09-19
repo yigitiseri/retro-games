@@ -297,7 +297,11 @@
     invuln = 0;
 
     foes = [];
-    var n = Math.min(5, 1 + Math.floor(level / 2));
+    /* A blot every other sheet up to five, and then no plateau: from sheet 14
+       one more arrives every single sheet. The 24 is only a sanity bound on
+       the array -- you would have to reach sheet 33 to meet it. */
+    var n = level <= 13 ? Math.min(5, 1 + Math.floor(level / 2))
+                        : Math.min(24, 5 + (level - 13));
     for (var k = 0; k < n; k++) {
       var a = Math.random() * 6.2832, sp = 44 + Math.min(58, level * 5);
       foes.push({ x: (4 + Math.random() * (COLS - 8)) * CELL,
