@@ -104,6 +104,33 @@
     box-shadow: 0 3px 0 #1c6b3b, 0 0 26px rgba(76,217,123,0.35);
   }
   .btn:active { transform: translateY(2px); box-shadow: 0 1px 0 #1c6b3b; }
+  /* Tapping thirds of the board means aiming at a boundary you cannot see,
+     with a wrong tie costing a tie and a route. Real buttons, always in the
+     same place, and lit only when that move is actually legal. */
+  .pad {
+    position: absolute; z-index: 2;
+    left: calc(var(--gut, 0px) + 10px); right: calc(var(--gut, 0px) + 10px);
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+    display: grid; grid-template-columns: 1fr 1.18fr 1fr; gap: 9px;
+    touch-action: none;
+  }
+  .pad[hidden] { display: none; }
+  .pd {
+    height: clamp(56px, 10.5vh, 80px);
+    display: grid; place-content: center;
+    font-family: var(--hud); font-size: clamp(15px, 4.6vw, 20px); line-height: 1;
+    color: var(--paper); border: 2px solid rgba(214,221,230,0.24); border-radius: 9px;
+    background: rgba(9,18,13,0.60);
+    box-shadow: 0 2px 0 rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.06);
+    transition: opacity 0.12s linear, background 0.08s linear;
+    -webkit-user-select: none; user-select: none;
+  }
+  .pd.mid { border-color: rgba(76,217,123,0.46); }
+  .pd .lbl { font-size: 6px; letter-spacing: 0.16em; color: var(--dim); margin-top: 7px; }
+  .pd.hot { background: rgba(76,217,123,0.34); border-color: var(--rail); transform: translateY(2px);
+            box-shadow: 0 0 0 rgba(0,0,0,0), inset 0 1px 0 rgba(255,255,255,0.10); }
+  .pd.off { opacity: 0.26; }
+
   .hintline { font-family: var(--hud); font-size: 7px; letter-spacing: 0.13em; color: var(--dim); line-height: 2; }
   .over-title { font-family: var(--hud); font-size: clamp(13px, 4.6vw, 19px); color: var(--loco); letter-spacing: 0.1em; }
   .over-title.best { color: var(--brass); }
@@ -158,6 +185,12 @@
   </div>
   <div class="bar" id="hBarWrap"><i id="hBar"></i></div>
 
+  <div class="pad" id="pad" hidden>
+    <div class="pd" id="pdW" aria-label="lay rail west">&#9664;</div>
+    <div class="pd mid" id="pdN" aria-label="lay rail ahead">&#9650;<span class="lbl">AHEAD</span></div>
+    <div class="pd" id="pdE" aria-label="lay rail east">&#9654;</div>
+  </div>
+
   <div class="screen" id="startScreen">
     <div class="title">RAY</div>
     <div class="sub">THE TRAIN NEVER STOPS</div>
@@ -171,7 +204,7 @@
       bend gives the speed back. Run out of rail and you <span class="bad">derail</span>.
     </div>
     <button class="btn" id="btnStart">LEAVE THE DEPOT</button>
-    <div class="hintline">TAP LEFT &middot; MIDDLE &middot; RIGHT &nbsp;|&nbsp; ARROW KEYS</div>
+    <div class="hintline">HOLD THE BUTTONS &middot; ARROW KEYS</div>
   </div>
 
   <div class="screen" id="overScreen" hidden>
@@ -246,13 +279,15 @@
   var overBest = document.getElementById("overBest");
   var overDist = document.getElementById("overDist");
   var overFreight = document.getElementById("overFreight");
+  var pad = document.getElementById("pad");
+  var pdEl = [document.getElementById("pdN"), document.getElementById("pdE"), document.getElementById("pdW")];
 
   var pipEls = [];
   for (var pi = 0; pi < TIE_MAX; pi++) { var el = document.createElement("i"); hPips.appendChild(el); pipEls.push(el); }
 
   var state = "start";
   var rows, topRow, path, ti, tf, camR, mult, ties, supply, score, best, alt, freight, laid;
-  var parts, pops, smoke, smokeT, tRun, shake, flash, beatBest, heldDir, layTimer, hintFade, warnT, wreck, overWait;
+  var parts, pops, smoke, smokeT, tRun, shake, flash, beatBest, heldDir, layTimer, warnT, wreck, overWait;
 
   function loadNum(k) { try { return parseInt(localStorage.getItem(k), 10) || 0; } catch (e) { return 0; } }
   function saveNum(k, v) { try { localStorage.setItem(k, String(Math.floor(v))); } catch (e) {} }
@@ -386,6 +421,12 @@
   }
 
   /* ---------------- the rail ---------------- */
+  var lastRefuse = -9, refusals = 0;
+  function refuse(f, dur, vol) {
+    if (tRun - lastRefuse < 0.34) return;
+    lastRefuse = tRun; refusals++;
+    blip(f, dur, "square", vol);
+  }
   function head() { return path[path.length - 1]; }
   function canLay(d) {
     var h = head();
@@ -398,15 +439,14 @@
   }
   function lay(d) {
     if (state !== "play") return false;
-    if (ties <= 0) { blip(90, 0.07, "square", 0.03); return false; }
-    if (!canLay(d)) { blip(120, 0.05, "square", 0.025); return false; }
+    if (ties <= 0) { refuse(90, 0.07, 0.03); return false; }
+    if (!canLay(d)) { refuse(120, 0.05, 0.025); return false; }
     var h = head();
     h.dout = d;
     var nc = h.c + DC[d], nr = h.r + DR[d];
     rows[nr].rail[nc] = 1;
     path.push({ c: nc, r: nr, din: d, dout: null });
     ties--; laid++;
-    if (hintFade < 1) hintFade = Math.min(1, hintFade + 0.12);
     blip(d === NORTH ? 520 : 440, 0.035, "square", 0.028);
     return true;
   }
@@ -535,7 +575,7 @@
     overBest.textContent = fmt(Math.floor(best));
     overDist.textContent = fmt(alt * 5);
     overFreight.textContent = freight;
-    overWait = 0.85;
+    overWait = 0.85; pad.hidden = true;
     blip(200, 0.5, "sawtooth", 0.075, 45);
   }
   function fmt(n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
@@ -599,14 +639,15 @@
     score = 0; alt = 0; freight = 0; laid = 0;
     parts = []; pops = []; smoke = []; smokeT = 0;
     tRun = 0; shake = 0; flash = 0; beatBest = false;
-    heldDir = null; layTimer = 0; hintFade = 0; warnT = 0; wreck = null; overWait = 0;
+    heldDir = null; layTimer = 0; warnT = 0; wreck = null; overWait = 0;
     best = loadNum("ray-best");
     generate();
+    pad.hidden = true;
     syncHud();
   }
   function startRun() {
     reset(); state = "play";
-    startScreen.hidden = true; overScreen.hidden = true; overWait = 0;
+    startScreen.hidden = true; overScreen.hidden = true; overWait = 0; pad.hidden = false;
     blip(300, 0.16, "triangle", 0.05, 600);
   }
 
@@ -621,7 +662,16 @@
     hDist.textContent = fmt(alt * 5);
     hBar.style.transform = "scaleX(" + (ties >= TIE_MAX ? 1 : Math.min(1, supply / tieTime())).toFixed(3) + ")";
     hBarWrap.classList.toggle("warn", ties <= 2);
+    // a lit button is a tie you can actually lay, so the board is read for you:
+    // that was the part that was hard to do with a thumb in the way
+    for (var d = 0; d < 3; d++) {
+      var live = state === "play" && ties > 0 && canLay(d);
+      if (padOff[d] !== !live) { padOff[d] = !live; pdEl[d].classList.toggle("off", !live); }
+      var hot = heldDir === d;
+      if (padHot[d] !== hot) { padHot[d] = hot; pdEl[d].classList.toggle("hot", hot); }
+    }
   }
+  var padOff = [null, null, null], padHot = [false, false, false];
 
   /* ---------------- drawing ---------------- */
   function drawGround() {
@@ -880,21 +930,6 @@
     ctx.restore();
   }
 
-  function drawHint() {
-    if (hintFade >= 1) return;
-    var a = (1 - hintFade) * 0.5;
-    var y = VH - 54;
-    ctx.font = "16px " + '"Press Start 2P", monospace';
-    ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    var labels = ["◀", "▲", "▶"], xs = [VW * 0.17, VW * 0.5, VW * 0.83];
-    for (var i = 0; i < 3; i++) {
-      ctx.fillStyle = "rgba(9,18,13," + (a * 0.8) + ")";
-      ctx.beginPath(); ctx.arc(xs[i], y, 20, 0, 6.3); ctx.fill();
-      ctx.fillStyle = "rgba(238,246,234," + a + ")";
-      ctx.fillText(labels[i], xs[i], y + 1);
-    }
-  }
-
   function render() {
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.fillStyle = "#0a110d";
@@ -944,7 +979,6 @@
     }
     ctx.globalAlpha = 1;
 
-    if (state === "play") drawHint();
     ctx.restore();
 
     // the buffer running out is the one thing you must never miss
@@ -983,6 +1017,28 @@
     var f = (ev.clientX - r.left) / r.width;
     return f < 0.34 ? WEST : (f > 0.66 ? EAST : NORTH);
   }
+  /* Sliding a thumb from one button to the next has to work, so the pad reads
+     the pointer position rather than each button catching its own events. */
+  function padDirOf(ev) {
+    var r = pad.getBoundingClientRect();
+    var f = (ev.clientX - r.left) / r.width;
+    if (f < 0.315) return WEST;
+    if (f > 0.685) return EAST;
+    return NORTH;
+  }
+  pad.addEventListener("pointerdown", function (ev) {
+    ev.preventDefault(); ev.stopPropagation();
+    if (state !== "play") return;
+    heldDir = padDirOf(ev);
+    lay(heldDir); layTimer = LAY_T * 2.4;
+    try { pad.setPointerCapture(ev.pointerId); } catch (e) {}
+  });
+  pad.addEventListener("pointermove", function (ev) {
+    if (heldDir === null) return;
+    ev.stopPropagation();
+    heldDir = padDirOf(ev);
+  });
+  pad.addEventListener("contextmenu", function (ev) { ev.preventDefault(); });
   wrap.addEventListener("pointerdown", function (ev) {
     ev.preventDefault();
     if (state === "over" || state === "start") { startRun(); return; }
