@@ -65,6 +65,7 @@
     --boya:    #e8452f;
     --ray:     #4cd97b;
     --fener:   #ffdca8;
+    --takla:   #b48cff;
 
     --cell-font: "Press Start 2P", ui-monospace, "Courier New", monospace;
     --read-font: "VT323", ui-monospace, "Courier New", monospace;
@@ -258,6 +259,7 @@
   .boya { --accent: var(--boya); }
   .ray { --accent: var(--ray); }
   .fener { --accent: var(--fener); }
+  .takla { --accent: var(--takla); }
 
   /* ---------- footer ---------- */
   .foot {
@@ -610,6 +612,17 @@
         <h2>FENER</h2>
         <p>The only cabinet here that hides anything from you. A minefield crossed on foot at night: stand on a square and it tells you how many mines touch it, and you work out the rest. You are crossing, not clearing, so a corner you cannot solve can be walked around. No field ever makes you guess &mdash; every one is thrown away unless a solver can cross it &mdash; so a mine is always a choice you made. The lamp is the clock, and the oil is always lying next to a mine.</p>
         <span class="keys">D-pad to walk &middot; Tap to mark</span>
+        <span class="play">&#9654; PLAY</span>
+      </div>
+    </a>
+
+    <a class="cab takla" href="games/takla/">
+      <div class="tube"><canvas data-demo="flip" aria-hidden="true"></canvas></div>
+      <div class="plate">
+        <span class="no">CABINET NO. 24 &mdash; 1988</span>
+        <h2>TAKLA</h2>
+        <p>One button, and the whole game is in it. Hold to spin, let go and the rider straightens up &mdash; which takes time you may not have left. You keep the flips you more than half finished. Every ramp is signed with the trick it will give you and the sign never lies, but a gold sign means there is one more in it if you can read the air. The speed you win from flips is the speed that clears the next gap, so a bail costs you both.</p>
+        <span class="keys">Hold anywhere &middot; Space</span>
         <span class="play">&#9654; PLAY</span>
       </div>
     </a>
@@ -2861,13 +2874,89 @@
     ctx.fillRect(px + T * 0.20, py - T * 0.04 + Math.sin(v.t * 4) * 1.2, T * 0.11, T * 0.13);
   }
 
+
+  /* ---------- takla: hold to spin, let go to land ---------- */
+  var tk = null;
+  function tkInit(W, H) {
+    return { W: W, H: H, last: 0, t: 0, x: 0, y: 0, vy: 0, air: false, ang: 0,
+             flips: 0, airT: 1, airFrom: 0,
+             G: 336, spd: 54, deck: H * 0.70, period: 104, gap: 36 };
+  }
+  function drawFlip(ctx, W, H, now) {
+    if (!tk || tk.W !== W) tk = tkInit(W, H);
+    var v = tk, dt = Math.min(0.05, (now - (v.last || now)) / 1000);
+    v.last = now; v.t += dt;
+    v.x += v.spd * dt;
+
+    var into = ((v.x % v.period) + v.period) % v.period;
+    if (!v.air && into >= v.period - v.gap - 3) {
+      v.air = true; v.y = 0; v.vy = -v.G * v.airT / 2;
+      v.ang = 0; v.airFrom = v.t;
+      v.flips = 1 + (Math.floor(v.x / v.period) % 3 === 0 ? 1 : 0);
+    }
+    if (v.air) {
+      v.vy += v.G * dt; v.y += v.vy * dt;
+      var u = Math.min(1, (v.t - v.airFrom) / (v.airT * 0.84));
+      var e = u < 1 ? u : 1;
+      v.ang = v.flips * Math.PI * 2 * (e * e * (3 - 2 * e));
+      if (v.y >= 0 && v.vy > 0) { v.air = false; v.y = 0; v.ang = 0; }
+    }
+
+    // dusk
+    var g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, "#1b0c2c"); g.addColorStop(0.42, "#4a1a49");
+    g.addColorStop(0.72, "#a8394b"); g.addColorStop(1, "#e8743e");
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = "rgba(255,214,140,0.8)";
+    ctx.beginPath(); ctx.arc(W * 0.74, v.deck - 34, 15, 0, 6.3); ctx.fill();
+
+    var camX = v.x - W * 0.34;
+    ctx.fillStyle = "#2a1030";
+    ctx.beginPath(); ctx.moveTo(0, H);
+    for (var hx = 0; hx <= W; hx += 6) {
+      ctx.lineTo(hx, v.deck - 6 - Math.sin((hx + camX * 0.3) * 0.026) * 9);
+    }
+    ctx.lineTo(W, H); ctx.closePath(); ctx.fill();
+
+    // decks with a kicker at each end
+    var first = Math.floor(camX / v.period) - 1;
+    for (var n = first; n < first + 4; n++) {
+      var x0 = n * v.period - camX, x1 = x0 + v.period - v.gap;
+      ctx.fillStyle = "#2c1a40"; ctx.fillRect(x0, v.deck, x1 - x0, H - v.deck);
+      ctx.fillStyle = "#e89a5e"; ctx.fillRect(x0, v.deck, x1 - x0, 2);
+      ctx.fillStyle = "#3d2657";
+      ctx.beginPath();
+      ctx.moveTo(x1 - 16, v.deck); ctx.lineTo(x1, v.deck - 11); ctx.lineTo(x1, v.deck);
+      ctx.closePath(); ctx.fill();
+    }
+
+    // the rider
+    var rx = W * 0.34, ry = v.deck + v.y - 7;
+    ctx.save(); ctx.translate(rx, ry); ctx.rotate(v.ang); ctx.scale(0.62, 0.62);
+    ctx.fillStyle = "#7a52c9"; ctx.fillRect(-16, 8.5, 32, 6);
+    ctx.fillStyle = "#b48cff"; ctx.fillRect(-16, 8.5, 32, 3);
+    ctx.fillStyle = "#3a2a5c"; ctx.fillRect(-7, 2, 5, 8); ctx.fillRect(2, 2, 5, 8);
+    ctx.fillStyle = "#e8743e"; ctx.fillRect(-7, -6, 14, 9);
+    ctx.fillStyle = "#ffe9c7"; ctx.fillRect(-5, -15, 10, 9);
+    ctx.fillStyle = "#b48cff"; ctx.fillRect(-6.5, -17.5, 13, 5);
+    ctx.fillStyle = "#ffe9c7"; ctx.fillRect(-13, -4, 7, 4); ctx.fillRect(6, -4, 7, 4);
+    ctx.restore();
+
+    if (v.air) {
+      ctx.fillStyle = "#ffc857";
+      ctx.font = "bold 13px monospace";
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText(String(Math.min(v.flips, Math.round(v.ang / (Math.PI * 2)))), rx, ry - 26);
+    }
+  }
+
   /* ---------- wire up ---------- */
-  var painters = { snake: drawSnake, road: drawRoad, lander: drawLander, flap: drawFlap, brick: drawBrick, maze: drawMaze, arch: drawArch, rocks: drawRocks, loom: drawLoom, invade: drawInvade, fuse: drawFuse, pong: drawPong, lamps: drawLamps, climb: drawClimb, lanes: drawLanes, swing: drawSwing, mine: drawMine, sky: drawSky, paint: drawFence, rails: drawRails, night: drawNight };
+  var painters = { snake: drawSnake, road: drawRoad, lander: drawLander, flap: drawFlap, brick: drawBrick, maze: drawMaze, arch: drawArch, rocks: drawRocks, loom: drawLoom, invade: drawInvade, fuse: drawFuse, pong: drawPong, lamps: drawLamps, climb: drawClimb, lanes: drawLanes, swing: drawSwing, mine: drawMine, sky: drawSky, paint: drawFence, rails: drawRails, night: drawNight, flip: drawFlip };
   Array.prototype.forEach.call(document.querySelectorAll("[data-demo]"), function (c) {
     var fn = painters[c.dataset.demo];
     if (fn) register(c, fn, c.dataset.demo === "flap" || c.dataset.demo === "brick" || c.dataset.demo === "maze" || c.dataset.demo === "arch" ||
                        c.dataset.demo === "rocks" || c.dataset.demo === "loom" ||
-                       c.dataset.demo === "invade" || c.dataset.demo === "fuse" || c.dataset.demo === "pong" || c.dataset.demo === "lamps" || c.dataset.demo === "climb" || c.dataset.demo === "lanes" || c.dataset.demo === "swing" || c.dataset.demo === "mine" || c.dataset.demo === "sky" || c.dataset.demo === "paint" || c.dataset.demo === "rails" || c.dataset.demo === "night");
+                       c.dataset.demo === "invade" || c.dataset.demo === "fuse" || c.dataset.demo === "pong" || c.dataset.demo === "lamps" || c.dataset.demo === "climb" || c.dataset.demo === "lanes" || c.dataset.demo === "swing" || c.dataset.demo === "mine" || c.dataset.demo === "sky" || c.dataset.demo === "paint" || c.dataset.demo === "rails" || c.dataset.demo === "night" || c.dataset.demo === "flip");
   });
 
   if (window.ResizeObserver) {

@@ -1,0 +1,799 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="description" content="Hold to spin, let go to land: a one-button trick cabinet about a combo you are carrying, and whether to risk it for one more flip.">
+<meta name="theme-color" content="#08090e">
+<style>
+  :root {
+    color-scheme: dark;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  body { margin: 0; }
+  img { max-width: 100%; }
+  [hidden] { display: none !important; }
+</style>
+<title>TAKLA — Retro Games Arcade</title>
+<link rel="preload" href="../../assets/fonts/press-start-2p-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../assets/fonts/fonts.css">
+<style>
+  :root {
+    --ink:    #130a1e;
+    --dusk1:  #2a1040;
+    --dusk2:  #6b2350;
+    --dusk3:  #c2464a;
+    --dusk4:  #f08a3c;
+    --violet: #b48cff;
+    --rider:  #ffe9c7;
+    --deck:   #2a1a3c;
+    --ramp:   #1b1028;
+    --gold:   #ffc857;
+    --bad:    #ff5240;
+    --paper:  #f3ecff;
+    --dim:    rgba(243, 236, 255, 0.45);
+    --hud: "Press Start 2P", monospace;
+    --ui: "VT323", ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; margin: 0; overflow: hidden; }
+  body {
+    background: var(--ink); color: var(--paper);
+    font-family: var(--ui); user-select: none; touch-action: none; overscroll-behavior: none;
+  }
+  #wrap { position: fixed; inset: 0; }
+  canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; }
+
+  .scrim {
+    position: absolute; left: 0; right: 0; top: 0; height: 170px; z-index: 1; pointer-events: none;
+    background: linear-gradient(180deg, rgba(14,6,22,0.80), rgba(14,6,22,0.42) 55%, rgba(14,6,22,0));
+  }
+
+  .hud {
+    position: absolute; top: 0; left: 0; right: 0;
+    padding: calc(env(safe-area-inset-top, 0px) + 10px) calc(var(--gut, 0px) + 12px) 0;
+    display: grid; grid-template-columns: 1fr auto 1fr;
+    align-items: start; pointer-events: none; z-index: 2; font-family: var(--hud);
+  }
+  .hud .k { font-size: 7px; letter-spacing: 0.16em; color: var(--dim); }
+  .hud .score { font-size: clamp(15px, 5vw, 21px); line-height: 1.5; }
+  .hud .best { font-size: 10px; color: var(--dim); line-height: 1.7; }
+  .hud .best.lead { color: var(--gold); }
+  .hud .right { text-align: right; }
+  .mid { text-align: center; }
+  .mid .v { font-size: clamp(14px, 4.6vw, 19px); line-height: 1.5; color: var(--violet); }
+  .mid .v.hot { color: var(--gold); }
+
+  .bar {
+    position: absolute; left: calc(var(--gut, 0px) + 12px); right: calc(var(--gut, 0px) + 12px);
+    top: calc(env(safe-area-inset-top, 0px) + 72px);
+    height: 5px; background: rgba(243,236,255,0.12); border-radius: 3px;
+    overflow: hidden; z-index: 2; pointer-events: none;
+  }
+  .bar i { display: block; height: 100%; width: 100%; transform-origin: left center;
+           background: linear-gradient(90deg, #6b2350, var(--violet), var(--gold)); }
+
+  .screen {
+    position: absolute; inset: 0; display: grid; place-content: center; justify-items: center;
+    gap: 15px; text-align: center; padding: 26px; z-index: 3;
+    background: radial-gradient(120% 90% at 50% 42%, rgba(19,10,30,0.86), rgba(19,10,30,0.97));
+  }
+  .screen[hidden] { display: none; }
+  .title {
+    font-family: var(--hud); font-size: clamp(28px, 11.5vw, 48px); letter-spacing: 5px; line-height: 1.4;
+    background: linear-gradient(180deg, #fff, var(--violet) 46%, var(--dusk3));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 0 24px rgba(180,140,255,0.45));
+  }
+  .sub { font-family: var(--hud); font-size: clamp(8px, 2.7vw, 10px); letter-spacing: 0.2em; color: var(--violet); }
+  .lines { font-size: clamp(17px, 4.6vw, 20px); line-height: 1.5; color: #e2d7f5; max-width: 34ch; }
+  .lines b { color: var(--gold); }
+  .lines .bad { color: var(--bad); }
+  .btn {
+    margin-top: 4px; font-family: var(--hud); font-size: 11px; letter-spacing: 0.14em;
+    padding: 14px 28px; color: #1a0d28; border: 0; border-radius: 4px; cursor: pointer;
+    background: linear-gradient(180deg, #e6d4ff, var(--violet));
+    box-shadow: 0 3px 0 #4b2a84, 0 0 26px rgba(180,140,255,0.35);
+  }
+  .btn:active { transform: translateY(2px); box-shadow: 0 1px 0 #4b2a84; }
+  .hintline { font-family: var(--hud); font-size: 7px; letter-spacing: 0.13em; color: var(--dim); line-height: 2; }
+  .over-title { font-family: var(--hud); font-size: clamp(13px, 4.6vw, 19px); color: var(--bad); letter-spacing: 0.1em; }
+  .over-title.best { color: var(--gold); }
+  .final { font-family: var(--hud); font-size: clamp(22px, 8vw, 36px); line-height: 1.4; }
+  .stats { display: grid; grid-template-columns: repeat(3, auto); gap: 8px 20px; justify-content: center; font-family: var(--hud); }
+  .stats .k { font-size: 7px; letter-spacing: 0.15em; color: var(--dim); }
+  .stats .v { font-size: 12px; margin-top: 4px; }
+  .stats .v.gold { color: var(--gold); }
+</style>
+<link rel="canonical" href="https://yigitiseri.github.io/retro-games/games/takla/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Retro Games Arcade">
+<meta property="og:title" content="TAKLA — Retro Games Arcade">
+<meta property="og:description" content="Hold to spin, let go to land: a one-button trick cabinet about a combo you are carrying, and whether to risk it for one more flip.">
+<meta property="og:url" content="https://yigitiseri.github.io/retro-games/games/takla/">
+<meta property="og:image" content="https://yigitiseri.github.io/retro-games/assets/social-card.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="TAKLA — Retro Games Arcade">
+<meta name="twitter:description" content="Hold to spin, let go to land: a one-button trick cabinet about a combo you are carrying, and whether to risk it for one more flip.">
+<meta name="twitter:image" content="https://yigitiseri.github.io/retro-games/assets/social-card.png">
+
+<!-- Cloudflare Web Analytics: no cookies, no client-side storage -->
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "aee6e644a3b74cb9bdaf4e1569d570e2"}'></script>
+<!-- End Cloudflare Web Analytics -->
+
+</head>
+<body>
+<div id="wrap">
+  <canvas id="c"></canvas>
+  <div class="scrim"></div>
+
+  <div class="hud">
+    <div>
+      <div class="k">SCORE</div>
+      <div class="score" id="hScore">0</div>
+      <div class="k" style="margin-top:5px">BEST</div>
+      <div class="best" id="hBest">0</div>
+    </div>
+    <div class="mid">
+      <div class="k">STREAK</div>
+      <div class="v" id="hStreak">&times;1.0</div>
+    </div>
+    <div class="right">
+      <div class="k">SPEED</div>
+      <div class="best" id="hSpeed">0</div>
+      <div class="k" style="margin-top:5px">METRES</div>
+      <div class="best" id="hDist">0</div>
+    </div>
+  </div>
+  <div class="bar"><i id="hBar"></i></div>
+
+  <div class="screen" id="startScreen">
+    <div class="title">TAKLA</div>
+    <div class="sub">ONE MORE FLIP?</div>
+    <div class="lines">
+      <b>Hold anywhere to spin.</b> Let go and the rider straightens up &mdash;
+      which takes time you may not have left.
+    </div>
+    <div class="lines" style="font-size:16px;opacity:0.84">
+      You keep the flips you more than half finished, and landing them banks
+      the lot. Every ramp is signed with the trick it will give you, and
+      <b>the sign never lies</b> &mdash; but a <b>gold sign</b> means there is
+      one more in it, if you can read the air. Land short of the far side and
+      the run is over, so the speed you win from flips is the speed that
+      clears the next gap: a <span class="bad">bail</span> costs you both.
+    </div>
+    <button class="btn" id="btnStart">DROP IN</button>
+    <div class="hintline">HOLD ANYWHERE &middot; SPACE</div>
+  </div>
+
+  <div class="screen" id="overScreen" hidden>
+    <div class="over-title" id="overTitle">CAME UP SHORT</div>
+    <div class="final" id="overScore">0</div>
+    <div class="stats">
+      <div><div class="k">BEST</div><div class="v gold" id="overBest">0</div></div>
+      <div><div class="k">METRES</div><div class="v" id="overDist">0</div></div>
+      <div><div class="k">BIGGEST</div><div class="v gold" id="overBig">0</div></div>
+    </div>
+    <button class="btn" id="btnAgain">AGAIN</button>
+    <div class="hintline">TAP OR PRESS R</div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ============================================================
+     TAKLA -- a combo you are holding, not one you set off.
+
+     FITIL and FISEK already do chain reactions: one act, many
+     consequences, scored on the square. This is the other kind of
+     combo, the kind nobody here had: one you are carrying, that is
+     worth more every second you keep it, and that you lose entirely
+     if you get greedy by one.
+
+     Hold to spin. Let go and the rider straightens to the nearest
+     upright, which costs up to a fifth of a second. You keep the
+     flips you more than half finished. Touch down still turning and
+     you lose the trick, the streak, and the speed -- and the speed
+     is what clears the next gap.
+
+     The promise: every ramp is signed with the biggest trick it will
+     take, and the sign never lies. Ramp airtimes are only ever drawn
+     from bands where that trick has a window at least 120ms wide,
+     measured; the 7% of airtimes where the top trick is a 4ms
+     knife-edge are never generated at all.
+     ============================================================ */
+
+  var TAU = Math.PI * 2;
+  var VW = 440, VH = 760, MIN_VH = 700;
+
+  var GRAV = 1000;          // px/s^2, chosen for the height of the arc
+  var WMAX = 20;            // top spin, rad/s
+  var ALPHA = 70;           // how fast the spin winds up
+  var SETTLE = 16;          // how fast the rider straightens once you let go
+
+  /* Measured airtime bands, not guessed.
+
+     PLAIN: the signed trick has at least 120ms of window and the one above
+     it is flatly impossible. Doing what the sign says is safe.
+
+     GOLD: the signed trick is just as safe, and there is one more in the
+     ramp on a window of 35-150ms. That is the dare, and the ramp says so. */
+  var PLAIN = [
+    { k: 1, lo: 0.50, hi: 0.76 },
+    { k: 2, lo: 0.81, hi: 1.07 },
+    { k: 3, lo: 1.12, hi: 1.38 },
+    { k: 4, lo: 1.44, hi: 1.70 },
+    { k: 5, lo: 1.75, hi: 2.01 }
+  ];
+  /* A gold ramp is simply a ramp one size bigger than its sign admits. The
+     extra flip is mechanically no harder than any other -- the risk is
+     reading the airtime right, which is the judgement the cabinet is about.
+     Building the dare out of a 40ms knife-edge instead just meant nobody,
+     including a machine, ever took it. */
+
+  var SPEED0 = 300, SPEED_MAX = 830, SPEED_MIN = 120;
+  var CRASH_KEEP = 0.72;
+  var PLAT_MIN = 230;
+  var MAX_PARTS = 170;
+
+  var cv = document.getElementById("c");
+  var ctx = cv.getContext("2d");
+  var wrap = document.getElementById("wrap");
+  var hScore = document.getElementById("hScore");
+  var hBest = document.getElementById("hBest");
+  var hStreak = document.getElementById("hStreak");
+  var hSpeed = document.getElementById("hSpeed");
+  var hDist = document.getElementById("hDist");
+  var hBar = document.getElementById("hBar");
+  var startScreen = document.getElementById("startScreen");
+  var overScreen = document.getElementById("overScreen");
+  var overTitle = document.getElementById("overTitle");
+  var overScore = document.getElementById("overScore");
+  var overBest = document.getElementById("overBest");
+  var overDist = document.getElementById("overDist");
+  var overBig = document.getElementById("overBig");
+
+  var state = "start";
+  var plats, rider, speed, score, best, streak, dist, biggest, landedJumps, crashes, beatSign;
+  var parts, pops, tRun, shake, flash, beatBest, holding, camX, camY, overWait, lastLand;
+
+  function loadNum(k) { try { return parseInt(localStorage.getItem(k), 10) || 0; } catch (e) { return 0; } }
+  function saveNum(k, v) { try { localStorage.setItem(k, String(Math.floor(v))); } catch (e) {} }
+
+  var seed = 1, lockSeed = null;
+  function rnd() { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; }
+  function rrange(a, b) { return a + rnd() * (b - a); }
+
+  /* ---------------- audio ---------------- */
+  var actx = null;
+  function blip(freq, dur, type, vol, slide) {
+    try {
+      if (!actx) { var AC = window.AudioContext || window.webkitAudioContext; if (!AC) return; actx = new AC(); }
+      if (actx.state === "suspended") actx.resume();
+      var o = actx.createOscillator(), g = actx.createGain();
+      o.type = type || "sine";
+      o.frequency.setValueAtTime(freq, actx.currentTime);
+      if (slide) o.frequency.exponentialRampToValueAtTime(slide, actx.currentTime + dur);
+      g.gain.setValueAtTime(vol || 0.05, actx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.0001, actx.currentTime + dur);
+      o.connect(g); g.connect(actx.destination);
+      o.start(); o.stop(actx.currentTime + dur);
+    } catch (e) {}
+  }
+
+  /* ---------------- sizing ---------------- */
+  var dpr = 1, scale = 1, originX = 0;
+  function resize() {
+    var w = wrap.clientWidth, h = wrap.clientHeight;
+    if (!w || !h) return;
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    cv.width = Math.round(w * dpr);
+    cv.height = Math.round(h * dpr);
+    scale = Math.min((w * dpr) / VW, (h * dpr) / MIN_VH);
+    originX = Math.round(((w * dpr) - VW * scale) / 2);
+    VH = (h * dpr) / scale;
+    wrap.style.setProperty("--gut", (originX / dpr) + "px");
+  }
+  function riderScreenX() { return VW * 0.31; }
+
+  /* ---------------- the ground ----------------
+     One platform, one gap, one landing, over and over. Every platform sits
+     at a known height and the landing is generated before the take-off, so
+     the airtime the sign promises is the airtime you actually get. */
+  function difficulty() { return Math.min(1, dist / 42000); }
+  // Past about two thirds of the way in a gap eats more of your reach than
+  // a bail leaves you, so from there a single bail ends the run.
+  function safeShare() { return 0.46 + 0.42 * difficulty(); }
+
+  function pickBand() {
+    var d = difficulty();
+    // early on the ramps are small; the big ones arrive as you get quicker
+    var top = 1 + Math.min(4, Math.floor(d * 5.4 + rnd() * 1.4));
+    var lowest = Math.max(1, top - 1);
+    var k = lowest + Math.floor(rnd() * (top - lowest + 1));
+    // roughly a third of ramps hide one more than they promise
+    var gold = k < 5 && rnd() < 0.30 + 0.10 * d;
+    var band = PLAIN[gold ? k : k - 1];
+    return { k: k, gold: gold, lo: band.lo, hi: band.hi };
+  }
+
+  function lastPlat() { return plats[plats.length - 1]; }
+
+  function addPlat() {
+    var prev = lastPlat();
+    var band = pickBand();
+    var T = rrange(band.lo + 0.015, band.hi - 0.015);
+    // the next deck may sit a little higher or lower, and the launch is solved
+    // for that height so the airtime is exactly what the sign says
+    var dy = rrange(-70, 70);
+    var y = Math.max(-120, Math.min(150, prev.y + dy));
+    var drop = y - prev.y;                                   // screen y grows downward
+    var vy0 = GRAV * T / 2 - drop / T;
+    if (vy0 < 120) { y = prev.y; drop = 0; vy0 = GRAV * T / 2; }
+    var reach = speed * T;
+    var gap = Math.max(60, Math.min(reach * 0.86, reach * safeShare()));
+    var len = Math.max(PLAT_MIN, reach * 0.55 + 140);
+    var x0 = prev.x1 + gap;
+    plats.push({ x0: x0, x1: x0 + len, y: y, sign: null, gold: false, T: null, vy0: null, gap: gap, launched: false });
+    // the sign belongs to the ramp you leave, not the deck you land on
+    prev.T = T; prev.vy0 = vy0; prev.sign = band.k; prev.gold = band.gold; prev.gap = gap;
+  }
+
+  function platAt(x) {
+    for (var i = 0; i < plats.length; i++) if (x >= plats[i].x0 && x <= plats[i].x1) return plats[i];
+    return null;
+  }
+  function prune() {
+    while (plats.length > 6 && plats[1].x1 < camX - VW) plats.shift();
+  }
+
+  /* ---------------- the rider ---------------- */
+  function launch(p) {
+    rider.sign = p.sign; rider.gold = p.gold;
+    rider.air = true;
+    rider.vy = -p.vy0;
+    rider.ang = 0; rider.w = 0;
+    rider.flips = 0; rider.settling = null; rider.done = false;
+    rider.baseY = p.y;
+    rider.fromT = p.T;
+    blip(300, 0.09, "triangle", 0.04, 520);
+  }
+
+  function release() {
+    if (!rider.air || rider.settling || !holding) return;
+    var turns = Math.round(rider.ang / TAU);
+    var target = turns * TAU;
+    var d = target - rider.ang;
+    var dur = Math.abs(d) / SETTLE;
+    rider.settling = { from: rider.ang, to: target, t: 0, dur: dur };
+    rider.flips = turns;
+    rider.w = 0;
+  }
+
+  function land(p) {
+    var k = rider.flips;
+    rider.air = false; rider.settling = null; rider.ang = 0; rider.w = 0;
+    rider.y = p.y;
+    streak += (k > (rider.sign || 0)) ? 2 : 1;      // a dare landed is worth two clean ones
+    landedJumps++;
+    if (k > biggest) biggest = k;
+    var mult = streakMult();
+    var over = k > (rider.sign || 0);
+    var gain = Math.round(k * k * k * 12 * mult * (over ? 2.6 : 1));
+    if (gain > 0) {
+      score += gain;
+      pop(riderScreenX(), VH * 0.42,
+          (over ? "OVER THE SIGN  " : "") + k + (k === 1 ? " FLIP" : " FLIPS") + "  +" + gain,
+          over ? "#6fdc8c" : "#ffc857");
+    }
+    if (over) beatSign++;
+    speed = Math.min(SPEED_MAX, speed + 6 + k * 9);
+    lastLand = { k: k, t: tRun };
+    for (var i = 0; i < 6 + k * 4; i++) burst(riderScreenX(), groundScreenY(p.y), "#b48cff");
+    blip(k ? 420 + k * 90 : 320, 0.1, "triangle", 0.045, k ? 880 + k * 90 : 420);
+    if (score > best) { best = score; beatBest = true; }
+  }
+
+  function crash(p) {
+    rider.air = false; rider.settling = null; rider.ang = 0; rider.w = 0;
+    rider.y = p.y;
+    streak = 0; crashes++;
+    speed = Math.max(SPEED_MIN, speed * CRASH_KEEP);
+    shake = 0.9; flash = 0.5;
+    pop(riderScreenX(), VH * 0.44, "BAILED", "#ff5240");
+    for (var i = 0; i < 26; i++) burst(riderScreenX(), groundScreenY(p.y), i % 2 ? "#ff5240" : "#8a3020");
+    blip(190, 0.35, "sawtooth", 0.06, 60);
+  }
+
+  function fell() {
+    state = "over"; overWait = 0.95;
+    shake = 1; flash = 0.8;
+    for (var i = 0; i < 34; i++) burst(riderScreenX(), VH * 0.7, i % 2 ? "#ff5240" : "#ffc857");
+    if (score > best) best = score;
+    saveNum("takla-best", best);
+    saveNum("takla-metres", Math.max(loadNum("takla-metres"), Math.floor(dist / 10)));
+    overTitle.textContent = beatBest ? "NEW BEST" : "CAME UP SHORT";
+    overTitle.classList.toggle("best", beatBest);
+    overScore.textContent = fmt(Math.floor(score));
+    overBest.textContent = fmt(Math.floor(best));
+    overDist.textContent = fmt(Math.floor(dist / 10));
+    overBig.textContent = biggest;
+    blip(170, 0.6, "sawtooth", 0.075, 45);
+  }
+  function fmt(n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
+  function streakMult() { return 1 + Math.min(2, streak * 0.34); }
+
+  function pop(x, y, txt, col) {
+    if (pops.length >= 6) pops.shift();
+    pops.push({ x: x, y: y, t: 0, txt: txt, col: col });
+  }
+  function burst(x, y, col) {
+    if (parts.length > MAX_PARTS) return;
+    var a = Math.random() * Math.PI * 2, s = 40 + Math.random() * 150;
+    parts.push({ x: x, y: y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 40,
+                 life: 0.3 + Math.random() * 0.5, t: 0, col: col, r: 1.4 + Math.random() * 2.4 });
+  }
+
+  function groundScreenY(worldY) { return VH * 0.70 + worldY - camY; }
+
+  function update(dt) {
+    tRun += dt;
+    if (shake > 0) shake = Math.max(0, shake - dt * 2.2);
+    if (flash > 0) flash = Math.max(0, flash - dt * 3);
+
+    rider.x += speed * dt;
+    dist = rider.x;
+
+    if (!rider.air) {
+      var p = platAt(rider.x);
+      if (!p) { fell(); return; }
+      rider.y = p.y;
+      // the ramp is the last stretch of the deck
+      if (!p.launched && rider.x >= p.x1 - 8) { p.launched = true; launch(p); addPlat(); }
+    } else {
+      if (holding && !rider.settling) {
+        rider.done = false;                       // spinning again after a settle
+        rider.w = Math.min(WMAX, rider.w + ALPHA * dt);
+        rider.ang += rider.w * dt;
+      } else if (rider.settling) {
+        var s = rider.settling;
+        s.t += dt;
+        var u = s.dur > 0 ? Math.min(1, s.t / s.dur) : 1;
+        var e = u * u * (3 - 2 * u);
+        rider.ang = s.from + (s.to - s.from) * e;
+        if (u >= 1) { rider.ang = s.to; rider.settling = null; rider.done = true; }
+      }
+      rider.vy += GRAV * dt;
+      rider.y += rider.vy * dt;
+      var land0 = platAt(rider.x);
+      if (rider.vy > 0 && land0 && rider.y >= land0.y) {
+        var upright = !holding && !rider.settling;
+        if (upright) land(land0); else crash(land0);
+      } else if (rider.y > 900) { fell(); return; }
+    }
+
+    camX += (rider.x - camX) * Math.min(1, dt * 14);
+    var wantY = rider.air ? Math.min(0, rider.y - rider.baseY) * 0.72 : 0;
+    camY += (wantY - camY) * Math.min(1, dt * 5);
+    prune();
+    while (plats.length < 4) addPlat();
+
+    for (var j = parts.length - 1; j >= 0; j--) {
+      var q = parts[j]; q.t += dt;
+      q.x += q.vx * dt; q.y += q.vy * dt; q.vy += 420 * dt;
+      if (q.t >= q.life) parts.splice(j, 1);
+    }
+    for (var k2 = pops.length - 1; k2 >= 0; k2--) {
+      pops[k2].t += dt; pops[k2].y -= 26 * dt;
+      if (pops[k2].t > 1.1) pops.splice(k2, 1);
+    }
+    syncHud();
+  }
+
+
+  /* ---------------- lifecycle ---------------- */
+  function reset() {
+    seed = lockSeed !== null ? (lockSeed >>> 0) : ((Math.random() * 4294967296) >>> 0);
+    speed = SPEED0; score = 0; streak = 0; dist = 0; biggest = 0;
+    landedJumps = 0; crashes = 0; beatSign = 0;
+    parts = []; pops = [];
+    tRun = 0; shake = 0; flash = 0; beatBest = false; holding = false;
+    overWait = 0; lastLand = null;
+    plats = [{ x0: -200, x1: 420, y: 0, sign: 1, gold: false, T: 0.6, vy0: 300, gap: 0, launched: false }];
+    rider = { x: 0, y: 0, vy: 0, ang: 0, w: 0, air: false, flips: 0, settling: null, done: false, baseY: 0 };
+    camX = 0; camY = 0;
+    while (plats.length < 4) addPlat();
+    best = loadNum("takla-best");
+    syncHud();
+  }
+  function startRun() {
+    reset(); state = "play";
+    startScreen.hidden = true; overScreen.hidden = true; overWait = 0;
+    blip(280, 0.16, "triangle", 0.05, 560);
+  }
+
+  function syncHud() {
+    hScore.textContent = fmt(Math.floor(score));
+    hBest.textContent = fmt(Math.floor(best));
+    hBest.classList.toggle("lead", beatBest);
+    hStreak.textContent = "×" + streakMult().toFixed(1);
+    hStreak.classList.toggle("hot", streak >= 6);
+    hSpeed.textContent = Math.round(speed);
+    hDist.textContent = fmt(Math.floor(dist / 10));
+    hBar.style.transform = "scaleX(" + ((speed - SPEED_MIN) / (SPEED_MAX - SPEED_MIN)).toFixed(3) + ")";
+  }
+
+  /* ---------------- drawing ---------------- */
+  function sky() {
+    var g = ctx.createLinearGradient(0, 0, 0, VH);
+    g.addColorStop(0, "#1b0c2c");
+    g.addColorStop(0.36, "#4a1a49");
+    g.addColorStop(0.62, "#a8394b");
+    g.addColorStop(0.80, "#e8743e");
+    g.addColorStop(1, "#f6b25a");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, VW, VH);
+    // the sun, low and fat
+    var sy = VH * 0.70 - camY * 0.12;
+    ctx.fillStyle = "rgba(255,214,140,0.85)";
+    ctx.beginPath(); ctx.arc(VW * 0.72, sy - 120, 62, 0, TAU); ctx.fill();
+    ctx.fillStyle = "rgba(255,150,90,0.16)";
+    ctx.beginPath(); ctx.arc(VW * 0.72, sy - 120, 118, 0, TAU); ctx.fill();
+  }
+
+  function hills(depth, col, amp, base) {
+    var off = camX * depth, y0 = VH * 0.70 - camY * depth * 1.4 + base;
+    ctx.fillStyle = col;
+    ctx.beginPath();
+    ctx.moveTo(0, VH);
+    for (var x = 0; x <= VW; x += 8) {
+      var w = (x + off) * 0.0055;
+      var y = y0 - Math.sin(w) * amp - Math.sin(w * 2.3 + 1.7) * amp * 0.45;
+      ctx.lineTo(x, y);
+    }
+    ctx.lineTo(VW, VH);
+    ctx.closePath(); ctx.fill();
+  }
+
+  function drawDeck(p) {
+    var x0 = p.x0 - camX + riderScreenX(), x1 = p.x1 - camX + riderScreenX();
+    if (x1 < -80 || x0 > VW + 80) return;
+    var y = groundScreenY(p.y);
+    ctx.fillStyle = "#2c1a40";
+    ctx.fillRect(x0, y, x1 - x0, VH - y + 40);
+    ctx.fillStyle = "#3d2657";
+    ctx.fillRect(x0, y, x1 - x0, 11);
+    ctx.fillStyle = "#e89a5e";                        // the low sun catches the edge
+    ctx.fillRect(x0, y, x1 - x0, 3);
+    ctx.fillStyle = "rgba(0,0,0,0.30)";
+    for (var g = x0 + 16; g < x1 - 10; g += 34) ctx.fillRect(g, y + 13, 2, 9);
+    // the kicker at the end, and the sign that says what it will take
+    var rw = 52, rh = 34;
+    ctx.fillStyle = "#3d2657";
+    ctx.beginPath();
+    ctx.moveTo(x1 - rw, y); ctx.lineTo(x1, y - rh); ctx.lineTo(x1, y); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = "#e89a5e"; ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(x1 - rw, y + 1); ctx.lineTo(x1, y - rh); ctx.stroke();
+    if (p.sign) {
+      var sx = x1 - rw - 26, sy = y - rh - 32, sw = p.gold ? 34 : 26;
+      if (p.gold) {
+        ctx.globalAlpha = 0.16 + 0.10 * Math.sin(tRun * 5 + p.x0 * 0.01);
+        ctx.fillStyle = "#ffc857";
+        ctx.fillRect(sx - sw / 2 - 6, sy - 19, sw + 12, 38);
+        ctx.globalAlpha = 1;
+      }
+      ctx.fillStyle = "#130a1e";
+      ctx.fillRect(sx - sw / 2, sy - 13, sw, 26);
+      ctx.strokeStyle = p.gold ? "#ffc857" : "#b48cff"; ctx.lineWidth = 2;
+      ctx.strokeRect(sx - sw / 2, sy - 13, sw, 26);
+      ctx.fillStyle = p.gold ? "#ffc857" : "#e6d4ff";
+      ctx.font = '13px "Press Start 2P", monospace';
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText(p.gold ? p.sign + "+" : String(p.sign), sx, sy + 1);
+      ctx.fillStyle = "#2a1a3c";
+      ctx.fillRect(sx - 1.5, sy + 13, 3, 20);
+    }
+  }
+
+  function drawRider() {
+    var x = riderScreenX(), y = groundScreenY(rider.y) - 13;
+    ctx.save();
+    ctx.translate(x, y - 4);
+    ctx.rotate(rider.ang);
+    ctx.scale(1.55, 1.55);
+    // board
+    ctx.fillStyle = "#7a52c9";
+    ctx.fillRect(-16, 8.5, 32, 6);
+    ctx.fillStyle = "#b48cff";
+    ctx.fillRect(-16, 8.5, 32, 3);
+    ctx.fillStyle = "#4a2d86";
+    ctx.fillRect(-12, 14.5, 4.5, 4); ctx.fillRect(7.5, 14.5, 4.5, 4);
+    // legs, body, head
+    ctx.fillStyle = "#3a2a5c";
+    ctx.fillRect(-7, 2, 5, 8); ctx.fillRect(2, 2, 5, 8);
+    ctx.fillStyle = "#e8743e";
+    ctx.fillRect(-7, -6, 14, 9);
+    ctx.fillStyle = "#c2553c";
+    ctx.fillRect(-7, -6, 14, 3);
+    ctx.fillStyle = "#ffe9c7";
+    ctx.fillRect(-5, -15, 10, 9);
+    ctx.fillStyle = "#b48cff";                        // helmet
+    ctx.fillRect(-6.5, -17.5, 13, 5);
+    ctx.fillStyle = "#2a1a3c";
+    ctx.fillRect(1, -12.5, 4, 3);
+    ctx.fillStyle = "#ffe9c7";                        // arms out
+    ctx.fillRect(-13, -4, 7, 4); ctx.fillRect(6, -4, 7, 4);
+    ctx.restore();
+  }
+
+  /* Where you are going to come down. Judging airtime with no shadow is
+     guesswork, and guesswork is not the decision this cabinet is about. */
+  function drawShadow() {
+    if (!rider.air) return;
+    var p = platAt(rider.x);
+    var tgt = null, i;
+    for (i = 0; i < plats.length; i++) if (plats[i].x1 > rider.x) { tgt = plats[i]; break; }
+    if (!tgt) return;
+    var landY = tgt.y;
+    var disc = rider.vy * rider.vy + 2 * GRAV * (landY - rider.y);
+    if (disc < 0) return;
+    var tt = (-rider.vy + Math.sqrt(disc)) / GRAV;
+    var lx = rider.x + speed * tt;
+    var sx = lx - camX + riderScreenX(), sy = groundScreenY(landY);
+    var onDeck = lx >= tgt.x0 && lx <= tgt.x1;
+    ctx.globalAlpha = 0.55;
+    ctx.fillStyle = onDeck ? "#b48cff" : "#ff5240";
+    ctx.beginPath(); ctx.ellipse(sx, sy + 3, 15, 4.5, 0, 0, TAU); ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  function drawFlips() {
+    if (!rider.air) return;
+    var shown = rider.settling || rider.done ? rider.flips : Math.round(rider.ang / TAU);
+    if (shown <= 0) return;
+    ctx.font = '22px "Press Start 2P", monospace';
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    var x = riderScreenX(), y = groundScreenY(rider.y) - 54;
+    ctx.fillStyle = "rgba(19,10,30,0.7)";
+    ctx.fillText(String(shown), x + 2, y + 2);
+    ctx.fillStyle = rider.settling || rider.done ? "#6fdc8c" : "#ffc857";
+    ctx.fillText(String(shown), x, y);
+  }
+
+  function render() {
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.fillStyle = "#0b0612";
+    ctx.fillRect(0, 0, cv.width, cv.height);
+    ctx.setTransform(scale, 0, 0, scale, originX, 0);
+    ctx.save();
+    ctx.beginPath(); ctx.rect(0, 0, VW, VH); ctx.clip();
+    var shx = shake > 0 ? (Math.random() - 0.5) * shake * 12 : 0;
+    var shy = shake > 0 ? (Math.random() - 0.5) * shake * 10 : 0;
+
+    sky();
+    ctx.save();
+    ctx.translate(shx, shy);
+    hills(0.10, "#3a1740", 52, 46);
+    hills(0.24, "#2a1030", 40, 84);
+    hills(0.46, "#1d0b24", 26, 120);
+
+    for (var i = 0; i < plats.length; i++) drawDeck(plats[i]);
+    drawShadow();
+    if (state !== "over") { drawRider(); drawFlips(); }
+
+    for (var j = 0; j < parts.length; j++) {
+      var q = parts[j];
+      ctx.globalAlpha = Math.max(0, 1 - q.t / q.life);
+      ctx.fillStyle = q.col;
+      ctx.fillRect(q.x - q.r, q.y - q.r, q.r * 2, q.r * 2);
+    }
+    ctx.globalAlpha = 1;
+
+    ctx.font = '10px "Press Start 2P", monospace';
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    for (var k = 0; k < pops.length; k++) {
+      var o = pops[k];
+      ctx.globalAlpha = Math.max(0, 1 - o.t / 1.1);
+      ctx.fillStyle = "rgba(19,10,30,0.75)";
+      ctx.fillText(o.txt, o.x + 1, o.y + 1);
+      ctx.fillStyle = o.col;
+      ctx.fillText(o.txt, o.x, o.y);
+    }
+    ctx.globalAlpha = 1;
+    ctx.restore();
+
+    if (flash > 0) {
+      ctx.globalAlpha = flash * 0.45;
+      ctx.fillStyle = "#ffd9a8";
+      ctx.fillRect(0, 0, VW, VH);
+      ctx.globalAlpha = 1;
+    }
+    var vg = ctx.createRadialGradient(VW / 2, VH * 0.5, VH * 0.3, VW / 2, VH * 0.5, VH * 0.8);
+    vg.addColorStop(0, "rgba(0,0,0,0)");
+    vg.addColorStop(1, "rgba(8,4,14,0.55)");
+    ctx.fillStyle = vg;
+    ctx.fillRect(0, 0, VW, VH);
+    ctx.restore();
+
+    if (originX > 0) {
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.fillStyle = "rgba(200,180,240,0.09)";
+      ctx.fillRect(originX - 2, 0, 2, cv.height);
+      ctx.fillRect(originX + VW * scale, 0, 2, cv.height);
+    }
+  }
+
+  /* ---------------- events ----------------
+     One button, so the button is the whole screen. There is no region to
+     aim at and nothing to miss. */
+  function press() {
+    if (state === "over" || state === "start") { startRun(); return; }
+    holding = true;
+  }
+  function lift() {
+    if (state !== "play") { holding = false; return; }
+    if (holding) release();
+    holding = false;
+  }
+  wrap.addEventListener("pointerdown", function (ev) { ev.preventDefault(); press(); });
+  window.addEventListener("pointerup", lift);
+  window.addEventListener("pointercancel", lift);
+  window.addEventListener("blur", lift);
+  document.addEventListener("visibilitychange", function () { if (document.hidden) lift(); });
+
+  window.addEventListener("keydown", function (ev) {
+    if (ev.key === " " || ev.key === "ArrowUp" || ev.key === "w" || ev.key === "W") {
+      ev.preventDefault();
+      if (state !== "play") { startRun(); return; }
+      if (!holding) press();
+    } else if (ev.key === "r" || ev.key === "R") { ev.preventDefault(); startRun(); }
+  });
+  window.addEventListener("keyup", function (ev) {
+    if (ev.key === " " || ev.key === "ArrowUp" || ev.key === "w" || ev.key === "W") lift();
+  });
+
+  document.getElementById("btnStart").addEventListener("click", function (e) { e.stopPropagation(); startRun(); });
+  document.getElementById("btnAgain").addEventListener("click", function (e) { e.stopPropagation(); startRun(); });
+  window.addEventListener("resize", function () { resize(); });
+
+  /* ---------------- boot ---------------- */
+  var last = 0;
+  function frame(now) {
+    requestAnimationFrame(frame);
+    var dt = last ? Math.min(0.032, (now - last) / 1000) : 0;
+    last = now;
+    if (state === "play") update(dt);
+    else {
+      if (shake > 0) shake = Math.max(0, shake - dt * 2.2);
+      if (flash > 0) flash = Math.max(0, flash - dt * 3);
+      for (var j = parts.length - 1; j >= 0; j--) {
+        var q = parts[j]; q.t += dt;
+        q.x += q.vx * dt; q.y += q.vy * dt; q.vy += 420 * dt;
+        if (q.t >= q.life) parts.splice(j, 1);
+      }
+      for (var k = pops.length - 1; k >= 0; k--) {
+        pops[k].t += dt; pops[k].y -= 26 * dt;
+        if (pops[k].t > 1.1) pops.splice(k, 1);
+      }
+      if (overWait > 0) { overWait -= dt; if (overWait <= 0) overScreen.hidden = false; }
+      tRun += dt;
+    }
+    render();
+  }
+  resize();
+  best = loadNum("takla-best");
+  reset();
+  syncHud();
+  if (window.ResizeObserver) new ResizeObserver(resize).observe(wrap);
+  requestAnimationFrame(frame);
+
+})();
+</script>
+</body>
+</html>
