@@ -62,7 +62,7 @@
     --sarkac:  #5fe4ff;
     --maden:   #ffc23d;
     --fisek:   #ff6ea8;
-    --cit:     #6fbf4a;
+    --boya:    #e8452f;
 
     --cell-font: "Press Start 2P", ui-monospace, "Courier New", monospace;
     --read-font: "VT323", ui-monospace, "Courier New", monospace;
@@ -253,7 +253,7 @@
   .sarkac { --accent: var(--sarkac); }
   .maden { --accent: var(--maden); }
   .fisek { --accent: var(--fisek); }
-  .cit { --accent: var(--cit); }
+  .boya { --accent: var(--boya); }
 
   /* ---------- footer ---------- */
   .foot {
@@ -577,13 +577,13 @@
       </div>
     </a>
 
-    <a class="cab cit" href="games/cit/">
-      <div class="tube"><canvas data-demo="fence" aria-hidden="true"></canvas></div>
+    <a class="cab boya" href="games/boya/">
+      <div class="tube"><canvas data-demo="paint" aria-hidden="true"></canvas></div>
       <div class="plate">
         <span class="no">CABINET NO. 21 &mdash; 1982</span>
-        <h2>&Ccedil;&#304;T</h2>
-        <p>The only cabinet here where you take ground instead of surviving it. Step off your land and you drag a fence behind you; get back to your own edge and everything you closed off is yours. While the line is open it can be cut &mdash; and a beast fenced into a small enough pen belongs to you too.</p>
-        <span class="keys">Hold to walk &middot; Arrows</span>
+        <h2>BOYA</h2>
+        <p>The only cabinet here where you take ground instead of surviving it. Leave the paint and the brush drags a wet line behind it; bring it back to colour and everything you closed off floods in. Every sheet is a new colour, so you can see how far you got &mdash; and an ink blot that touches a line still wet costs you the page.</p>
+        <span class="keys">Hold to paint &middot; Arrows</span>
         <span class="play">&#9654; PLAY</span>
       </div>
     </a>
@@ -2501,9 +2501,10 @@
   }
 
 
-  /* ---------- cit: walk out, close the loop, the ground is yours ---------- */
+  /* ---------- boya: close the loop and the colour floods in ---------- */
   var ci = null;
-  var CI_CROPS = ["#3f8f3a", "#8a8f2a", "#b58a24", "#2f7a4a"];
+  var CI_SHEETS = ["#e8452f", "#2f6fe8", "#1f9e6a", "#7b4fd6", "#f0a428", "#e0409a"];
+  var ciSheet = 0;
   function ciInit(W, H) {
     var T = 5, cols = Math.floor(W / T), rows = Math.floor(H / T);
     var g = new Uint8Array(cols * rows);
@@ -2560,7 +2561,7 @@
         v.out = false;
         var open = 0;
         for (var z = 0; z < v.g.length; z++) if (!v.g[z]) open++;
-        if (open < v.cols * v.rows * 0.22) ci = ciInit(W, H);
+        if (open < v.cols * v.rows * 0.22) { ciSheet++; ci = ciInit(W, H); }   // a fresh sheet, a fresh colour
       }
     }
 
@@ -2569,27 +2570,28 @@
     if (at(Math.floor(fx / T), Math.floor(f.y / T)) !== 0) f.vx = -f.vx; else f.x = fx;
     if (at(Math.floor(f.x / T), Math.floor(fy / T)) !== 0) f.vy = -f.vy; else f.y = fy;
 
-    ctx.fillStyle = "#0d1410"; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = "#f4ece0"; ctx.fillRect(0, 0, W, H);
     for (var r3 = 0; r3 < v.rows; r3++) for (var c3 = 0; c3 < v.cols; c3++) {
       var g3 = v.g[ix(c3, r3)];
       if (!g3) continue;
-      if (g3 === 2) ctx.fillStyle = "#ffe98a";
-      else ctx.fillStyle = CI_CROPS[((((c3 / 4) | 0) * 7 + ((r3 / 4) | 0) * 13) % 4)];
+      if (g3 === 2) ctx.fillStyle = "#ffffff";
+      else ctx.fillStyle = CI_SHEETS[ciSheet % CI_SHEETS.length];
       ctx.fillRect(c3 * T, r3 * T, T, T);
     }
-    ctx.fillStyle = "#ff4d5a";
-    ctx.beginPath(); ctx.arc(f.x, f.y, 2.6, 0, 6.2832); ctx.fill();
-    ctx.fillStyle = "#eefae6";
+    ctx.fillStyle = "#1a1d28";
+    ctx.beginPath(); ctx.arc(f.x, f.y, 2.8, 0, 6.2832); ctx.fill();
+    ctx.beginPath(); ctx.arc(f.x + 2.4, f.y - 1.8, 1.2, 0, 6.2832); ctx.fill();
+    ctx.fillStyle = "#5a4a33";
     ctx.fillRect(v.c * T - 1, v.r * T - 1, T + 2, T + 2);
   }
 
   /* ---------- wire up ---------- */
-  var painters = { snake: drawSnake, road: drawRoad, lander: drawLander, flap: drawFlap, brick: drawBrick, maze: drawMaze, arch: drawArch, rocks: drawRocks, loom: drawLoom, invade: drawInvade, fuse: drawFuse, pong: drawPong, lamps: drawLamps, climb: drawClimb, lanes: drawLanes, swing: drawSwing, mine: drawMine, sky: drawSky, fence: drawFence };
+  var painters = { snake: drawSnake, road: drawRoad, lander: drawLander, flap: drawFlap, brick: drawBrick, maze: drawMaze, arch: drawArch, rocks: drawRocks, loom: drawLoom, invade: drawInvade, fuse: drawFuse, pong: drawPong, lamps: drawLamps, climb: drawClimb, lanes: drawLanes, swing: drawSwing, mine: drawMine, sky: drawSky, paint: drawFence };
   Array.prototype.forEach.call(document.querySelectorAll("[data-demo]"), function (c) {
     var fn = painters[c.dataset.demo];
     if (fn) register(c, fn, c.dataset.demo === "flap" || c.dataset.demo === "brick" || c.dataset.demo === "maze" || c.dataset.demo === "arch" ||
                        c.dataset.demo === "rocks" || c.dataset.demo === "loom" ||
-                       c.dataset.demo === "invade" || c.dataset.demo === "fuse" || c.dataset.demo === "pong" || c.dataset.demo === "lamps" || c.dataset.demo === "climb" || c.dataset.demo === "lanes" || c.dataset.demo === "swing" || c.dataset.demo === "mine" || c.dataset.demo === "sky" || c.dataset.demo === "fence");
+                       c.dataset.demo === "invade" || c.dataset.demo === "fuse" || c.dataset.demo === "pong" || c.dataset.demo === "lamps" || c.dataset.demo === "climb" || c.dataset.demo === "lanes" || c.dataset.demo === "swing" || c.dataset.demo === "mine" || c.dataset.demo === "sky" || c.dataset.demo === "paint");
   });
 
   if (window.ResizeObserver) {

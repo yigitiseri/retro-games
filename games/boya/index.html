@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
-<meta name="description" content="CIT - take the ground by fencing it off, and mind the open line.">
+<meta name="description" content="BOYA - fill the page: close a wet line and the colour floods in.">
 <meta name="theme-color" content="#08090e">
 <style>
   :root {
@@ -15,21 +15,21 @@
   img { max-width: 100%; }
   [hidden] { display: none !important; }
 </style>
-<title>ÇİT — Retro Games Arcade</title>
+<title>BOYA — Retro Games Arcade</title>
 <link rel="preload" href="../../assets/fonts/press-start-2p-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="../../assets/fonts/fonts.css">
 <style>
   :root {
-    --ink:    #0d1410;
-    --soil:   #16221a;
-    --field:  #6fbf4a;
-    --field2: #3f8f3a;
-    --wheat:  #ffc75a;
-    --trail:  #ffe98a;
-    --foe:    #ff4d5a;
-    --hunter: #ff8a3d;
-    --paper:  #eefae6;
-    --dim:    rgba(238, 250, 230, 0.45);
+    --ink:    #14100c;
+    --soil:   #1e1812;
+    --field:  #e8452f;
+    --field2: #b82c1c;
+    --wheat:  #f0a428;
+    --trail:  #ffd9a8;
+    --foe:    #2e3346;
+    --hunter: #3f5a92;
+    --paper:  #f4ece0;
+    --dim:    rgba(244, 236, 224, 0.45);
     --hud: "Press Start 2P", monospace;
     --ui: "VT323", ui-monospace, monospace;
   }
@@ -64,7 +64,7 @@
     overflow: hidden; z-index: 2; pointer-events: none;
   }
   .bar i { display: block; height: 100%; width: 100%; transform-origin: left center;
-           background: linear-gradient(90deg, var(--field2), var(--field)); }
+           background: linear-gradient(90deg, var(--field2), var(--wheat)); }
   .bar u {
     position: absolute; top: -3px; width: 2px; height: 11px;
     background: var(--wheat); border-radius: 1px;
@@ -73,14 +73,14 @@
   .screen {
     position: absolute; inset: 0; display: grid; place-content: center; justify-items: center;
     gap: 15px; text-align: center; padding: 26px; z-index: 3;
-    background: radial-gradient(120% 90% at 50% 42%, rgba(13,20,16,0.82), rgba(13,20,16,0.96));
+    background: radial-gradient(120% 90% at 50% 42%, rgba(20,16,12,0.84), rgba(20,16,12,0.96));
   }
   .screen[hidden] { display: none; }
   .title {
     font-family: var(--hud); font-size: clamp(30px, 12vw, 50px); letter-spacing: 3px; line-height: 1.4;
-    background: linear-gradient(180deg, #fff, var(--field) 50%, var(--field2));
+    background: linear-gradient(180deg, #fff, var(--wheat) 45%, var(--field));
     -webkit-background-clip: text; background-clip: text; color: transparent;
-    filter: drop-shadow(0 0 22px rgba(111,191,74,0.45));
+    filter: drop-shadow(0 0 22px rgba(240,164,40,0.45));
   }
   .sub { font-family: var(--hud); font-size: clamp(8px, 2.7vw, 10px); letter-spacing: 0.2em; color: var(--wheat); }
   .lines { font-size: clamp(17px, 4.6vw, 20px); line-height: 1.5; color: #d9ead2; max-width: 33ch; }
@@ -88,11 +88,11 @@
   .lines .bad { color: var(--foe); }
   .btn {
     margin-top: 4px; font-family: var(--hud); font-size: 11px; letter-spacing: 0.14em;
-    padding: 14px 28px; color: #0d1410; border: 0; border-radius: 4px; cursor: pointer;
-    background: linear-gradient(180deg, #b8f09a, var(--field));
-    box-shadow: 0 3px 0 #2d6b28, 0 0 26px rgba(111,191,74,0.35);
+    padding: 14px 28px; color: #14100c; border: 0; border-radius: 4px; cursor: pointer;
+    background: linear-gradient(180deg, #ffd0a8, var(--wheat));
+    box-shadow: 0 3px 0 #8a5a1c, 0 0 26px rgba(240,164,40,0.35);
   }
-  .btn:active { transform: translateY(2px); box-shadow: 0 1px 0 #2d6b28; }
+  .btn:active { transform: translateY(2px); box-shadow: 0 1px 0 #8a5a1c; }
   .hintline { font-family: var(--hud); font-size: 7px; letter-spacing: 0.13em; color: var(--dim); line-height: 2; }
   .over-title { font-family: var(--hud); font-size: clamp(13px, 4.6vw, 19px); color: var(--foe); letter-spacing: 0.1em; }
   .over-title.best { color: var(--wheat); }
@@ -102,18 +102,18 @@
   .stats .v { font-size: 12px; margin-top: 4px; }
   .stats .v.gold { color: var(--wheat); }
 </style>
-<link rel="canonical" href="https://yigitiseri.github.io/retro-games/games/cit/">
+<link rel="canonical" href="https://yigitiseri.github.io/retro-games/games/boya/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Retro Games Arcade">
-<meta property="og:title" content="ÇİT — Retro Games Arcade">
-<meta property="og:description" content="CIT - take the ground by fencing it off, and mind the open line.">
-<meta property="og:url" content="https://yigitiseri.github.io/retro-games/games/cit/">
+<meta property="og:title" content="BOYA — Retro Games Arcade">
+<meta property="og:description" content="BOYA - fill the page: close a wet line and the colour floods in.">
+<meta property="og:url" content="https://yigitiseri.github.io/retro-games/games/boya/">
 <meta property="og:image" content="https://yigitiseri.github.io/retro-games/assets/social-card.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="ÇİT — Retro Games Arcade">
-<meta name="twitter:description" content="CIT - take the ground by fencing it off, and mind the open line.">
+<meta name="twitter:title" content="BOYA — Retro Games Arcade">
+<meta name="twitter:description" content="BOYA - fill the page: close a wet line and the colour floods in.">
 <meta name="twitter:image" content="https://yigitiseri.github.io/retro-games/assets/social-card.png">
 
 <!-- Cloudflare Web Analytics: no cookies, no client-side storage -->
@@ -133,11 +133,11 @@
       <div class="best" id="hBest">0</div>
     </div>
     <div class="pct">
-      <div class="k">FENCED</div>
+      <div class="k">PAINTED</div>
       <div class="v" id="hPct">0%</div>
     </div>
     <div class="right">
-      <div class="k">FIELD</div>
+      <div class="k">SHEET</div>
       <div class="best" id="hLevel">1</div>
       <div class="k" style="margin-top:5px">LIVES</div>
       <div class="best" id="hLives">3</div>
@@ -146,28 +146,28 @@
   <div class="bar"><i id="hBar"></i><u id="hMark"></u></div>
 
   <div class="screen" id="startScreen">
-    <div class="title">ÇİT</div>
-    <div class="sub">TAKE THE GROUND</div>
+    <div class="title">BOYA</div>
+    <div class="sub">FILL THE PAGE</div>
     <div class="lines">
-      Step off your land and you start dragging a fence. Get back to your
-      own edge and <b>everything you closed off is yours</b>.
+      Leave the paint and the brush drags a wet line behind it. Bring it
+      back to colour and <b>everything you closed off floods in</b>.
     </div>
     <div class="lines" style="font-size:16px;opacity:0.82">
-      While the fence is open it can be cut. <span class="bad">Anything out there</span>
-      that touches the line, or you, ends the run. Fence a beast into a
-      small enough pen and it is yours too.
+      While the line is wet an <span class="bad">ink blot</span> can smear it, and
+      that costs you the sheet. Box a blot into a small enough corner and the
+      paper soaks it up.
     </div>
-    <button class="btn" id="btnStart">GO OUT</button>
-    <div class="hintline">HOLD TO WALK &middot; ARROW KEYS</div>
+    <button class="btn" id="btnStart">DIP THE BRUSH</button>
+    <div class="hintline">HOLD TO PAINT &middot; ARROW KEYS</div>
   </div>
 
   <div class="screen" id="overScreen" hidden>
-    <div class="over-title" id="overTitle">FENCE CUT</div>
+    <div class="over-title" id="overTitle">SMUDGED</div>
     <div class="final" id="overScore">0</div>
     <div class="stats">
       <div><div class="k">BEST</div><div class="v gold" id="overBest">0</div></div>
-      <div><div class="k">FIELDS</div><div class="v" id="overFields">0</div></div>
-      <div><div class="k">PENNED</div><div class="v gold" id="overPenned">0</div></div>
+      <div><div class="k">SHEETS</div><div class="v" id="overFields">0</div></div>
+      <div><div class="k">SOAKED</div><div class="v gold" id="overPenned">0</div></div>
     </div>
     <button class="btn" id="btnAgain">AGAIN</button>
     <div class="hintline">TAP OR PRESS R</div>
@@ -190,18 +190,21 @@
   var OPEN = 0, MINE = 1, LINE = 2;
 
   // four crops, so the ground you take is a quilt rather than a slab
-  /* Each patch is a crop with its own colour AND its own row direction, which
-     is what makes farmland read as farmland from above rather than as a fill. */
-  var CROPS = [
-    { a: "#b8912e", b: "#c99f35", row: "rgba(255,226,150,0.34)", vert: false },
-    { a: "#6d8a2e", b: "#7a9635", row: "rgba(196,224,124,0.30)", vert: true  },
-    { a: "#4a7a52", b: "#538459", row: "rgba(152,216,162,0.28)", vert: false },
-    { a: "#a8662c", b: "#b47131", row: "rgba(255,192,132,0.28)", vert: true  },
-    { a: "#3f7a3a", b: "#468141", row: "rgba(124,202,112,0.30)", vert: false }
+  /* Every sheet is a new colour, so how far you have got is visible at a
+     glance -- the old fields all looked alike however many you had taken. */
+  var SHEETS = [
+    { ink: "#e8452f", deep: "#b82c1c", wash: "rgba(255,150,120,0.30)" },  // vermilion
+    { ink: "#2f6fe8", deep: "#1d4bb0", wash: "rgba(150,190,255,0.28)" },  // cobalt
+    { ink: "#1f9e6a", deep: "#147a50", wash: "rgba(150,240,200,0.26)" },  // viridian
+    { ink: "#7b4fd6", deep: "#5733a6", wash: "rgba(200,175,255,0.28)" },  // violet
+    { ink: "#f0a428", deep: "#c07c12", wash: "rgba(255,220,150,0.30)" },  // amber
+    { ink: "#e0409a", deep: "#ad2472", wash: "rgba(255,170,220,0.28)" },  // magenta
+    { ink: "#17a2b8", deep: "#0d7686", wash: "rgba(150,235,245,0.26)" },  // teal
+    { ink: "#6b8f1f", deep: "#4c6a12", wash: "rgba(210,240,140,0.28)" }   // olive
   ];
-  var WILD_A = "#16211b", WILD_B = "#121c17";
-  var FENCE_RAIL = "#8a6a2c", FENCE_POST = "#d9b36a";
-  // a stable scatter, so scrub and stones never shimmer between frames
+  function sheet() { return SHEETS[(level - 1) % SHEETS.length]; }
+  var PAPER_A = "#f4ece0", PAPER_B = "#efe5d6", PAPER_LINE = "rgba(120,104,84,0.13)";
+  // a stable scatter, so the paper grain never crawls between frames
   function hash2(c, r) { var h = (c * 73856093) ^ (r * 19349663); h = (h ^ (h >>> 13)) >>> 0; return (h % 1000) / 1000; }
 
   var STEP_T = 0.052;        // seconds per cell walked
@@ -312,7 +315,7 @@
     score = 0; level = 1; lives = 3; penned = 0;
     parts = []; pops = [];
     tRun = 0; shake = 0; flash = 0; beatBest = false;
-    best = loadNum("cit-best");
+    best = loadNum("boya-best");
     newField();
   }
   function startRun() {
@@ -322,9 +325,9 @@
   }
   function gameOver() {
     state = "over";
-    if (score > best) { best = score; saveNum("cit-best", best); }
-    saveNum("cit-fields", Math.max(loadNum("cit-fields"), level - 1));
-    overTitle.textContent = beatBest ? "NEW BEST" : "FENCE CUT";
+    if (score > best) { best = score; saveNum("boya-best", best); }
+    saveNum("boya-sheets", Math.max(loadNum("boya-sheets"), level - 1));
+    overTitle.textContent = beatBest ? "NEW BEST" : "SMUDGED";
     overTitle.classList.toggle("best", beatBest);
     overScore.textContent = fmt(Math.floor(score));
     overBest.textContent = fmt(Math.floor(best));
@@ -387,8 +390,8 @@
         for (var z = foes.length - 1; z >= 0; z--) {
           var zc = Math.floor(foes[z].x / CELL), zr = Math.floor(foes[z].y / CELL);
           if (at(zc, zr) === OPEN && seen[idx(zc, zr)]) {
-            spark(foes[z].x, foes[z].y, 22, "#ffc75a", 180);
-            pop(foes[z].x, foes[z].y, "PENNED +500", "#ffc75a");
+            spark(foes[z].x, foes[z].y, 22, "#f0a428", 180);
+            pop(foes[z].x, foes[z].y, "SOAKED +500", "#f0a428");
             score += 500; penned++;
             foes.splice(z, 1);
             blip(880, 0.25, "triangle", 0.07, 1500);
@@ -403,8 +406,8 @@
     claimed += gained;
     var add = gained * 4;
     score += add;
-    pop(p.c * CELL, p.r * CELL, "+" + add, "#6fbf4a");
-    spark(p.c * CELL, p.r * CELL, 10, "#6fbf4a", 120);
+    pop(p.c * CELL, p.r * CELL, "+" + add, "#f0a428");
+    spark(p.c * CELL, p.r * CELL, 10, "#f0a428", 120);
     blip(520, 0.14, "triangle", 0.05, 760);
     if (!beatBest && score > best && best > 0) { beatBest = true; flash = 1; }
 
@@ -412,7 +415,7 @@
       clearWait = 0.9;
       var bonus = Math.round((pct() - TARGET) * 100) * 40 + 400;
       score += bonus;
-      pop(VW / 2, VH * 0.4, "FIELD TAKEN +" + bonus, "#ffc75a");
+      pop(VW / 2, VH * 0.4, "SHEET DONE +" + bonus, "#f0a428");
       blip(980, 0.3, "triangle", 0.07, 1600);
     }
     syncHud();
@@ -424,7 +427,7 @@
     if (invuln > 0) return;
     lives--;
     shake = 0.6;
-    spark(cx, cy, 26, "#ff4d5a", 200);
+    spark(cx, cy, 26, "#2e3346", 200);
     for (var t = 0; t < trail.length; t++) set(trail[t][0], trail[t][1], OPEN);
     trail = [];
     p.out = false;
@@ -558,55 +561,59 @@
     if (!fieldDirty) return;
     fieldDirty = false;
 
-    var g = fieldCtx;
+    var g = fieldCtx, sh = sheet();
     g.setTransform(scale, 0, 0, scale, 0, 0);
-    g.fillStyle = "#0d1410";
+    g.fillStyle = PAPER_A;
     g.fillRect(0, 0, VW, ROWS * CELL);
 
     for (var r = 0; r < ROWS; r++) {
       for (var c = 0; c < COLS; c++) {
         var v = grid[idx(c, r)], x = c * CELL, y = r * CELL, n = hash2(c, r);
         if (v === MINE) {
-          var crop = CROPS[(((c / 5) | 0) * 7 + ((r / 5) | 0) * 13) % CROPS.length];
-          g.fillStyle = ((c + r) & 1) ? crop.a : crop.b;
+          /* paint, laid on in strokes rather than as a flat fill: the tone
+             shifts a little cell to cell and a brush mark runs through it */
+          g.fillStyle = ((c + r) & 1) ? sh.ink : sh.deep;
           g.fillRect(x, y, CELL + 0.6, CELL + 0.6);
-          g.fillStyle = crop.row;
-          if (crop.vert) { g.fillRect(x + 2.5, y, 1.8, CELL + 0.6); g.fillRect(x + 7.5, y, 1.8, CELL + 0.6); }
-          else { g.fillRect(x, y + 2.5, CELL + 0.6, 1.8); g.fillRect(x, y + 7.5, CELL + 0.6, 1.8); }
-          if (n > 0.93) { g.fillStyle = "rgba(255,240,190,0.5)"; g.fillRect(x + 5, y + 3, 2, 6); }
+          g.fillStyle = sh.ink;
+          g.fillRect(x, y, CELL + 0.6, CELL + 0.6);
+          if (n > 0.66) {
+            g.fillStyle = sh.wash;                       // a lighter drag of the brush
+            g.fillRect(x, y + (n > 0.83 ? 2 : 6), CELL + 0.6, 2.6);
+          } else if (n < 0.14) {
+            g.fillStyle = "rgba(0,0,0,0.10)";            // and where it pooled
+            g.fillRect(x + 2, y + 2, CELL - 3, CELL - 3);
+          }
         } else {
-          g.fillStyle = ((c + r) & 1) ? WILD_A : WILD_B;
+          // blank paper: warm stock, faint rule, and the odd fibre in it
+          g.fillStyle = ((c + r) & 1) ? PAPER_A : PAPER_B;
           g.fillRect(x, y, CELL + 0.6, CELL + 0.6);
-          if (n > 0.86) { g.fillStyle = "#24402c"; g.fillRect(x + 3, y + 6, 3, 2); g.fillRect(x + 4, y + 4, 1, 2); }
-          else if (n > 0.78) { g.fillStyle = "#33392f"; g.fillRect(x + 6, y + 5, 3, 2); }
-          else if (n > 0.74) { g.fillStyle = "#1d2b22"; g.fillRect(x + 2, y + 2, 2, 2); }
+          if (c % 4 === 0) { g.fillStyle = PAPER_LINE; g.fillRect(x, y, 1, CELL + 0.6); }
+          if (r % 4 === 0) { g.fillStyle = PAPER_LINE; g.fillRect(x, y, CELL + 0.6, 1); }
+          if (n > 0.93) { g.fillStyle = "rgba(150,130,104,0.28)"; g.fillRect(x + 4, y + 5, 3, 1); }
+          else if (n < 0.05) { g.fillStyle = "rgba(150,130,104,0.20)"; g.fillRect(x + 7, y + 3, 1, 2); }
         }
       }
     }
 
-    /* And the fence the cabinet is named after, which was never drawn at all:
-       a rail along every edge where your land meets wild ground. */
+    /* Where wet paint meets dry paper it pools into a darker edge. That is
+       what a brush actually does, and it is what makes the shape you have
+       filled read as painted rather than merely coloured in. */
     for (var r2 = 0; r2 < ROWS; r2++) {
       for (var c2 = 0; c2 < COLS; c2++) {
         if (grid[idx(c2, r2)] !== MINE) continue;
-        var x2 = c2 * CELL, y2 = r2 * CELL, drew = false;
-        g.fillStyle = FENCE_RAIL;
-        if (at(c2, r2 - 1) === OPEN) { g.fillRect(x2, y2, CELL + 0.6, 2.2); drew = true; }
-        if (at(c2, r2 + 1) === OPEN) { g.fillRect(x2, y2 + CELL - 1.6, CELL + 0.6, 2.2); drew = true; }
-        if (at(c2 - 1, r2) === OPEN) { g.fillRect(x2, y2, 2.2, CELL + 0.6); drew = true; }
-        if (at(c2 + 1, r2) === OPEN) { g.fillRect(x2 + CELL - 1.6, y2, 2.2, CELL + 0.6); drew = true; }
-        if (drew && ((c2 + r2) & 1)) {
-          g.fillStyle = FENCE_POST;
-          if (at(c2, r2 - 1) === OPEN) g.fillRect(x2 + CELL * 0.4, y2 - 1, 2.4, 4);
-          if (at(c2 - 1, r2) === OPEN) g.fillRect(x2 - 1, y2 + CELL * 0.4, 4, 2.4);
-        }
+        var x2 = c2 * CELL, y2 = r2 * CELL;
+        g.fillStyle = sh.deep;
+        if (at(c2, r2 - 1) === OPEN) g.fillRect(x2, y2, CELL + 0.6, 2.4);
+        if (at(c2, r2 + 1) === OPEN) g.fillRect(x2, y2 + CELL - 1.8, CELL + 0.6, 2.4);
+        if (at(c2 - 1, r2) === OPEN) g.fillRect(x2, y2, 2.4, CELL + 0.6);
+        if (at(c2 + 1, r2) === OPEN) g.fillRect(x2 + CELL - 1.8, y2, 2.4, CELL + 0.6);
       }
     }
   }
 
   function render() {
     ctx.setTransform(scale, 0, 0, scale, 0, 0);
-    ctx.fillStyle = "#0d1410";
+    ctx.fillStyle = "#14100c";
     ctx.fillRect(0, 0, VW, VH);
 
     paintField();
@@ -618,56 +625,57 @@
     ctx.save();
     ctx.translate(shx / scale, shy / scale);
 
-    // the open line is live: it is the only ground that changes between frames
+    // the wet line you are dragging, still glossy and still smearable
+    var shx2 = sheet();
     for (var t = 0; t < trail.length; t++) {
       var tx = trail[t][0] * CELL, ty = trail[t][1] * CELL;
-      ctx.fillStyle = "#6b4a18";
+      ctx.fillStyle = shx2.deep;
       ctx.fillRect(tx, ty, CELL + 0.6, CELL + 0.6);
-      ctx.fillStyle = "#ffe98a";
-      ctx.fillRect(tx + 1, ty + CELL * 0.34, CELL - 1.6, 2.4);
-      ctx.fillRect(tx + CELL * 0.36, ty + 1, 2.4, CELL - 1.6);
+      ctx.fillStyle = shx2.ink;
+      ctx.fillRect(tx + 1, ty + 1, CELL - 1.4, CELL - 1.4);
+      ctx.fillStyle = "rgba(255,255,255,0.45)";
+      ctx.fillRect(tx + 2, ty + 2.5, CELL - 6, 1.6);
     }
 
-    /* the beasts: a boar shape rather than a dot, and it faces where it is
-       going, which is the only cue you get about where it will be next */
+    /* ink blots: they roam the blank paper and smear a line that is still
+       wet. Irregular, with a droplet or two thrown off, because a tidy circle
+       would read as a token rather than a spill. */
     for (var i = 0; i < foes.length; i++) {
       var f = foes[i];
       var hunter = f.kind === "hunter";
-      var col = hunter ? "#ff8a3d" : "#e0444f";
-      var dark = hunter ? "#8a3d12" : "#7d1f27";
-      var face = f.vx >= 0 ? 1 : -1;
-      var bob = Math.sin(tRun * 9 + i) * 0.7;
-      ctx.shadowBlur = 10; ctx.shadowColor = col;
-      ctx.fillStyle = dark;
-      ctx.fillRect(f.x - 6, f.y - 4 + bob, 12, 8);            // body
+      var col = hunter ? "#1d2b4a" : "#14161f";
+      var rim = hunter ? "#3f5a92" : "#2e3346";
+      var wob = Math.sin(tRun * 5 + i * 2) * 0.8;
+      ctx.fillStyle = rim;
+      ctx.beginPath(); ctx.arc(f.x, f.y, 7 + wob * 0.3, 0, 6.2832); ctx.fill();
       ctx.fillStyle = col;
-      ctx.fillRect(f.x - 5, f.y - 3 + bob, 10, 6);
-      ctx.shadowBlur = 0;
-      ctx.fillStyle = dark;
-      ctx.fillRect(f.x + face * 4, f.y - 1 + bob, 3, 3);      // snout
-      ctx.fillRect(f.x - face * 3, f.y - 6 + bob, 2, 2);      // ears
-      ctx.fillRect(f.x - face * 0.5, f.y - 6 + bob, 2, 2);
-      ctx.fillRect(f.x - 4, f.y + 3 + bob, 2, 2);             // trotters
-      ctx.fillRect(f.x + 2, f.y + 3 + bob, 2, 2);
-      ctx.fillStyle = "#fff3d0";
-      ctx.fillRect(f.x + face * 2, f.y - 2 + bob, 1.6, 1.6);  // eye
+      ctx.beginPath(); ctx.arc(f.x, f.y, 5.6, 0, 6.2832); ctx.fill();
+      ctx.beginPath(); ctx.arc(f.x + 4 + wob, f.y - 3, 2.6, 0, 6.2832); ctx.fill();
+      ctx.beginPath(); ctx.arc(f.x - 4, f.y + 3 - wob, 2.2, 0, 6.2832); ctx.fill();
+      ctx.fillStyle = rim;
+      ctx.beginPath(); ctx.arc(f.x + 7, f.y + 5, 1.3, 0, 6.2832); ctx.fill();
+      ctx.fillStyle = "#f4ece0";
+      ctx.fillRect(f.x - 2.6, f.y - 1.6, 1.6, 1.6);
+      ctx.fillRect(f.x + 1, f.y - 1.6, 1.6, 1.6);
     }
 
-    // the walker: a smallholder in a straw hat, not a white square
+    // the brush: a pale handle with a loaded tip, wet while the line is open
     var px = p.c * CELL + CELL / 2, py = p.r * CELL + CELL / 2;
-    if (invuln > 0 && ((tRun * 12) | 0) % 2) { /* blink after a cut */ }
+    var shw = sheet();
+    if (invuln > 0 && ((tRun * 12) | 0) % 2) { /* blink after a smear */ }
     else {
-      ctx.shadowBlur = 11; ctx.shadowColor = p.out ? "#ffc75a" : "#eefae6";
-      ctx.fillStyle = "#2f4a63";
-      ctx.fillRect(px - 3, py - 1, 6, 6);                     // body
-      ctx.fillStyle = "#f2e9d0";
-      ctx.fillRect(px - 2, py - 4, 4, 3);                     // face
-      ctx.shadowBlur = 0;
-      ctx.fillStyle = p.out ? "#ffc75a" : "#d9b36a";
-      ctx.fillRect(px - 5, py - 5, 10, 2.4);                  // straw hat
-      ctx.fillStyle = "#1a2a18";
-      ctx.fillRect(px - 1.6, py - 3, 1.2, 1.2);
-      ctx.fillRect(px + 0.6, py - 3, 1.2, 1.2);
+      ctx.fillStyle = "rgba(60,44,28,0.28)";
+      ctx.fillRect(px - 4, py + 4, 8, 2);
+      ctx.fillStyle = "#f6efe2";
+      ctx.fillRect(px - 3, py - 6, 6, 7);                    // handle
+      ctx.fillStyle = "#9a7b4f";
+      ctx.fillRect(px - 3, py - 1, 6, 2);                    // ferrule
+      ctx.fillStyle = p.out ? shw.ink : "#5a4a33";
+      ctx.fillRect(px - 2.5, py + 1, 5, 4);                  // tip
+      if (p.out) {
+        ctx.fillStyle = "rgba(255,255,255,0.55)";
+        ctx.fillRect(px - 2, py - 5, 2, 3);
+      }
     }
 
     for (var q = 0; q < parts.length; q++) {
@@ -691,14 +699,14 @@
 
     // a scrim so the readouts survive a bright field behind them
     var sc = ctx.createLinearGradient(0, 0, 0, 96);
-    sc.addColorStop(0, "rgba(13,20,16,0.82)");
-    sc.addColorStop(0.7, "rgba(13,20,16,0.4)");
-    sc.addColorStop(1, "rgba(13,20,16,0)");
+    sc.addColorStop(0, "rgba(20,16,12,0.86)");
+    sc.addColorStop(0.7, "rgba(20,16,12,0.45)");
+    sc.addColorStop(1, "rgba(20,16,12,0)");
     ctx.fillStyle = sc;
     ctx.fillRect(0, 0, VW, 96);
 
     if (flash > 0) {
-      ctx.fillStyle = "rgba(255,199,90," + (flash * 0.13).toFixed(3) + ")";
+      ctx.fillStyle = "rgba(255,240,215," + (flash * 0.13).toFixed(3) + ")";
       ctx.fillRect(0, 0, VW, VH);
     }
   }
@@ -767,7 +775,7 @@
     render();
   }
   resize();
-  best = loadNum("cit-best");
+  best = loadNum("boya-best");
   reset();
   syncHud();
   if (window.ResizeObserver) new ResizeObserver(resize).observe(wrap);
