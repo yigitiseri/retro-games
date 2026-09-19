@@ -68,6 +68,7 @@
     --takla:   #b48cff;
     --ikiz:    #ff7ad9;
     --golge:   #6ad9c0;
+    --nabiz:   #ff6b5b;
 
     --cell-font: "Press Start 2P", ui-monospace, "Courier New", monospace;
     --read-font: "VT323", ui-monospace, "Courier New", monospace;
@@ -264,6 +265,7 @@
   .takla { --accent: var(--takla); }
   .ikiz { --accent: var(--ikiz); }
   .golge { --accent: var(--golge); }
+  .nabiz { --accent: var(--nabiz); }
 
   /* ---------- footer ---------- */
   .foot {
@@ -649,6 +651,17 @@
         <h2>GÖLGE</h2>
         <p>FENER hides the room from you; this hides you from the guards. Hold to walk, let go to stand still &mdash; that is the whole control. Standing in a beam fills the alarm and standing in the dark empties it, so every room is a question of how much light you are willing to take. Every room can be crossed, but none of them without taking some, and the shift clock will not let you wait all night.</p>
         <span class="keys">Hold anywhere &middot; Space</span>
+        <span class="play">&#9654; PLAY</span>
+      </div>
+    </a>
+
+    <a class="cab nabiz" href="games/nabiz/">
+      <div class="tube"><canvas data-demo="pulse" aria-hidden="true"></canvas></div>
+      <div class="plate">
+        <span class="no">CABINET NO. 27 &mdash; 1987</span>
+        <h2>NABIZ</h2>
+        <p>Four drums, four speeds, and only one strike per beat between them. Sooner or later two come due on the same beat and you cannot serve both &mdash; so you clear one early, which costs you almost nothing and pays you almost nothing. Waiting for the line pays the drum's whole count. Every pattern can be played clean, and the cabinet checks that before it deals one.</p>
+        <span class="keys">Tap the pads &middot; A S D F</span>
         <span class="play">&#9654; PLAY</span>
       </div>
     </a>
@@ -3090,12 +3103,68 @@
   }
 
   /* ---------- wire up ---------- */
-  var painters = { snake: drawSnake, road: drawRoad, lander: drawLander, flap: drawFlap, brick: drawBrick, maze: drawMaze, arch: drawArch, rocks: drawRocks, loom: drawLoom, invade: drawInvade, fuse: drawFuse, pong: drawPong, lamps: drawLamps, climb: drawClimb, lanes: drawLanes, swing: drawSwing, mine: drawMine, sky: drawSky, paint: drawFence, rails: drawRails, night: drawNight, flip: drawFlip, twin: drawTwin, creep: drawCreep };
+
+  /* ---------- nabiz: four clocks, one hand ---------- */
+  var nb = null;
+  function nbInit(W, H) {
+    var p = [3, 4, 6, 8], ev = [], i, d;
+    for (i = 0; i < 4; i++) for (d = 1 + i; d < 60; d += p[i]) ev.push({ d: i, b: d });
+    return { W: W, H: H, t: 0, last: 0, pos: 0, p: p, ev: ev, hit: 0, lane: [0, 0, 0, 0] };
+  }
+  function drawPulse(ctx, W, H, now) {
+    if (!nb || nb.W !== W) nb = nbInit(W, H);
+    var v = nb, dt = Math.min(0.05, (now - (v.last || now)) / 1000);
+    v.last = now; v.t += dt;
+    v.pos += dt * 1.9;
+    if (v.pos > 50) { v.pos = 0; for (var q = 0; q < v.ev.length; q++) v.ev[q].hit = 0; }
+
+    ctx.fillStyle = "#0a0710"; ctx.fillRect(0, 0, W, H);
+    var cols = ["#ff6b5b", "#ffcf5b", "#5bd4ff", "#b78bff"];
+    var gap = W / 4, hy = H * 0.80, look = 4.2, bh = (hy - H * 0.08) / look;
+
+    for (var i = 0; i < 4; i++) {
+      var cx = gap * (i + 0.5);
+      ctx.fillStyle = "#150e1d";
+      ctx.fillRect(gap * i + 2, H * 0.05, gap - 4, hy - H * 0.05 + 6);
+      if (v.lane[i] > 0) {
+        v.lane[i] -= dt * 3.2;
+        ctx.fillStyle = "rgba(255,255,255," + Math.max(0, v.lane[i] * 0.10).toFixed(3) + ")";
+        ctx.fillRect(gap * i + 2, H * 0.05, gap - 4, hy - H * 0.05 + 6);
+      }
+      for (var gb = Math.floor(v.pos); gb <= v.pos + look + 1; gb++) {
+        var gy = hy - (gb + 0.5 - v.pos) * bh;
+        if (gy < H * 0.05 || gy > hy) continue;
+        ctx.fillStyle = gb % 4 === 1 ? "rgba(242,233,247,0.13)" : "rgba(242,233,247,0.05)";
+        ctx.fillRect(gap * i + 6, gy, gap - 12, 1);
+      }
+      ctx.fillStyle = "rgba(255,107,91,0.55)";
+      ctx.fillRect(gap * i + 2, hy - 1, gap - 4, 2);
+      void cx;
+    }
+
+    for (var k = 0; k < v.ev.length; k++) {
+      var e = v.ev[k];
+      if (e.hit) continue;
+      var dy = hy - (e.b + 0.5 - v.pos) * bh;
+      if (dy > hy + 2) { e.hit = 1; v.lane[e.d] = 1; v.hit = 1; continue; }
+      if (dy < H * 0.02) continue;
+      var x = gap * (e.d + 0.5), r = Math.max(4, W * 0.035);
+      var g = ctx.createRadialGradient(x, dy - r * 0.35, 1, x, dy, r);
+      g.addColorStop(0, "#ffffff"); g.addColorStop(0.35, cols[e.d]); g.addColorStop(1, "#1d1428");
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(x, dy, r, 0, Math.PI * 2); ctx.fill();
+    }
+    v.hit = Math.max(0, v.hit - dt * 3);
+    ctx.fillStyle = "rgba(255,207,91," + (0.35 + v.hit * 0.5).toFixed(3) + ")";
+    ctx.beginPath(); ctx.arc(W / 2, hy + H * 0.09, Math.max(2.5, W * 0.016), 0, Math.PI * 2); ctx.fill();
+  }
+
+  var painters = { snake: drawSnake, road: drawRoad, lander: drawLander, flap: drawFlap, brick: drawBrick, maze: drawMaze, arch: drawArch, rocks: drawRocks, loom: drawLoom, invade: drawInvade, fuse: drawFuse, pong: drawPong, lamps: drawLamps, climb: drawClimb, lanes: drawLanes, swing: drawSwing, mine: drawMine, sky: drawSky, paint: drawFence, rails: drawRails, night: drawNight, flip: drawFlip, twin: drawTwin, creep: drawCreep, pulse: drawPulse };
   Array.prototype.forEach.call(document.querySelectorAll("[data-demo]"), function (c) {
     var fn = painters[c.dataset.demo];
     if (fn) register(c, fn, c.dataset.demo === "flap" || c.dataset.demo === "brick" || c.dataset.demo === "maze" || c.dataset.demo === "arch" ||
                        c.dataset.demo === "rocks" || c.dataset.demo === "loom" ||
-                       c.dataset.demo === "invade" || c.dataset.demo === "fuse" || c.dataset.demo === "pong" || c.dataset.demo === "lamps" || c.dataset.demo === "climb" || c.dataset.demo === "lanes" || c.dataset.demo === "swing" || c.dataset.demo === "mine" || c.dataset.demo === "sky" || c.dataset.demo === "paint" || c.dataset.demo === "rails" || c.dataset.demo === "night" || c.dataset.demo === "flip" || c.dataset.demo === "twin" || c.dataset.demo === "creep");
+                       c.dataset.demo === "invade" || c.dataset.demo === "fuse" || c.dataset.demo === "pong" || c.dataset.demo === "lamps" || c.dataset.demo === "climb" || c.dataset.demo === "lanes" || c.dataset.demo === "swing" || c.dataset.demo === "mine" || c.dataset.demo === "sky" || c.dataset.demo === "paint" || c.dataset.demo === "rails" || c.dataset.demo === "night" || c.dataset.demo === "flip" || c.dataset.demo === "twin" || c.dataset.demo === "creep" || c.dataset.demo === "pulse");
   });
 
   if (window.ResizeObserver) {

@@ -1,0 +1,698 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="description" content="NABIZ — four drums, four speeds, and one strike per beat between them">
+<meta name="theme-color" content="#08090e">
+<style>
+  :root {
+    color-scheme: dark;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  body { margin: 0; }
+  img { max-width: 100%; }
+  [hidden] { display: none !important; }
+</style>
+<title>NABIZ — Retro Games Arcade</title>
+<link rel="preload" href="../../assets/fonts/press-start-2p-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../assets/fonts/fonts.css">
+<style>
+  :root {
+    --ink:    #0a0710;
+    --well:   #150e1d;
+    --well2:  #1d1428;
+    --d0:     #ff6b5b;
+    --d1:     #ffcf5b;
+    --d2:     #5bd4ff;
+    --d3:     #b78bff;
+    --line:   #ff6b5b;
+    --paper:  #f2e9f7;
+    --dim:    rgba(242, 233, 247, 0.45);
+    --bad:    #ff4f5a;
+    --good:   #7ef0b0;
+    --hud: "Press Start 2P", monospace;
+    --ui: "VT323", ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; margin: 0; overflow: hidden; }
+  body { background: var(--ink); color: var(--paper); font-family: var(--ui);
+         user-select: none; touch-action: none; overscroll-behavior: none; }
+  #wrap { position: fixed; inset: 0; }
+  canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; }
+  .scrim { position: absolute; left: 0; right: 0; top: 0; height: 150px; z-index: 1; pointer-events: none;
+           background: linear-gradient(180deg, rgba(10,7,16,0.92), rgba(10,7,16,0.50) 58%, rgba(10,7,16,0)); }
+
+  .hud { position: absolute; top: 0; left: 0; right: 0;
+    padding: calc(env(safe-area-inset-top, 0px) + 10px) calc(var(--gut, 0px) + 12px) 0;
+    display: grid; grid-template-columns: 1fr auto 1fr; align-items: start;
+    pointer-events: none; z-index: 2; font-family: var(--hud); }
+  .hud .k { font-size: 7px; letter-spacing: 0.16em; color: var(--dim); }
+  .hud .score { font-size: clamp(15px, 5vw, 21px); line-height: 1.5; }
+  .hud .best { font-size: 10px; color: var(--dim); line-height: 1.7; }
+  .hud .best.lead { color: var(--d1); }
+  .hud .right { text-align: right; }
+  .mid { text-align: center; }
+  .mid .v { font-size: clamp(14px, 4.6vw, 19px); line-height: 1.5; color: var(--d1); }
+  .mid .v.cold { color: var(--dim); }
+  .hearts { font-size: 12px; letter-spacing: 3px; color: var(--bad); line-height: 1.7; }
+
+  .pads { position: absolute; left: var(--gut, 0px); right: var(--gut, 0px);
+    bottom: var(--pb, 14px); height: var(--ph, 150px);
+    padding: 0 2.381%; display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.905%;
+    z-index: 2; }
+  .pd { border-radius: 9px; border: 2px solid rgba(242,233,247,0.16);
+    background: linear-gradient(180deg, rgba(242,233,247,0.09), rgba(242,233,247,0.02));
+    display: grid; place-content: center; gap: 5px; cursor: pointer;
+    font-family: var(--hud); color: var(--dim); transition: transform 60ms, filter 60ms; }
+  .pd .n { font-size: clamp(13px, 5vw, 19px); }
+  .pd .u { font-size: 6px; letter-spacing: 0.14em; }
+  .pd.hot { transform: translateY(3px) scale(0.985); filter: brightness(1.5); }
+  .pd.due { border-color: currentColor; box-shadow: 0 0 20px -4px currentColor, inset 0 0 26px -12px currentColor; }
+  .pd0 { color: var(--d0); } .pd1 { color: var(--d1); }
+  .pd2 { color: var(--d2); } .pd3 { color: var(--d3); }
+  .pd.due .n { color: currentColor; }
+
+  .screen { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center;
+    gap: 15px; text-align: center; padding: 26px; z-index: 3;
+    background: radial-gradient(120% 90% at 50% 42%, rgba(10,7,16,0.90), rgba(10,7,16,0.97)); }
+  .screen[hidden] { display: none; }
+  .title { font-family: var(--hud); font-size: clamp(28px, 11.5vw, 48px); letter-spacing: 5px; line-height: 1.4;
+    background: linear-gradient(180deg, #fff, var(--d0) 48%, #7d2419);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 0 22px rgba(255,107,91,0.40)); }
+  .sub { font-family: var(--hud); font-size: clamp(8px, 2.7vw, 10px); letter-spacing: 0.2em; color: var(--d0); }
+  .lines { font-size: clamp(17px, 4.6vw, 20px); line-height: 1.5; color: #e2d6ea; max-width: 34ch; }
+  .lines b { color: var(--d1); }
+  .lines .bad { color: var(--bad); }
+  .lines .ok { color: var(--good); }
+  .btn { margin-top: 4px; font-family: var(--hud); font-size: 11px; letter-spacing: 0.14em;
+    padding: 14px 28px; color: #220704; border: 0; border-radius: 4px; cursor: pointer;
+    background: linear-gradient(180deg, #ffc4bb, var(--d0));
+    box-shadow: 0 3px 0 #8a2d22, 0 0 26px rgba(255,107,91,0.32); }
+  .btn:active { transform: translateY(2px); box-shadow: 0 1px 0 #8a2d22; }
+  .hintline { font-family: var(--hud); font-size: 7px; letter-spacing: 0.13em; color: var(--dim); line-height: 2; }
+  .over-title { font-family: var(--hud); font-size: clamp(13px, 4.6vw, 19px); color: var(--bad); letter-spacing: 0.1em; }
+  .over-title.best { color: var(--d1); }
+  .final { font-family: var(--hud); font-size: clamp(22px, 8vw, 36px); line-height: 1.4; }
+  .stats { display: grid; grid-template-columns: repeat(3, auto); gap: 8px 20px; justify-content: center; font-family: var(--hud); }
+  .stats .k { font-size: 7px; letter-spacing: 0.15em; color: var(--dim); }
+  .stats .v { font-size: 12px; margin-top: 4px; }
+  .stats .v.gold { color: var(--d1); }
+</style>
+<link rel="canonical" href="https://yigitiseri.github.io/retro-games/games/nabiz/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Retro Games Arcade">
+<meta property="og:title" content="NABIZ — Retro Games Arcade">
+<meta property="og:description" content="NABIZ — four drums, four speeds, and one strike per beat between them">
+<meta property="og:url" content="https://yigitiseri.github.io/retro-games/games/nabiz/">
+<meta property="og:image" content="https://yigitiseri.github.io/retro-games/assets/social-card.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="NABIZ — Retro Games Arcade">
+<meta name="twitter:description" content="NABIZ — four drums, four speeds, and one strike per beat between them">
+<meta name="twitter:image" content="https://yigitiseri.github.io/retro-games/assets/social-card.png">
+
+<!-- Cloudflare Web Analytics: no cookies, no client-side storage -->
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "aee6e644a3b74cb9bdaf4e1569d570e2"}'></script>
+<!-- End Cloudflare Web Analytics -->
+
+</head>
+<body>
+<div id="wrap">
+  <canvas id="c"></canvas>
+  <div class="scrim"></div>
+
+  <div class="hud">
+    <div>
+      <div class="k">SCORE</div><div class="score" id="hScore">0</div>
+      <div class="k" style="margin-top:5px">BEST</div><div class="best" id="hBest">0</div>
+    </div>
+    <div class="mid">
+      <div class="k">COMBO</div><div class="v cold" id="hCombo">&times;1</div>
+    </div>
+    <div class="right">
+      <div class="k">LEVEL</div><div class="best" id="hLevel">1</div>
+      <div class="k" style="margin-top:5px">DRUMS</div><div class="hearts" id="hHearts">&#9679;&#9679;&#9679;</div>
+    </div>
+  </div>
+
+  <div class="pads" id="pads">
+    <div class="pd pd0" data-i="0"><div class="n" id="pn0">7</div><div class="u">BEATS</div></div>
+    <div class="pd pd1" data-i="1"><div class="n" id="pn1">5</div><div class="u">BEATS</div></div>
+    <div class="pd pd2" data-i="2"><div class="n" id="pn2">9</div><div class="u">BEATS</div></div>
+    <div class="pd pd3" data-i="3"><div class="n" id="pn3">4</div><div class="u">BEATS</div></div>
+  </div>
+
+  <div class="screen" id="startScreen">
+    <div class="title">NABIZ</div>
+    <div class="sub">ONE STRIKE PER BEAT</div>
+    <div class="lines">
+      Four drums, four speeds. Each one must be struck on the beat its
+      light reaches the line &mdash; but <b>you only get one strike per
+      beat</b>, and sooner or later two drums come due at once.
+    </div>
+    <div class="lines" style="font-size:16px;opacity:0.84">
+      You can strike a drum <b>early</b> to clear it out of the way. It
+      costs you almost nothing and pays almost nothing. Waiting for the
+      line pays the drum's whole count, and the slow drums pay most.
+      Miss one and it <span class="bad">splits</span>.
+      <span class="ok">Every pattern can be played clean</span> &mdash; the
+      cabinet checks before it deals one.
+    </div>
+    <button class="btn" id="btnStart">COUNT ME IN</button>
+    <div class="hintline">TAP THE PADS &middot; KEYS A S D F</div>
+  </div>
+
+  <div class="screen" id="overScreen" hidden>
+    <div class="over-title" id="overTitle">ALL THREE SPLIT</div>
+    <div class="final" id="overScore">0</div>
+    <div class="stats">
+      <div><div class="k">BEST</div><div class="v gold" id="overBest">0</div></div>
+      <div><div class="k">ON THE LINE</div><div class="v" id="overOn">0</div></div>
+      <div><div class="k">LEVEL</div><div class="v gold" id="overLevel">1</div></div>
+    </div>
+    <button class="btn" id="btnAgain">AGAIN</button>
+    <div class="hintline">TAP OR PRESS R</div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ============================================================
+     NABIZ -- the first cabinet here where the clock is the game.
+
+     Four drums, each on its own period. A drum must be struck on the
+     beat it comes due. You get ONE strike per beat, so when two drums
+     land on the same beat you cannot serve both -- you had to have
+     cleared one earlier, and clearing early pays almost nothing.
+
+     The promise: every bar can be played without splitting a single
+     drum. That is checked before the bar is dealt, by Hall's
+     condition over every window of beats -- the number of strikes
+     that can only fall inside a window must never exceed the number
+     of beats in it. Unit jobs with release times and deadlines are
+     feasible exactly when that holds, and earliest-deadline-first
+     then finds the clean line every time.
+
+     Two things the measurements corrected. First, an early strike
+     originally re-phased the drum to now + period, which shortened
+     its cycle -- so every bank quietly raised the load and even a
+     bar demanding 55% of the beats broke drums. Keeping the drum on
+     its grid fixes that and makes the whole bar readable from beat
+     one. Second, the feasibility check let a strike land before the
+     bar began, so two drums both due on beat 1 looked servable. They
+     are not. Clamping the release time to the start of the bar took
+     earliest-deadline-first from 1,620 splits to zero.
+     ============================================================ */
+
+  var wrap = document.getElementById("wrap");
+  var cv = document.getElementById("c");
+  var ctx = cv.getContext("2d", { alpha: false });
+
+  var VW = 420, VH = 780, MIN_VH = 720;
+  var scale = 1, originX = 0, dpr = 1;
+
+  var DRUMS = 4, BAR = 24;
+  var COL_W = 94, COL_GAP = 8, COL_L = 10;
+  var PAD_H = 166, PAD_B = 14, LANE_TOP = 134, LOOK = 7;
+
+  var DCOL = ["#ff6b5b", "#ffcf5b", "#5bd4ff", "#b78bff"];
+  var DDIM = ["#5c2620", "#5e4a1f", "#1f4a5c", "#40305c"];
+  var POOL = [3, 4, 5, 6, 7, 8, 9, 10, 12];
+
+  function colX(i) { return COL_L + i * (COL_W + COL_GAP); }
+  function hitY() { return VH - PAD_B - PAD_H - 26; }
+  // a pip always takes exactly LOOK beats to fall to the line, whatever the
+  // screen is. a fixed pixel spacing left the top third of every well unable
+  // to hold a pip on a tall phone, and changed how far ahead you could see.
+  function beatH() { return (hitY() - LANE_TOP) / LOOK; }
+  function wellBot(hy) { return hy + 18; }
+
+  /* ---------- seeded randomness so a pilot run repeats ---------- */
+  var seed = (Math.random() * 4294967296) >>> 0, lockSeed = false;
+  function rnd() { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; }
+
+  /* ---------- difficulty ---------------------------------------- */
+  // utilisation is the share of beats that MUST carry a strike; above 1 the
+  // bar is impossible by counting alone, and well below 1 it can still be
+  // impossible, which is what the Hall check is for.
+  function utilFor(lv) { return Math.min(0.95, 0.50 + 0.045 * lv); }
+  // the beat never stops getting faster -- the floor is below any thumb
+  function tempoFor(lv) { return Math.max(0.15, 0.68 - 0.022 * lv); }
+
+  /* ---------- the fairness check -------------------------------- */
+  // Hall's condition. Events are unit jobs: drum i due at relative beat d
+  // may be struck anywhere in (d - p, d], clamped to the start of the bar
+  // because nothing can be struck before the bar exists.
+  function hallOk(p, due) {
+    var ev = [], i, d;
+    for (i = 0; i < DRUMS; i++)
+      for (d = due[i]; d <= BAR; d += p[i])
+        ev.push([Math.max(1, d - p[i] + 1), d]);
+    for (var a = 1; a <= BAR; a++)
+      for (var b = a; b <= BAR; b++) {
+        var n = 0;
+        for (i = 0; i < ev.length; i++) if (ev[i][0] >= a && ev[i][1] <= b) n++;
+        if (n > b - a + 1) return false;
+      }
+    return true;
+  }
+
+  var lastRolls = 1;
+  function rollBar(lv) {
+    var want = utilFor(lv), best = null, bestErr = 1e9, i;
+    for (var t = 0; t < 400; t++) {
+      var p = [], u = 0;
+      for (i = 0; i < DRUMS; i++) { var v = POOL[Math.floor(rnd() * POOL.length)]; p.push(v); u += 1 / v; }
+      if (u > 0.98) continue;
+      var err = Math.abs(u - want);
+      if (err < bestErr) { bestErr = err; best = { p: p, u: u }; }
+      if (err < 0.03) break;
+    }
+    if (!best) best = { p: [6, 7, 8, 9], u: 1 / 6 + 1 / 7 + 1 / 8 + 1 / 9 };
+    for (var att = 1; att <= 120; att++) {
+      var due = [];
+      for (i = 0; i < DRUMS; i++) due.push(1 + Math.floor(rnd() * best.p[i]));
+      if (hallOk(best.p, due)) { lastRolls = att; return { p: best.p, due: due, util: best.u }; }
+    }
+    lastRolls = 121;
+    return { p: [6, 7, 8, 9], due: [2, 4, 6, 8], util: 1 / 6 + 1 / 7 + 1 / 8 + 1 / 9 };
+  }
+
+  /* ---------- run state ----------------------------------------- */
+  var state = "start";
+  var score = 0, best = 0, combo = 0, hearts = 3, level = 1, barNo = 0;
+  var onTimes = 0, banks = 0, splits = 0;
+  var absBeat = 0, tBeat = 0, tempo = 0.68, budget = 1, barStart = 1, nextBarStart = 1;
+  var periods = [7, 5, 9, 4], events = [], pops = [], flashes = [];
+  var beatPulse = 0, linePulse = 0, budgetFlash = 0, tRun = 0;
+  var padHot = [0, 0, 0, 0], padDue = [0, 0, 0, 0];
+
+  function comboMult() { return 1 + Math.min(3, combo * 0.25); }
+
+  function dealBar() {
+    var bar = rollBar(level);
+    periods = bar.p.slice();
+    // bars are laid end to end on the beat line. dealing at absBeat + 1
+    // instead overlapped each new bar onto the last eight beats of the one
+    // still playing, which doubled the demand there -- earliest-deadline
+    // play split 718 drums before this was fixed, and cannot split any now.
+    barStart = nextBarStart;
+    nextBarStart = barStart + BAR;
+    for (var i = 0; i < DRUMS; i++)
+      for (var d = bar.due[i]; d <= BAR; d += bar.p[i])
+        events.push({ d: i, b: barStart + d - 1, st: 0, pop: 0 });
+    events.sort(function (x, y) { return x.b - y.b; });
+    barNo++;
+    level = 1 + Math.floor(barNo / 2);
+    tempo = tempoFor(level);
+    for (i = 0; i < DRUMS; i++) document.getElementById("pn" + i).textContent = periods[i];
+    return bar;
+  }
+
+  function pending(i) {
+    for (var k = 0; k < events.length; k++)
+      if (events[k].d === i && events[k].st === 0) return events[k];
+    return null;
+  }
+
+  function reset() {
+    if (!lockSeed) seed = (Math.random() * 4294967296) >>> 0;
+    score = 0; combo = 0; hearts = 3; level = 1; barNo = 0;
+    onTimes = 0; banks = 0; splits = 0;
+    absBeat = 0; tBeat = 0; budget = 1; tRun = 0; nextBarStart = 1;
+    events = []; pops = []; flashes = [];
+    beatPulse = 0; linePulse = 0; budgetFlash = 0;
+    tempo = tempoFor(1);
+    while (nextBarStart - 1 < absBeat + LOOK + 1) dealBar();
+  }
+
+  /* ---------- sound (never load-bearing: the beat is visual) ----- */
+  var AC = null;
+  function ac() {
+    if (AC === null) { try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { AC = 0; } }
+    return AC || null;
+  }
+  function blip(f, dur, type, vol) {
+    var a = ac(); if (!a) return;
+    if (a.state === "suspended") a.resume();
+    var o = a.createOscillator(), g = a.createGain();
+    o.type = type || "square"; o.frequency.value = f;
+    g.gain.setValueAtTime(vol || 0.05, a.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001, a.currentTime + dur);
+    o.connect(g); g.connect(a.destination); o.start(); o.stop(a.currentTime + dur);
+  }
+
+  /* ---------- striking ------------------------------------------ */
+  function strikePad(i) {
+    if (state !== "play") return false;
+    padHot[i] = 0.10;
+    if (!budget) { budgetFlash = 0.22; blip(90, 0.05, "square", 0.03); return false; }
+    var ev = pending(i);
+    if (!ev) return false;
+    budget = 0;
+    var onTime = ev.b === absBeat;
+    ev.st = onTime ? 1 : 2;
+    ev.pop = 0.30;
+    if (onTime) {
+      onTimes++; combo++;
+      var gain = Math.round(periods[i] * 10 * comboMult());
+      score += gain;
+      addPop(colX(i) + COL_W / 2, hitY() - 22, "+" + gain, DCOL[i], 1.0);
+      linePulse = 1;
+      blip(360 + periods[i] * 26, 0.09, "square", 0.055);
+    } else {
+      banks++; combo = 0; score += 2;
+      addPop(colX(i) + COL_W / 2, hitY() - 22, "EARLY", "#9b8fa8", 0.7);
+      blip(150, 0.07, "triangle", 0.035);
+    }
+    syncHud();
+    return onTime;
+  }
+
+  function addPop(x, y, txt, col, sz) { pops.push({ x: x, y: y, t: 0, txt: txt, col: col, sz: sz || 1 }); if (pops.length > 8) pops.shift(); }
+
+  /* ---------- the beat ------------------------------------------ */
+  function advanceBeat() {
+    // anything still pending whose beat has now passed is split
+    for (var k = 0; k < events.length; k++) {
+      var ev = events[k];
+      if (ev.st === 0 && ev.b <= absBeat) {
+        ev.st = 3; ev.pop = 0.45; splits++; combo = 0; hearts--;
+        addPop(colX(ev.d) + COL_W / 2, hitY() - 22, "SPLIT", "#ff4f5a", 1.1);
+        flashes.push({ t: 0, d: ev.d });
+        blip(70, 0.26, "sawtooth", 0.075);
+      }
+    }
+    absBeat++;
+    budget = 1;
+    beatPulse = 1;
+    if (hearts <= 0) { gameOver(); return; }
+    // clear events that are finished and well behind
+    if (events.length > 90)
+      events = events.filter(function (e) { return e.st === 0 || e.b > absBeat - 4; });
+    // keep the beat line dealt further ahead than the screen can show
+    while (nextBarStart - 1 < absBeat + LOOK + 1) dealBar();
+    blip(absBeat % 4 === 1 ? 700 : 520, 0.028, "square", 0.018);
+  }
+
+  function gameOver() {
+    state = "over";
+    if (score > best) { best = score; saveNum("nabiz-best", best); document.getElementById("overTitle").classList.add("best"); }
+    else document.getElementById("overTitle").classList.remove("best");
+    document.getElementById("overScore").textContent = fmt(score);
+    document.getElementById("overBest").textContent = fmt(best);
+    document.getElementById("overOn").textContent = onTimes;
+    document.getElementById("overLevel").textContent = level;
+    document.getElementById("overScreen").hidden = false;
+    syncHud();
+  }
+
+  function start() {
+    reset();
+    state = "play";
+    document.getElementById("startScreen").hidden = true;
+    document.getElementById("overScreen").hidden = true;
+    syncHud();
+  }
+
+  /* ---------- the loop ------------------------------------------ */
+  function step(dt) {
+    tRun += dt;
+    for (var i = 0; i < DRUMS; i++) if (padHot[i] > 0) padHot[i] = Math.max(0, padHot[i] - dt);
+    beatPulse = Math.max(0, beatPulse - dt * 4.2);
+    linePulse = Math.max(0, linePulse - dt * 3.4);
+    budgetFlash = Math.max(0, budgetFlash - dt * 4);
+    for (i = 0; i < events.length; i++) if (events[i].pop > 0) events[i].pop = Math.max(0, events[i].pop - dt);
+    for (i = pops.length - 1; i >= 0; i--) { pops[i].t += dt; if (pops[i].t > 0.85) pops.splice(i, 1); }
+    for (i = flashes.length - 1; i >= 0; i--) { flashes[i].t += dt; if (flashes[i].t > 0.4) flashes.splice(i, 1); }
+    if (state !== "play") return;
+    tBeat += dt;
+    var guard = 0;
+    while (tBeat >= tempo && guard++ < 8) { tBeat -= tempo; advanceBeat(); if (state !== "play") return; }
+  }
+
+  // continuous beat position, used for pip placement
+  function beatPos() { return absBeat + (state === "play" ? tBeat / tempo : 0); }
+
+  /* ---------- drawing ------------------------------------------- */
+  // deliberately does NOT begin a path: the well clip is built from four of
+  // these in one path. an earlier version began a path here, so the clip kept
+  // only the last column and pips in the other three were never drawn.
+  function rr(x, y, w, h, r) {
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  function draw() {
+    var hy = hitY(), pos = beatPos(), i, k;
+
+    ctx.fillStyle = "#0a0710";
+    ctx.fillRect(0, 0, VW, VH);
+
+    // the wells
+    for (i = 0; i < DRUMS; i++) {
+      var x = colX(i);
+      var g = ctx.createLinearGradient(0, LANE_TOP, 0, hy + 30);
+      g.addColorStop(0, "#150e1d");
+      g.addColorStop(1, "#1d1428");
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      rr(x, LANE_TOP - 16, COL_W, wellBot(hy) - LANE_TOP + 16, 8);
+      ctx.fill();
+      var fl = 0;
+      for (k = 0; k < flashes.length; k++) if (flashes[k].d === i) fl = Math.max(fl, 1 - flashes[k].t / 0.4);
+      if (fl > 0) {
+        ctx.fillStyle = "rgba(255,79,90," + (fl * 0.30).toFixed(3) + ")";
+        ctx.beginPath();
+        rr(x, LANE_TOP - 16, COL_W, wellBot(hy) - LANE_TOP + 16, 8);
+        ctx.fill();
+      }
+      ctx.strokeStyle = "rgba(242,233,247,0.07)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      rr(x + 0.5, LANE_TOP - 15.5, COL_W - 1, wellBot(hy) - LANE_TOP + 15, 8);
+      ctx.stroke();
+    }
+
+    // pips, clipped to the wells so nothing spills into the HUD
+    ctx.save();
+    ctx.beginPath();
+    for (i = 0; i < DRUMS; i++) rr(colX(i), LANE_TOP - 16, COL_W, wellBot(hy) - LANE_TOP + 16, 8);
+    ctx.clip();
+
+    // the beat has to be visible even when no pip is near the line -- phone
+    // audio latency means the sound can never be what you play to
+    var bh = beatH();
+    for (var gb = Math.floor(pos); gb <= pos + LOOK + 1; gb++) {
+      var gy = hy - (gb + 0.5 - pos) * bh;
+      if (gy < LANE_TOP - 20 || gy > wellBot(hy)) continue;
+      var strong = gb % 4 === 1;
+      ctx.fillStyle = strong ? "rgba(242,233,247,0.11)" : "rgba(242,233,247,0.045)";
+      for (var gi = 0; gi < DRUMS; gi++) ctx.fillRect(colX(gi) + 6, gy, COL_W - 12, strong ? 2 : 1);
+    }
+
+    for (k = 0; k < events.length; k++) {
+      var ev = events[k];
+      var dy = hy - (ev.b + 0.5 - pos) * bh;
+      if (dy < LANE_TOP - 60 || dy > wellBot(hy) + 20) continue;
+      var cx = colX(ev.d) + COL_W / 2;
+      var live = ev.st === 0;
+      var r = 19;
+      if (ev.pop > 0) r = 19 + ev.pop * 26;
+      if (!live && ev.pop <= 0) continue;
+
+      // a pip due on the same beat as another is the whole point, so mark it
+      var shared = false;
+      if (live) for (var j = 0; j < events.length; j++)
+        if (j !== k && events[j].st === 0 && events[j].b === ev.b) { shared = true; break; }
+
+      ctx.globalAlpha = live ? 1 : Math.max(0, ev.pop / 0.45);
+      if (shared) {
+        ctx.strokeStyle = "#fff6e8";
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(cx, dy, r + 6, 0, Math.PI * 2); ctx.stroke();
+      }
+      var col = ev.st === 3 ? "#ff4f5a" : DCOL[ev.d];
+      var ha = ctx.createRadialGradient(cx, dy, r * 0.6, cx, dy, r * 2.1);
+      ha.addColorStop(0, ev.st === 3 ? "rgba(255,79,90,0.30)" : "rgba(255,255,255,0.13)");
+      ha.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = ha;
+      ctx.beginPath(); ctx.arc(cx, dy, r * 2.1, 0, Math.PI * 2); ctx.fill();
+      var gg = ctx.createRadialGradient(cx, dy - r * 0.35, 1, cx, dy, r);
+      gg.addColorStop(0, "#ffffff");
+      gg.addColorStop(0.35, col);
+      gg.addColorStop(1, ev.st === 3 ? "#5c1a1e" : DDIM[ev.d]);
+      ctx.fillStyle = gg;
+      ctx.beginPath(); ctx.arc(cx, dy, r, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = "rgba(0,0,0,0.35)"; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(cx, dy, r, 0, Math.PI * 2); ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+    ctx.restore();
+
+    // the line
+    var lp = Math.max(beatPulse * 0.45, linePulse);
+    for (i = 0; i < DRUMS; i++) {
+      var x2 = colX(i);
+      ctx.fillStyle = "rgba(255,107,91," + (0.22 + lp * 0.55).toFixed(3) + ")";
+      ctx.fillRect(x2, hy - 2, COL_W, 4);
+      ctx.fillStyle = "rgba(255,246,232," + (0.10 + lp * 0.45).toFixed(3) + ")";
+      ctx.fillRect(x2, hy - 1, COL_W, 1);
+    }
+
+    // one strike per beat, shown as a bead that goes dark when spent
+    // the bead sits in the 26-unit gap between the line and the pads, and
+    // must stay clear of both -- it overlapped the pad tops before
+    var bx = VW / 2, by = hy + 13;
+    ctx.fillStyle = budget ? "#ffcf5b" : (budgetFlash > 0 ? "#ff4f5a" : "#3a2f45");
+    ctx.beginPath(); ctx.arc(bx, by, budget ? 5.5 : 4, 0, Math.PI * 2); ctx.fill();
+    if (budget) {
+      ctx.globalAlpha = 0.22 + beatPulse * 0.34;
+      ctx.beginPath(); ctx.arc(bx, by, 10, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+
+    // bar progress across the top of the wells
+    var done = Math.min(BAR, Math.max(0, absBeat - barStart + 1));
+    ctx.fillStyle = "rgba(242,233,247,0.10)";
+    ctx.fillRect(COL_L, LANE_TOP - 27, VW - COL_L * 2, 3);
+    ctx.fillStyle = "rgba(255,207,91,0.65)";
+    ctx.fillRect(COL_L, LANE_TOP - 27, (VW - COL_L * 2) * (done / BAR), 3);
+
+    // pops
+    ctx.textAlign = "center";
+    for (k = 0; k < pops.length; k++) {
+      var p = pops[k], a = 1 - p.t / 0.85;
+      ctx.globalAlpha = a;
+      ctx.fillStyle = p.col;
+      ctx.font = Math.round(8 * p.sz) + "px 'Press Start 2P', monospace";
+      ctx.fillText(p.txt, p.x, p.y - p.t * 26);
+      ctx.globalAlpha = 1;
+    }
+    ctx.textAlign = "left";
+  }
+
+  /* ---------- HUD ----------------------------------------------- */
+  var hScore = document.getElementById("hScore"), hBest = document.getElementById("hBest");
+  var hCombo = document.getElementById("hCombo"), hLevel = document.getElementById("hLevel");
+  var hHearts = document.getElementById("hHearts");
+  var pdEl = [];
+  for (var q = 0; q < DRUMS; q++) pdEl.push(document.querySelector('.pd[data-i="' + q + '"]'));
+
+  function fmt(n) { return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
+  function syncHud() {
+    hScore.textContent = fmt(score);
+    hBest.textContent = fmt(best);
+    hBest.classList.toggle("lead", score >= best && score > 0);
+    var m = comboMult();
+    hCombo.textContent = "×" + (Math.round(m * 100) / 100);
+    hCombo.classList.toggle("cold", combo === 0);
+    hLevel.textContent = level;
+    var s = "";
+    for (var i = 0; i < 3; i++) s += i < hearts ? "●" : "○";
+    hHearts.textContent = s;
+  }
+
+  function syncPads() {
+    for (var i = 0; i < DRUMS; i++) {
+      var hot = padHot[i] > 0;
+      if (pdEl[i]._hot !== hot) { pdEl[i]._hot = hot; pdEl[i].classList.toggle("hot", hot); }
+      var ev = state === "play" ? pending(i) : null;
+      var due = !!(ev && ev.b === absBeat);
+      if (padDue[i] !== due) { padDue[i] = due; pdEl[i].classList.toggle("due", due); }
+    }
+  }
+
+  function saveNum(k, v) { try { localStorage.setItem(k, String(v)); } catch (e) {} }
+  function loadNum(k) { try { var v = parseInt(localStorage.getItem(k), 10); return isFinite(v) ? v : 0; } catch (e) { return 0; } }
+
+  /* ---------- input --------------------------------------------- */
+  document.getElementById("pads").addEventListener("pointerdown", function (e) {
+    var pd = e.target.closest ? e.target.closest(".pd") : null;
+    if (!pd) return;
+    e.preventDefault();
+    strikePad(parseInt(pd.dataset.i, 10));
+  }, { passive: false });
+
+  document.getElementById("btnStart").addEventListener("click", function (e) { e.stopPropagation(); start(); });
+  document.getElementById("btnAgain").addEventListener("click", function (e) { e.stopPropagation(); start(); });
+  document.getElementById("startScreen").addEventListener("pointerdown", function () { start(); });
+  document.getElementById("overScreen").addEventListener("pointerdown", function () { start(); });
+
+  var KEYS = { KeyA: 0, KeyS: 1, KeyD: 2, KeyF: 3, Digit1: 0, Digit2: 1, Digit3: 2, Digit4: 3 };
+  window.addEventListener("keydown", function (e) {
+    if (e.repeat) return;
+    if (e.code === "Space" || e.code === "Enter") {
+      if (state !== "play") { e.preventDefault(); start(); }
+      return;
+    }
+    if (e.code === "KeyR") { e.preventDefault(); start(); return; }
+    var i = KEYS[e.code];
+    if (i !== undefined) { e.preventDefault(); strikePad(i); }
+  });
+
+  /* ---------- layout -------------------------------------------- */
+  function resize() {
+    dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+    var w = wrap.clientWidth, h = wrap.clientHeight;
+    cv.width = Math.round(w * dpr);
+    cv.height = Math.round(h * dpr);
+    scale = Math.min((w * dpr) / VW, (h * dpr) / MIN_VH);
+    originX = Math.round(((w * dpr) - VW * scale) / 2);
+    VH = (h * dpr) / scale;
+    wrap.style.setProperty("--gut", (originX / dpr) + "px");
+    wrap.style.setProperty("--ph", (PAD_H * scale / dpr) + "px");
+    wrap.style.setProperty("--pb", (PAD_B * scale / dpr) + "px");
+    ctx.setTransform(scale, 0, 0, scale, originX, 0);
+    render();
+  }
+
+  function render() {
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.fillStyle = "#05030a";
+    ctx.fillRect(0, 0, cv.width, cv.height);
+    ctx.restore();
+    draw();
+    if (originX > 0) {
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.fillStyle = "rgba(242,233,247,0.07)";
+      ctx.fillRect(originX - 1, 0, 1, cv.height);
+      ctx.fillRect(originX + VW * scale, 0, 1, cv.height);
+      ctx.restore();
+    }
+  }
+
+  var last = 0;
+  function frame(now) {
+    requestAnimationFrame(frame);
+    var dt = last ? Math.min(0.032, (now - last) / 1000) : 0;
+    last = now;
+    step(dt);
+    syncPads();
+    render();
+  }
+
+  best = loadNum("nabiz-best");
+  reset();
+  syncHud();
+  resize();
+  if (window.ResizeObserver) new ResizeObserver(resize).observe(wrap);
+  window.addEventListener("resize", resize);
+  requestAnimationFrame(frame);
+
+})();
+</script>
+</body>
+</html>
