@@ -66,6 +66,7 @@
     --ray:     #4cd97b;
     --fener:   #ffdca8;
     --takla:   #b48cff;
+    --ikiz:    #ff7ad9;
 
     --cell-font: "Press Start 2P", ui-monospace, "Courier New", monospace;
     --read-font: "VT323", ui-monospace, "Courier New", monospace;
@@ -260,6 +261,7 @@
   .ray { --accent: var(--ray); }
   .fener { --accent: var(--fener); }
   .takla { --accent: var(--takla); }
+  .ikiz { --accent: var(--ikiz); }
 
   /* ---------- footer ---------- */
   .foot {
@@ -623,6 +625,17 @@
         <h2>TAKLA</h2>
         <p>One button, and the whole game is in it. Hold to spin, let go and the rider straightens up &mdash; which takes time you may not have left. You keep the flips you more than half finished. Every ramp is signed with the trick it will give you and the sign never lies, but a gold sign means there is one more in it if you can read the air. The speed you win from flips is the speed that clears the next gap, so a bail costs you both.</p>
         <span class="keys">Hold anywhere &middot; Space</span>
+        <span class="play">&#9654; PLAY</span>
+      </div>
+    </a>
+
+    <a class="cab ikiz" href="games/ikiz/">
+      <div class="tube"><canvas data-demo="twin" aria-hidden="true"></canvas></div>
+      <div class="plate">
+        <span class="no">CABINET NO. 25 &mdash; 1983</span>
+        <h2>İKİZ</h2>
+        <p>Every other cabinet here gives you one thing to control. This one gives you two, and one input for both &mdash; going left for one twin sends the other right. Catch the fruit on either side, dodge the bombs on both. A safe lane always exists and no bomb is ever allowed into it; the fruit is what pulls you out. The hard part is not your thumb, it is that you cannot watch both halves at once.</p>
+        <span class="keys">Drag the rail &middot; Arrows</span>
         <span class="play">&#9654; PLAY</span>
       </div>
     </a>
@@ -2950,13 +2963,67 @@
     }
   }
 
+
+  /* ---------- ikiz: one input, two mirrored twins ---------- */
+  var ik = null;
+  function ikInit(W, H) {
+    return { W: W, H: H, last: 0, t: 0, u: 0.5, tgt: 0.5, items: [], spawn: 0 };
+  }
+  function drawTwin(ctx, W, H, now) {
+    if (!ik || ik.W !== W) ik = ikInit(W, H);
+    var v = ik, dt = Math.min(0.05, (now - (v.last || now)) / 1000);
+    v.last = now; v.t += dt;
+    var halfW = W / 2, pad = 6, cw = 18, travel = halfW - pad * 2 - cw;
+    var cy = H - 22, tol = (cw / 2 + 5) / travel;
+
+    v.spawn -= dt;
+    if (v.spawn <= 0) {
+      v.spawn = 0.42;
+      var line = 0.5 + 0.32 * Math.sin(1.3 * v.t) + 0.13 * Math.sin(2.7 * v.t);
+      var bomb = Math.random() < 0.45, ur;
+      if (bomb) { for (var g = 0; g < 30; g++) { ur = Math.random(); if (Math.abs(ur - line) > tol + 0.16) break; } }
+      else ur = Math.max(0, Math.min(1, line + (Math.random() - 0.5) * 0.3));
+      v.items.push({ side: Math.random() < 0.5 ? 0 : 1, ur: ur, y: -6, bomb: bomb });
+    }
+    // the demo rides its own safe line, drifting for fruit
+    var aim = 0.5 + 0.32 * Math.sin(1.3 * (v.t + 0.25)) + 0.13 * Math.sin(2.7 * (v.t + 0.25));
+    v.tgt = Math.max(0, Math.min(1, aim));
+    var d = v.tgt - v.u, st = 1.7 * dt;
+    v.u += Math.abs(d) <= st ? d : (d > 0 ? st : -st);
+
+    ctx.fillStyle = "#0a0f16"; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = "#16222f";
+    ctx.fillRect(pad, 4, halfW - pad * 2, H - 10);
+    ctx.fillRect(halfW + pad, 4, halfW - pad * 2, H - 10);
+    ctx.fillStyle = "rgba(79,214,255,0.14)"; ctx.fillRect(halfW - 1, 4, 2, H - 10);
+
+    function xAt(side, ur) {
+      var lx = pad + cw / 2 + ur * travel;
+      return side === 0 ? lx : W - lx;
+    }
+    for (var i = v.items.length - 1; i >= 0; i--) {
+      var it = v.items[i];
+      it.y += 46 * dt;
+      if (it.y > cy + 10) { v.items.splice(i, 1); continue; }
+      var x = xAt(it.side, it.ur);
+      ctx.fillStyle = it.bomb ? "#ff4f5a" : "#7cf06a";
+      ctx.beginPath(); ctx.arc(x, it.y, 4.5, 0, 6.283); ctx.fill();
+    }
+    var lx2 = pad + cw / 2 + v.u * travel;
+    ctx.fillStyle = "#4fd6ff"; ctx.fillRect(lx2 - cw / 2, cy - 4, cw, 8);
+    ctx.fillStyle = "#ff7ad9"; ctx.fillRect(W - lx2 - cw / 2, cy - 4, cw, 8);
+    ctx.fillStyle = "rgba(255,255,255,0.35)";
+    ctx.fillRect(lx2 - cw / 2, cy - 4, cw, 2);
+    ctx.fillRect(W - lx2 - cw / 2, cy - 4, cw, 2);
+  }
+
   /* ---------- wire up ---------- */
-  var painters = { snake: drawSnake, road: drawRoad, lander: drawLander, flap: drawFlap, brick: drawBrick, maze: drawMaze, arch: drawArch, rocks: drawRocks, loom: drawLoom, invade: drawInvade, fuse: drawFuse, pong: drawPong, lamps: drawLamps, climb: drawClimb, lanes: drawLanes, swing: drawSwing, mine: drawMine, sky: drawSky, paint: drawFence, rails: drawRails, night: drawNight, flip: drawFlip };
+  var painters = { snake: drawSnake, road: drawRoad, lander: drawLander, flap: drawFlap, brick: drawBrick, maze: drawMaze, arch: drawArch, rocks: drawRocks, loom: drawLoom, invade: drawInvade, fuse: drawFuse, pong: drawPong, lamps: drawLamps, climb: drawClimb, lanes: drawLanes, swing: drawSwing, mine: drawMine, sky: drawSky, paint: drawFence, rails: drawRails, night: drawNight, flip: drawFlip, twin: drawTwin };
   Array.prototype.forEach.call(document.querySelectorAll("[data-demo]"), function (c) {
     var fn = painters[c.dataset.demo];
     if (fn) register(c, fn, c.dataset.demo === "flap" || c.dataset.demo === "brick" || c.dataset.demo === "maze" || c.dataset.demo === "arch" ||
                        c.dataset.demo === "rocks" || c.dataset.demo === "loom" ||
-                       c.dataset.demo === "invade" || c.dataset.demo === "fuse" || c.dataset.demo === "pong" || c.dataset.demo === "lamps" || c.dataset.demo === "climb" || c.dataset.demo === "lanes" || c.dataset.demo === "swing" || c.dataset.demo === "mine" || c.dataset.demo === "sky" || c.dataset.demo === "paint" || c.dataset.demo === "rails" || c.dataset.demo === "night" || c.dataset.demo === "flip");
+                       c.dataset.demo === "invade" || c.dataset.demo === "fuse" || c.dataset.demo === "pong" || c.dataset.demo === "lamps" || c.dataset.demo === "climb" || c.dataset.demo === "lanes" || c.dataset.demo === "swing" || c.dataset.demo === "mine" || c.dataset.demo === "sky" || c.dataset.demo === "paint" || c.dataset.demo === "rails" || c.dataset.demo === "night" || c.dataset.demo === "flip" || c.dataset.demo === "twin");
   });
 
   if (window.ResizeObserver) {
