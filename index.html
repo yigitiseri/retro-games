@@ -64,6 +64,7 @@
     --fisek:   #ff6ea8;
     --boya:    #e8452f;
     --ray:     #4cd97b;
+    --fener:   #ffdca8;
 
     --cell-font: "Press Start 2P", ui-monospace, "Courier New", monospace;
     --read-font: "VT323", ui-monospace, "Courier New", monospace;
@@ -256,6 +257,7 @@
   .fisek { --accent: var(--fisek); }
   .boya { --accent: var(--boya); }
   .ray { --accent: var(--ray); }
+  .fener { --accent: var(--fener); }
 
   /* ---------- footer ---------- */
   .foot {
@@ -597,6 +599,17 @@
         <h2>RAY</h2>
         <p>The strategy cabinet. There is no brake and no steering &mdash; you lay the rail ahead of the train, left, ahead or right, and it takes whatever line you built. Ties arrive one at a time from the depot, so a long straight burns them faster than they come; straight track is fast and pays double, and every bend hands the speed back. Run out of rail and you derail.</p>
         <span class="keys">Three buttons &middot; Arrows</span>
+        <span class="play">&#9654; PLAY</span>
+      </div>
+    </a>
+
+    <a class="cab fener" href="games/fener/">
+      <div class="tube"><canvas data-demo="night" aria-hidden="true"></canvas></div>
+      <div class="plate">
+        <span class="no">CABINET NO. 23 &mdash; 1985</span>
+        <h2>FENER</h2>
+        <p>The only cabinet here that hides anything from you. A minefield crossed on foot at night: stand on a square and it tells you how many mines touch it, and you work out the rest. You are crossing, not clearing, so a corner you cannot solve can be walked around. No field ever makes you guess &mdash; every one is thrown away unless a solver can cross it &mdash; so a mine is always a choice you made. The lamp is the clock, and the oil is always lying next to a mine.</p>
+        <span class="keys">D-pad to walk &middot; Tap to mark</span>
         <span class="play">&#9654; PLAY</span>
       </div>
     </a>
@@ -2755,13 +2768,106 @@
     }
   }
 
+
+  /* ---------- fener: a minefield crossed on foot, by lamplight ---------- */
+  var fnr = null;
+  var FN_NUM = ["", "#7fb3ff", "#6fdc8c", "#ff8a78", "#c99bff", "#ffb04f", "#5fe4e4", "#fff", "#b9c2cf"];
+  function fnrField(v) {
+    var i, c, r, n = v.CO * v.RO;
+    v.mine = []; v.seen = []; v.num = [];
+    for (i = 0; i < n; i++) { v.mine.push(0); v.seen.push(0); v.num.push(0); }
+    var want = 7;
+    while (want > 0) {
+      c = 1 + Math.floor(Math.random() * (v.CO - 2));
+      r = Math.floor(Math.random() * v.RO);
+      if (!v.mine[r * v.CO + c]) { v.mine[r * v.CO + c] = 1; want--; }
+    }
+    // carve the way across first, so the walker always has one
+    v.path = [];
+    var pr = Math.floor(v.RO / 2);
+    for (c = 0; c < v.CO; c++) {
+      if (Math.random() < 0.45) pr += Math.random() < 0.5 ? 1 : -1;
+      pr = Math.max(0, Math.min(v.RO - 1, pr));
+      v.mine[pr * v.CO + c] = 0;
+      v.path.push(pr * v.CO + c);
+    }
+    for (i = 0; i < n; i++) {
+      var cc = i % v.CO, rr = (i / v.CO) | 0, k = 0;
+      for (var dc = -1; dc <= 1; dc++) for (var dr = -1; dr <= 1; dr++) {
+        if (!dc && !dr) continue;
+        var nc = cc + dc, nr = rr + dr;
+        if (nc < 0 || nc >= v.CO || nr < 0 || nr >= v.RO) continue;
+        if (v.mine[nr * v.CO + nc]) k++;
+      }
+      v.num[i] = k;
+    }
+    v.at = 2;                                 // start mid-crossing, with clues already up
+    for (i = 0; i <= v.at; i++) v.seen[v.path[i]] = 1;
+    v.wait = 0;
+  }
+  function fnrInit(W, H) {
+    var CO = 8, RO = 6;
+    var v = { W: W, CO: CO, RO: RO, T: Math.min(W / CO, H / RO), last: 0, t: 0, tick: 0 };
+    v.OX = (W - v.T * CO) / 2; v.OY = (H - v.T * RO) / 2;
+    fnrField(v);
+    return v;
+  }
+  function drawNight(ctx, W, H, now) {
+    if (!fnr || fnr.W !== W) fnr = fnrInit(W, H);
+    var v = fnr, T = v.T, dt = Math.min(0.05, (now - (v.last || now)) / 1000);
+    v.last = now; v.t += dt;
+
+    v.tick -= dt;
+    if (v.tick <= 0) {
+      v.tick = 0.42;
+      if (v.at < v.path.length - 1) { v.at++; v.seen[v.path[v.at]] = 1; }
+      else { v.wait += 0.42; if (v.wait > 0.85) fnrField(v); }
+    }
+
+    ctx.fillStyle = "#0e1520";
+    ctx.fillRect(0, 0, W, H);
+    var i, c, r, x, y;
+    for (r = 0; r < v.RO; r++) for (c = 0; c < v.CO; c++) {
+      i = r * v.CO + c; x = v.OX + c * T; y = v.OY + r * T;
+      var road = (c === 0 || c === v.CO - 1);
+      ctx.fillStyle = road ? "#59667f" : (v.seen[i] ? "#42506c" : "#1e2736");
+      ctx.fillRect(x + 0.5, y + 0.5, T - 1, T - 1);
+      if (v.seen[i] && v.num[i]) {
+        ctx.fillStyle = FN_NUM[v.num[i]];
+        ctx.font = Math.round(T * 0.46) + "px monospace";
+        ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.fillText(String(v.num[i]), x + T / 2, y + T / 2 + 1);
+      }
+    }
+    // lamplight, which is the whole look of the cabinet
+    var p = v.path[v.at], px = v.OX + (p % v.CO) * T + T / 2, py = v.OY + (((p / v.CO) | 0)) * T + T / 2;
+    var R = T * (3.35 + 0.20 * Math.sin(v.t * 5.3) + 0.09 * Math.sin(v.t * 11.7));
+    var g = ctx.createRadialGradient(px, py, R * 0.22, px, py, R);
+    g.addColorStop(0, "rgba(10,16,26,0)");
+    g.addColorStop(1, "rgba(8,12,20,0.60)");
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    var w = ctx.createRadialGradient(px, py, 0, px, py, R * 0.7);
+    w.addColorStop(0, "rgba(255,196,108," + (0.27 + 0.06 * Math.sin(v.t * 7.1)).toFixed(3) + ")");
+    w.addColorStop(1, "rgba(255,196,108,0)");
+    ctx.fillStyle = w; ctx.fillRect(0, 0, W, H);
+
+    ctx.fillStyle = "#31405a";
+    ctx.fillRect(px - T * 0.16, py - T * 0.14, T * 0.32, T * 0.36);
+    ctx.fillStyle = "#e6ecf6";
+    ctx.fillRect(px - T * 0.10, py - T * 0.30, T * 0.20, T * 0.18);
+    ctx.fillStyle = "#1b2532";
+    ctx.fillRect(px - T * 0.13, py - T * 0.34, T * 0.26, T * 0.10);
+    ctx.fillStyle = "#ffdca8";
+    ctx.fillRect(px + T * 0.20, py - T * 0.04 + Math.sin(v.t * 4) * 1.2, T * 0.11, T * 0.13);
+  }
+
   /* ---------- wire up ---------- */
-  var painters = { snake: drawSnake, road: drawRoad, lander: drawLander, flap: drawFlap, brick: drawBrick, maze: drawMaze, arch: drawArch, rocks: drawRocks, loom: drawLoom, invade: drawInvade, fuse: drawFuse, pong: drawPong, lamps: drawLamps, climb: drawClimb, lanes: drawLanes, swing: drawSwing, mine: drawMine, sky: drawSky, paint: drawFence, rails: drawRails };
+  var painters = { snake: drawSnake, road: drawRoad, lander: drawLander, flap: drawFlap, brick: drawBrick, maze: drawMaze, arch: drawArch, rocks: drawRocks, loom: drawLoom, invade: drawInvade, fuse: drawFuse, pong: drawPong, lamps: drawLamps, climb: drawClimb, lanes: drawLanes, swing: drawSwing, mine: drawMine, sky: drawSky, paint: drawFence, rails: drawRails, night: drawNight };
   Array.prototype.forEach.call(document.querySelectorAll("[data-demo]"), function (c) {
     var fn = painters[c.dataset.demo];
     if (fn) register(c, fn, c.dataset.demo === "flap" || c.dataset.demo === "brick" || c.dataset.demo === "maze" || c.dataset.demo === "arch" ||
                        c.dataset.demo === "rocks" || c.dataset.demo === "loom" ||
-                       c.dataset.demo === "invade" || c.dataset.demo === "fuse" || c.dataset.demo === "pong" || c.dataset.demo === "lamps" || c.dataset.demo === "climb" || c.dataset.demo === "lanes" || c.dataset.demo === "swing" || c.dataset.demo === "mine" || c.dataset.demo === "sky" || c.dataset.demo === "paint" || c.dataset.demo === "rails");
+                       c.dataset.demo === "invade" || c.dataset.demo === "fuse" || c.dataset.demo === "pong" || c.dataset.demo === "lamps" || c.dataset.demo === "climb" || c.dataset.demo === "lanes" || c.dataset.demo === "swing" || c.dataset.demo === "mine" || c.dataset.demo === "sky" || c.dataset.demo === "paint" || c.dataset.demo === "rails" || c.dataset.demo === "night");
   });
 
   if (window.ResizeObserver) {
