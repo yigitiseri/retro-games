@@ -1,0 +1,642 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="description" content="A stealth cabinet with one control: hold to walk, let go to stand still. Light fills the alarm, dark drains it, and every room can be crossed but never without taking some light.">
+<meta name="theme-color" content="#08090e">
+<style>
+  :root {
+    color-scheme: dark;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  body { margin: 0; }
+  img { max-width: 100%; }
+  [hidden] { display: none !important; }
+</style>
+<title>GÖLGE — Retro Games Arcade</title>
+<link rel="preload" href="../../assets/fonts/press-start-2p-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../assets/fonts/fonts.css">
+<style>
+  :root {
+    --ink:    #070a10;
+    --floor:  #131b26;
+    --floor2: #18222f;
+    --beam:   #ffe08a;
+    --guard:  #ff6b5c;
+    --you:    #6ad9c0;
+    --loot:   #ffc857;
+    --alarm:  #ff4f5a;
+    --paper:  #e6eef7;
+    --dim:    rgba(230, 238, 247, 0.45);
+    --hud: "Press Start 2P", monospace;
+    --ui: "VT323", ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; margin: 0; overflow: hidden; }
+  body { background: var(--ink); color: var(--paper); font-family: var(--ui);
+         user-select: none; touch-action: none; overscroll-behavior: none; }
+  #wrap { position: fixed; inset: 0; }
+  canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; }
+  .scrim { position: absolute; left: 0; right: 0; top: 0; height: 170px; z-index: 1; pointer-events: none;
+           background: linear-gradient(180deg, rgba(7,10,16,0.88), rgba(7,10,16,0.45) 55%, rgba(7,10,16,0)); }
+
+  .hud { position: absolute; top: 0; left: 0; right: 0;
+    padding: calc(env(safe-area-inset-top, 0px) + 10px) calc(var(--gut, 0px) + 12px) 0;
+    display: grid; grid-template-columns: 1fr auto 1fr; align-items: start;
+    pointer-events: none; z-index: 2; font-family: var(--hud); }
+  .hud .k { font-size: 7px; letter-spacing: 0.16em; color: var(--dim); }
+  .hud .score { font-size: clamp(15px, 5vw, 21px); line-height: 1.5; }
+  .hud .best { font-size: 10px; color: var(--dim); line-height: 1.7; }
+  .hud .best.lead { color: var(--loot); }
+  .hud .right { text-align: right; }
+  .mid { text-align: center; }
+  .mid .v { font-size: clamp(14px, 4.6vw, 19px); line-height: 1.5; color: var(--you); }
+  .mid .v.tight { color: var(--alarm); }
+
+  .bar { position: absolute; left: calc(var(--gut, 0px) + 12px); right: calc(var(--gut, 0px) + 12px);
+    top: calc(env(safe-area-inset-top, 0px) + 74px); height: 7px;
+    background: rgba(230,238,247,0.10); border-radius: 4px; overflow: hidden; z-index: 2; pointer-events: none; }
+  .bar i { display: block; height: 100%; width: 100%; transform-origin: left center;
+           background: linear-gradient(90deg, #7a5a12, var(--beam), var(--alarm)); }
+  .bar u { position: absolute; top: -3px; width: 2px; height: 13px; background: rgba(230,238,247,0.35); }
+
+  .screen { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center;
+    gap: 15px; text-align: center; padding: 26px; z-index: 3;
+    background: radial-gradient(120% 90% at 50% 42%, rgba(7,10,16,0.88), rgba(7,10,16,0.97)); }
+  .screen[hidden] { display: none; }
+  .title { font-family: var(--hud); font-size: clamp(28px, 11.5vw, 48px); letter-spacing: 5px; line-height: 1.4;
+    background: linear-gradient(180deg, #fff, var(--you) 48%, #1d6f60);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 0 22px rgba(106,217,192,0.40)); }
+  .sub { font-family: var(--hud); font-size: clamp(8px, 2.7vw, 10px); letter-spacing: 0.2em; color: var(--you); }
+  .lines { font-size: clamp(17px, 4.6vw, 20px); line-height: 1.5; color: #d3dfec; max-width: 34ch; }
+  .lines b { color: var(--beam); }
+  .lines .bad { color: var(--alarm); }
+  .btn { margin-top: 4px; font-family: var(--hud); font-size: 11px; letter-spacing: 0.14em;
+    padding: 14px 28px; color: #06120f; border: 0; border-radius: 4px; cursor: pointer;
+    background: linear-gradient(180deg, #bff3e7, var(--you));
+    box-shadow: 0 3px 0 #1a5e52, 0 0 26px rgba(106,217,192,0.32); }
+  .btn:active { transform: translateY(2px); box-shadow: 0 1px 0 #1a5e52; }
+  .hintline { font-family: var(--hud); font-size: 7px; letter-spacing: 0.13em; color: var(--dim); line-height: 2; }
+  .over-title { font-family: var(--hud); font-size: clamp(13px, 4.6vw, 19px); color: var(--alarm); letter-spacing: 0.1em; }
+  .over-title.best { color: var(--loot); }
+  .final { font-family: var(--hud); font-size: clamp(22px, 8vw, 36px); line-height: 1.4; }
+  .stats { display: grid; grid-template-columns: repeat(3, auto); gap: 8px 20px; justify-content: center; font-family: var(--hud); }
+  .stats .k { font-size: 7px; letter-spacing: 0.15em; color: var(--dim); }
+  .stats .v { font-size: 12px; margin-top: 4px; }
+  .stats .v.gold { color: var(--loot); }
+</style>
+<link rel="canonical" href="https://yigitiseri.github.io/retro-games/games/golge/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Retro Games Arcade">
+<meta property="og:title" content="GÖLGE — Retro Games Arcade">
+<meta property="og:description" content="A stealth cabinet with one control: hold to walk, let go to stand still. Light fills the alarm, dark drains it, and every room can be crossed but never without taking some light.">
+<meta property="og:url" content="https://yigitiseri.github.io/retro-games/games/golge/">
+<meta property="og:image" content="https://yigitiseri.github.io/retro-games/assets/social-card.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="GÖLGE — Retro Games Arcade">
+<meta name="twitter:description" content="A stealth cabinet with one control: hold to walk, let go to stand still. Light fills the alarm, dark drains it, and every room can be crossed but never without taking some light.">
+<meta name="twitter:image" content="https://yigitiseri.github.io/retro-games/assets/social-card.png">
+
+<!-- Cloudflare Web Analytics: no cookies, no client-side storage -->
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "aee6e644a3b74cb9bdaf4e1569d570e2"}'></script>
+<!-- End Cloudflare Web Analytics -->
+
+</head>
+<body>
+<div id="wrap">
+  <canvas id="c"></canvas>
+  <div class="scrim"></div>
+
+  <div class="hud">
+    <div>
+      <div class="k">SCORE</div><div class="score" id="hScore">0</div>
+      <div class="k" style="margin-top:5px">BEST</div><div class="best" id="hBest">0</div>
+    </div>
+    <div class="mid">
+      <div class="k">SHIFT ENDS</div><div class="v" id="hClock">10.0</div>
+    </div>
+    <div class="right">
+      <div class="k">ROOM</div><div class="best" id="hRoom">1</div>
+      <div class="k" style="margin-top:5px">TAKEN</div><div class="best" id="hLoot">0</div>
+    </div>
+  </div>
+  <div class="bar"><i id="hBar"></i><u id="hMark"></u></div>
+
+  <div class="screen" id="startScreen">
+    <div class="title">GÖLGE</div>
+    <div class="sub">WAIT. THEN GO.</div>
+    <div class="lines">
+      <b>Hold to walk, let go to stand still.</b> That is the only control
+      you have.
+    </div>
+    <div class="lines" style="font-size:16px;opacity:0.84">
+      Standing in a beam fills the alarm; standing in the dark empties it.
+      Every room can be crossed, but <b>never without taking some light</b>
+      &mdash; so it is a question of how much, and the shift clock will not
+      let you wait all night. Fill the alarm and you are
+      <span class="bad">seen</span>.
+    </div>
+    <button class="btn" id="btnStart">SLIP IN</button>
+    <div class="hintline">HOLD ANYWHERE &middot; SPACE</div>
+  </div>
+
+  <div class="screen" id="overScreen" hidden>
+    <div class="over-title" id="overTitle">SEEN</div>
+    <div class="final" id="overScore">0</div>
+    <div class="stats">
+      <div><div class="k">BEST</div><div class="v gold" id="overBest">0</div></div>
+      <div><div class="k">ROOMS</div><div class="v" id="overRooms">0</div></div>
+      <div><div class="k">TAKEN</div><div class="v gold" id="overLoot">0</div></div>
+    </div>
+    <button class="btn" id="btnAgain">AGAIN</button>
+    <div class="hintline">TAP OR PRESS R</div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ============================================================
+     GÖLGE -- the other side of hidden information.
+
+     FENER hides the field from you. This hides you from the guards,
+     which is a different game: you can see everything, and the
+     question is only when to move.
+
+     Hold to walk, let go to stand. Light fills an alarm, dark drains
+     it. The promise is that every room can be crossed -- verified by
+     a dynamic program over time and position that carries the least
+     alarm you could arrive with, and binary-searched for the lowest
+     peak any route can manage. Rooms whose best route would still be
+     caught, or which cannot be done before the shift ends, are
+     thrown away before you see them.
+
+     Asking that program for the alarm at the EXIT was useless: you
+     always drain to nothing in the last patch of shadow, so the
+     answer was always zero however bright the room. The peak is what
+     matters, and measured that way you are forced to take a quarter
+     of the alarm on a typical room and four fifths on the worst.
+     ============================================================ */
+
+  var VW = 420, VH = 780, MIN_VH = 720;
+  var L = 700, V = 96;                      // route length and walking speed
+  var FILL = 0.62, DRAIN = 0.85;            // alarm per second in light / in dark
+  var SHIFT = (L / V) * 1.4;                // seconds to cross before the shift ends
+  var CAP = 0.85;                           // a room whose best route peaks above this is thrown away
+  var MAX_PARTS = 150;
+
+  var cv = document.getElementById("c");
+  var ctx = cv.getContext("2d");
+  var wrap = document.getElementById("wrap");
+  var hScore = document.getElementById("hScore");
+  var hBest = document.getElementById("hBest");
+  var hClock = document.getElementById("hClock");
+  var hRoom = document.getElementById("hRoom");
+  var hLoot = document.getElementById("hLoot");
+  var hBar = document.getElementById("hBar");
+  var hMark = document.getElementById("hMark");
+  var startScreen = document.getElementById("startScreen");
+  var overScreen = document.getElementById("overScreen");
+  var overTitle = document.getElementById("overTitle");
+  var overScore = document.getElementById("overScore");
+  var overBest = document.getElementById("overBest");
+  var overRooms = document.getElementById("overRooms");
+  var overLoot = document.getElementById("overLoot");
+
+  var state = "start";
+  var guards, route, loot, s, alarm, clock, level, score, best, lootGot, rooms;
+  var tRun, walking, parts, pops, shake, flash, beatBest, overWait, litNow, rolls;
+
+  function loadNum(k) { try { return parseInt(localStorage.getItem(k), 10) || 0; } catch (e) { return 0; } }
+  function saveNum(k, v) { try { localStorage.setItem(k, String(Math.floor(v))); } catch (e) {} }
+
+  var seed = 1, lockSeed = null;
+  function rnd() { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; }
+
+  /* ---------------- audio ---------------- */
+  var actx = null;
+  function blip(f, d, ty, vol, sl) {
+    try {
+      if (!actx) { var AC = window.AudioContext || window.webkitAudioContext; if (!AC) return; actx = new AC(); }
+      if (actx.state === "suspended") actx.resume();
+      var o = actx.createOscillator(), g = actx.createGain();
+      o.type = ty || "sine"; o.frequency.setValueAtTime(f, actx.currentTime);
+      if (sl) o.frequency.exponentialRampToValueAtTime(sl, actx.currentTime + d);
+      g.gain.setValueAtTime(vol || 0.05, actx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.0001, actx.currentTime + d);
+      o.connect(g); g.connect(actx.destination); o.start(); o.stop(actx.currentTime + d);
+    } catch (e) {}
+  }
+
+  /* ---------------- sizing ---------------- */
+  var dpr = 1, scale = 1, originX = 0;
+  function resize() {
+    var w = wrap.clientWidth, h = wrap.clientHeight;
+    if (!w || !h) return;
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+    scale = Math.min((w * dpr) / VW, (h * dpr) / MIN_VH);
+    originX = Math.round(((w * dpr) - VW * scale) / 2);
+    VH = (h * dpr) / scale;
+    wrap.style.setProperty("--gut", (originX / dpr) + "px");
+  }
+
+  /* ---------------- the room ----------------
+     The route is a zigzag through the floor. Everything the rules care
+     about is its arc length, so the light model and the drawing agree by
+     construction: a beam is drawn from the post to the very stretch of
+     route the model says it covers. */
+  function makeRoute() {
+    var pts = [], n = 7;
+    for (var i = 0; i <= n; i++) {
+      var f = i / n;
+      pts.push({ x: 210 + Math.sin(f * 5.1 + 1.2) * 108, y: 40 + (1 - f) * 0 });
+    }
+    // lay them out by arc length so spacing is even
+    var seg = L / n, acc = 0;
+    for (var k = 0; k <= n; k++) { pts[k].s = k * seg; }
+    return pts;
+  }
+  function routeAt(arc) {
+    var n = route.length - 1, seg = L / n;
+    var i = Math.max(0, Math.min(n - 1, Math.floor(arc / seg)));
+    var f = (arc - i * seg) / seg;
+    var a = route[i], b = route[i + 1];
+    return { x: a.x + (b.x - a.x) * f, y: arc };    // y is the arc itself: the route climbs steadily
+  }
+
+  function litAt(arc, t) {
+    for (var i = 0; i < guards.length; i++) {
+      var g = guards[i], d = arc - g.at;
+      if (Math.abs(d) > g.reach) continue;
+      if (Math.abs(d - g.span * Math.sin(g.w * t + g.ph)) <= g.width) return true;
+    }
+    return false;
+  }
+
+  function rollGuards(lv) {
+    var n = Math.min(6, 1 + Math.floor(lv * 0.7 + rnd() * 0.8)), out = [];
+    for (var i = 0; i < n; i++) {
+      out.push({
+        at: L * (i + 0.7 + rnd() * 0.6) / (n + 0.8),
+        reach: 150 + rnd() * 60, width: 26 + rnd() * 16, span: 56 + rnd() * 40,
+        w: 1.0 + rnd() * 0.9 + lv * 0.05, ph: rnd() * 6.283,
+        side: rnd() < 0.5 ? -1 : 1
+      });
+    }
+    return out;
+  }
+
+  /* Can this room be crossed keeping the alarm under `cap`, before the
+     shift ends? Carry the least alarm reachable at each place and time. */
+  function crossableUnder(gs, cap) {
+    var dt = 0.05, ds = V * dt, N = Math.ceil(L / ds), steps = Math.ceil(SHIFT / dt);
+    var cur = new Float64Array(N + 1).fill(Infinity);
+    cur[0] = 0;
+    var save = guards; guards = gs;
+    for (var k = 0; k < steps; k++) {
+      var t = k * dt, next = new Float64Array(N + 1).fill(Infinity);
+      for (var i = 0; i <= N; i++) {
+        var a = cur[i];
+        if (a === Infinity) continue;
+        for (var m = 0; m < 2; m++) {
+          var j = i + m;
+          if (j > N) continue;
+          var na = litAt(j * ds, t) ? a + FILL * dt : a - DRAIN * dt;
+          if (na > cap) continue;
+          if (na < 0) na = 0;
+          if (na < next[j]) next[j] = na;
+        }
+      }
+      cur = next;
+      if (cur[N] < Infinity) { guards = save; return t; }
+    }
+    guards = save;
+    return -1;
+  }
+
+  function newRoom() {
+    rolls = 0;
+    for (var tries = 0; tries < 40; tries++) {
+      rolls++;
+      var gs = rollGuards(level);
+      if (crossableUnder(gs, CAP) >= 0) { guards = gs; break; }
+      if (tries === 39) guards = rollGuards(1);      // a thin room rather than none
+    }
+    route = makeRoute();
+    loot = [];
+    var want = 2 + Math.floor(level / 3);
+    for (var i = 0; i < want; i++) {
+      loot.push({ at: L * (0.12 + 0.76 * (i + rnd() * 0.7) / want), got: false });
+    }
+    s = 0; alarm = 0; clock = SHIFT;
+  }
+
+  /* ---------------- the run ---------------- */
+  function caught(why) {
+    state = "over"; overWait = 0.95; shake = 1; flash = 0.8;
+    var p = routeAt(s);
+    for (var i = 0; i < 30; i++) burst(p.x, screenY(p.y), i % 2 ? "#ff4f5a" : "#ffe08a");
+    if (score > best) best = score;
+    saveNum("golge-best", best);
+    saveNum("golge-rooms", Math.max(loadNum("golge-rooms"), rooms));
+    overTitle.textContent = beatBest ? "NEW BEST" : why;
+    overTitle.classList.toggle("best", beatBest);
+    overScore.textContent = fmt(Math.floor(score));
+    overBest.textContent = fmt(Math.floor(best));
+    overRooms.textContent = rooms;
+    overLoot.textContent = lootGot;
+    blip(150, 0.6, "sawtooth", 0.08, 45);
+  }
+  function cleared() {
+    rooms++;
+    var left = Math.max(0, clock);
+    var gain = 150 + 40 * level + Math.round(left * 18);
+    score += gain;
+    pop(VW / 2, VH * 0.35, "+" + gain, "#6ad9c0");
+    blip(520, 0.18, "triangle", 0.05, 900);
+    level++;
+    newRoom();
+    if (score > best) { best = score; beatBest = true; }
+  }
+  function fmt(n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
+  function pop(x, y, t, c) { if (pops.length >= 6) pops.shift(); pops.push({ x: x, y: y, t: 0, txt: t, col: c }); }
+  function burst(x, y, c) {
+    if (parts.length > MAX_PARTS) return;
+    var a = Math.random() * 6.283, sp = 35 + Math.random() * 120;
+    parts.push({ x: x, y: y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 0.3 + Math.random() * 0.4,
+                 t: 0, col: c, r: 1.3 + Math.random() * 2 });
+  }
+
+  function update(dt) {
+    tRun += dt;
+    if (shake > 0) shake = Math.max(0, shake - dt * 2.4);
+    if (flash > 0) flash = Math.max(0, flash - dt * 3);
+
+    clock -= dt;
+    if (clock <= 0) { caught("SHIFT OVER"); return; }
+
+    if (walking) s = Math.min(L, s + V * dt);
+    litNow = litAt(s, tRun);
+    alarm += (litNow ? FILL : -DRAIN) * dt;
+    if (alarm < 0) alarm = 0;
+    if (alarm >= 1) { alarm = 1; caught("SEEN"); return; }
+
+    for (var i = 0; i < loot.length; i++) {
+      if (!loot[i].got && Math.abs(s - loot[i].at) < 14) {
+        loot[i].got = true; lootGot++;
+        var g = 60 + 12 * level;
+        score += g;
+        var p = routeAt(loot[i].at);
+        pop(p.x, screenY(p.y) - 20, "+" + g, "#ffc857");
+        for (var b = 0; b < 8; b++) burst(p.x, screenY(p.y), "#ffc857");
+        blip(660, 0.08, "triangle", 0.045, 980);
+      }
+    }
+    if (s >= L - 0.5) { cleared(); return; }
+
+    for (var j = parts.length - 1; j >= 0; j--) {
+      var q = parts[j]; q.t += dt; q.x += q.vx * dt; q.y += q.vy * dt; q.vy += 160 * dt;
+      if (q.t >= q.life) parts.splice(j, 1);
+    }
+    for (var k = pops.length - 1; k >= 0; k--) {
+      pops[k].t += dt; pops[k].y -= 24 * dt;
+      if (pops[k].t > 0.95) pops.splice(k, 1);
+    }
+    syncHud();
+  }
+
+  /* ---------------- lifecycle ---------------- */
+  function reset() {
+    seed = lockSeed !== null ? (lockSeed >>> 0) : ((Math.random() * 4294967296) >>> 0);
+    level = 1; score = 0; lootGot = 0; rooms = 0; tRun = 0;
+    parts = []; pops = []; shake = 0; flash = 0; beatBest = false;
+    walking = false; overWait = 0; litNow = false;
+    best = loadNum("golge-best");
+    newRoom();
+    syncHud();
+  }
+  function startRun() {
+    reset(); state = "play";
+    startScreen.hidden = true; overScreen.hidden = true; overWait = 0;
+    blip(300, 0.16, "triangle", 0.05, 560);
+  }
+  function syncHud() {
+    hScore.textContent = fmt(Math.floor(score));
+    hBest.textContent = fmt(Math.floor(best));
+    hBest.classList.toggle("lead", beatBest);
+    hClock.textContent = Math.max(0, clock).toFixed(1);
+    hClock.classList.toggle("tight", clock < 3);
+    hRoom.textContent = level;
+    hLoot.textContent = lootGot;
+    hBar.style.transform = "scaleX(" + Math.min(1, alarm).toFixed(3) + ")";
+    hMark.style.left = (CAP * 100) + "%";
+  }
+
+  /* ---------------- drawing ---------------- */
+  function camY() { return Math.max(0, Math.min(L - 1, s)) - 160; }
+  function screenY(arc) { return VH * 0.72 - (arc - camY()) * 0.86; }
+
+  function drawFloor() {
+    ctx.fillStyle = "#0b1119";
+    ctx.fillRect(0, 0, VW, VH);
+    // the corridor the route runs down
+    ctx.beginPath();
+    for (var a = 0; a <= L; a += 20) { var p = routeAt(a); var y = screenY(a); if (a === 0) ctx.moveTo(p.x, y); else ctx.lineTo(p.x, y); }
+    ctx.strokeStyle = "#131b26"; ctx.lineWidth = 74; ctx.lineJoin = "round"; ctx.lineCap = "round"; ctx.stroke();
+    ctx.strokeStyle = "#18222f"; ctx.lineWidth = 66; ctx.stroke();
+    ctx.strokeStyle = "rgba(230,238,247,0.05)"; ctx.lineWidth = 2; ctx.stroke();
+    // floor tiles
+    for (var b = 0; b <= L; b += 46) {
+      var q = routeAt(b), yy = screenY(b);
+      if (yy < -30 || yy > VH + 30) continue;
+      ctx.fillStyle = "rgba(230,238,247,0.045)";
+      ctx.fillRect(q.x - 30, yy - 1, 60, 2);
+    }
+    // the way out
+    var e = routeAt(L), ey = screenY(L);
+    ctx.fillStyle = "#6ad9c0";
+    ctx.globalAlpha = 0.20 + 0.10 * Math.sin(tRun * 3);
+    ctx.fillRect(e.x - 40, ey - 26, 80, 30);
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = "#6ad9c0";
+    ctx.fillRect(e.x - 34, ey - 4, 68, 4);
+    ctx.font = '8px "Press Start 2P", monospace';
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText("OUT", e.x, ey - 16);
+  }
+
+  function drawBeams() {
+    for (var i = 0; i < guards.length; i++) {
+      var g = guards[i];
+      var post = routeAt(g.at);
+      var px = post.x + g.side * 86, py = screenY(g.at);
+      if (py < -160 || py > VH + 160) continue;
+      var c = g.span * Math.sin(g.w * tRun + g.ph);
+      var aArc = g.at + c - g.width, bArc = g.at + c + g.width;
+      var A = routeAt(aArc), B = routeAt(bArc);
+      var ax = A.x, ay = screenY(aArc), bx = B.x, by = screenY(bArc);
+      // stretch the beam past the route so it reads as a cone, not a triangle
+      var ex = px + (ax - px) * 1.5, ey = py + (ay - py) * 1.5;
+      var fx = px + (bx - px) * 1.5, fy = py + (by - py) * 1.5;
+      var grd = ctx.createRadialGradient(px, py, 4, px, py, 190);
+      grd.addColorStop(0, "rgba(255,224,138,0.42)");
+      grd.addColorStop(1, "rgba(255,224,138,0.06)");
+      ctx.fillStyle = grd;
+      ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(ex, ey); ctx.lineTo(fx, fy); ctx.closePath(); ctx.fill();
+      // the guard
+      ctx.fillStyle = "#2a1f22"; ctx.fillRect(px - 9, py - 11, 18, 22);
+      ctx.fillStyle = "#ff6b5c"; ctx.fillRect(px - 7, py - 9, 14, 11);
+      ctx.fillStyle = "#e6eef7"; ctx.fillRect(px - 5, py - 18, 10, 8);
+      ctx.fillStyle = "#ffe08a"; ctx.fillRect(px - 3 + g.side * 4, py - 4, 6, 4);
+    }
+  }
+
+  function drawLoot() {
+    for (var i = 0; i < loot.length; i++) {
+      if (loot[i].got) continue;
+      var p = routeAt(loot[i].at), y = screenY(loot[i].at);
+      if (y < -20 || y > VH + 20) continue;
+      var bob = Math.sin(tRun * 3 + i) * 2;
+      ctx.fillStyle = "rgba(255,200,87,0.18)";
+      ctx.beginPath(); ctx.arc(p.x, y + bob, 13, 0, 6.283); ctx.fill();
+      ctx.fillStyle = "#ffc857";
+      ctx.fillRect(p.x - 7, y - 5 + bob, 14, 11);
+      ctx.fillStyle = "#7a5a12";
+      ctx.fillRect(p.x - 7, y - 1 + bob, 14, 2.5);
+    }
+  }
+
+  function drawYou() {
+    var p = routeAt(s), y = screenY(s);
+    ctx.fillStyle = "rgba(0,0,0,0.4)";
+    ctx.beginPath(); ctx.ellipse(p.x, y + 11, 11, 4, 0, 0, 6.283); ctx.fill();
+    var bob = walking ? Math.sin(tRun * 12) * 1.4 : 0;
+    ctx.fillStyle = litNow ? "#ffd7a0" : "#1d3a37";
+    ctx.fillRect(p.x - 8, y - 9 + bob, 16, 19);
+    ctx.fillStyle = litNow ? "#ffe9c7" : "#6ad9c0";
+    ctx.fillRect(p.x - 6, y - 18 + bob, 12, 9);
+    ctx.fillStyle = "#06120f";
+    ctx.fillRect(p.x - 3, y - 15 + bob, 6, 2.5);
+    if (litNow) {
+      ctx.globalAlpha = 0.25 + 0.2 * Math.sin(tRun * 14);
+      ctx.fillStyle = "#ff4f5a";
+      ctx.beginPath(); ctx.arc(p.x, y - 26, 5, 0, 6.283); ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  function render() {
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.fillStyle = "#05080d"; ctx.fillRect(0, 0, cv.width, cv.height);
+    ctx.setTransform(scale, 0, 0, scale, originX, 0);
+    ctx.save();
+    ctx.beginPath(); ctx.rect(0, 0, VW, VH); ctx.clip();
+    var shx = shake > 0 ? (Math.random() - 0.5) * 11 * shake : 0;
+    var shy = shake > 0 ? (Math.random() - 0.5) * 9 * shake : 0;
+    ctx.save(); ctx.translate(shx, shy);
+
+    drawFloor();
+    drawBeams();
+    drawLoot();
+    if (state !== "over") drawYou();
+
+    for (var j = 0; j < parts.length; j++) {
+      var q = parts[j];
+      ctx.globalAlpha = Math.max(0, 1 - q.t / q.life);
+      ctx.fillStyle = q.col; ctx.fillRect(q.x - q.r, q.y - q.r, q.r * 2, q.r * 2);
+    }
+    ctx.globalAlpha = 1;
+    ctx.font = '10px "Press Start 2P", monospace';
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    for (var k = 0; k < pops.length; k++) {
+      var o = pops[k];
+      ctx.globalAlpha = Math.max(0, 1 - o.t / 0.95);
+      ctx.fillStyle = "rgba(5,8,13,0.75)"; ctx.fillText(o.txt, o.x + 1, o.y + 1);
+      ctx.fillStyle = o.col; ctx.fillText(o.txt, o.x, o.y);
+    }
+    ctx.globalAlpha = 1;
+    ctx.restore();
+
+    if (state === "play" && alarm > 0.6) {
+      var kk = (alarm - 0.6) / 0.4;
+      var rg = ctx.createRadialGradient(VW / 2, VH * 0.5, VH * 0.26, VW / 2, VH * 0.5, VH * 0.72);
+      rg.addColorStop(0, "rgba(255,79,90,0)");
+      rg.addColorStop(1, "rgba(255,79,90," + (0.55 * kk).toFixed(3) + ")");
+      ctx.fillStyle = rg; ctx.fillRect(0, 0, VW, VH);
+    }
+    if (flash > 0) {
+      ctx.globalAlpha = flash * 0.45; ctx.fillStyle = "#ffe08a";
+      ctx.fillRect(0, 0, VW, VH); ctx.globalAlpha = 1;
+    }
+    ctx.restore();
+    if (originX > 0) {
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.fillStyle = "rgba(190,215,240,0.09)";
+      ctx.fillRect(originX - 2, 0, 2, cv.height);
+      ctx.fillRect(originX + VW * scale, 0, 2, cv.height);
+    }
+  }
+
+  /* ---------------- events ---------------- */
+  function press() { if (state !== "play") { startRun(); return; } walking = true; }
+  function lift() { walking = false; }
+  wrap.addEventListener("pointerdown", function (ev) { ev.preventDefault(); press(); });
+  window.addEventListener("pointerup", lift);
+  window.addEventListener("pointercancel", lift);
+  window.addEventListener("blur", lift);
+  document.addEventListener("visibilitychange", function () { if (document.hidden) lift(); });
+  window.addEventListener("keydown", function (ev) {
+    if (ev.key === " " || ev.key === "ArrowUp" || ev.key === "w" || ev.key === "W") {
+      ev.preventDefault();
+      if (state !== "play") { startRun(); return; }
+      walking = true;
+    } else if (ev.key === "r" || ev.key === "R") { ev.preventDefault(); startRun(); }
+  });
+  window.addEventListener("keyup", function (ev) {
+    if (ev.key === " " || ev.key === "ArrowUp" || ev.key === "w" || ev.key === "W") lift();
+  });
+  document.getElementById("btnStart").addEventListener("click", function (e) { e.stopPropagation(); startRun(); });
+  document.getElementById("btnAgain").addEventListener("click", function (e) { e.stopPropagation(); startRun(); });
+  window.addEventListener("resize", function () { resize(); });
+
+  /* ---------------- boot ---------------- */
+  var last = 0;
+  function frame(now) {
+    requestAnimationFrame(frame);
+    var dt = last ? Math.min(0.032, (now - last) / 1000) : 0;
+    last = now;
+    if (state === "play") update(dt);
+    else {
+      if (shake > 0) shake = Math.max(0, shake - dt * 2.4);
+      if (flash > 0) flash = Math.max(0, flash - dt * 3);
+      for (var j = parts.length - 1; j >= 0; j--) {
+        var q = parts[j]; q.t += dt; q.x += q.vx * dt; q.y += q.vy * dt; q.vy += 160 * dt;
+        if (q.t >= q.life) parts.splice(j, 1);
+      }
+      for (var k = pops.length - 1; k >= 0; k--) {
+        pops[k].t += dt; pops[k].y -= 24 * dt;
+        if (pops[k].t > 0.95) pops.splice(k, 1);
+      }
+      if (overWait > 0) { overWait -= dt; if (overWait <= 0) overScreen.hidden = false; }
+      tRun += dt;
+    }
+    render();
+  }
+  resize();
+  best = loadNum("golge-best");
+  reset();
+  syncHud();
+  if (window.ResizeObserver) new ResizeObserver(resize).observe(wrap);
+  requestAnimationFrame(frame);
+
+})();
+</script>
+</body>
+</html>

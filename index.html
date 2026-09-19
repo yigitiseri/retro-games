@@ -67,6 +67,7 @@
     --fener:   #ffdca8;
     --takla:   #b48cff;
     --ikiz:    #ff7ad9;
+    --golge:   #6ad9c0;
 
     --cell-font: "Press Start 2P", ui-monospace, "Courier New", monospace;
     --read-font: "VT323", ui-monospace, "Courier New", monospace;
@@ -262,6 +263,7 @@
   .fener { --accent: var(--fener); }
   .takla { --accent: var(--takla); }
   .ikiz { --accent: var(--ikiz); }
+  .golge { --accent: var(--golge); }
 
   /* ---------- footer ---------- */
   .foot {
@@ -636,6 +638,17 @@
         <h2>İKİZ</h2>
         <p>Every other cabinet here gives you one thing to control. This one gives you two, and one input for both &mdash; going left for one twin sends the other right. Catch the fruit on either side, dodge the bombs on both. A safe lane always exists and no bomb is ever allowed into it; the fruit is what pulls you out. The hard part is not your thumb, it is that you cannot watch both halves at once.</p>
         <span class="keys">Drag the rail &middot; Arrows</span>
+        <span class="play">&#9654; PLAY</span>
+      </div>
+    </a>
+
+    <a class="cab golge" href="games/golge/">
+      <div class="tube"><canvas data-demo="creep" aria-hidden="true"></canvas></div>
+      <div class="plate">
+        <span class="no">CABINET NO. 26 &mdash; 1986</span>
+        <h2>GÖLGE</h2>
+        <p>FENER hides the room from you; this hides you from the guards. Hold to walk, let go to stand still &mdash; that is the whole control. Standing in a beam fills the alarm and standing in the dark empties it, so every room is a question of how much light you are willing to take. Every room can be crossed, but none of them without taking some, and the shift clock will not let you wait all night.</p>
+        <span class="keys">Hold anywhere &middot; Space</span>
         <span class="play">&#9654; PLAY</span>
       </div>
     </a>
@@ -3017,13 +3030,72 @@
     ctx.fillRect(W - lx2 - cw / 2, cy - 4, cw, 2);
   }
 
+
+  /* ---------- golge: wait for the dark, then go ---------- */
+  var gl = null;
+  function glInit(W, H) {
+    return { W: W, H: H, last: 0, t: 0, s: 0, alarm: 0,
+             guards: [{ at: 0.32, ph: 0.4, w: 1.5 }, { at: 0.66, ph: 2.3, w: 1.9 }] };
+  }
+  function glLit(v, s) {
+    for (var i = 0; i < v.guards.length; i++) {
+      var g = v.guards[i], d = s - g.at;
+      if (Math.abs(d - 0.12 * Math.sin(g.w * v.t + g.ph)) <= 0.065) return true;
+    }
+    return false;
+  }
+  function drawCreep(ctx, W, H, now) {
+    if (!gl || gl.W !== W) gl = glInit(W, H);
+    var v = gl, dt = Math.min(0.05, (now - (v.last || now)) / 1000);
+    v.last = now; v.t += dt;
+
+    var ahead = glLit(v, Math.min(1, v.s + 0.05));
+    if (!ahead || v.alarm < 0.3) v.s += 0.20 * dt;
+    v.alarm += (glLit(v, v.s) ? 0.55 : -0.8) * dt;
+    v.alarm = Math.max(0, Math.min(1, v.alarm));
+    if (v.s >= 1) { v.s = 0; v.alarm = 0; }
+
+    ctx.fillStyle = "#070a10"; ctx.fillRect(0, 0, W, H);
+    var y0 = H * 0.5;
+    function px(s) { return 10 + s * (W - 20); }
+    function py(s) { return y0 + Math.sin(s * 5.0) * (H * 0.22); }
+    ctx.beginPath();
+    for (var a = 0; a <= 1.001; a += 0.02) { if (a === 0) ctx.moveTo(px(a), py(a)); else ctx.lineTo(px(a), py(a)); }
+    ctx.strokeStyle = "#131b26"; ctx.lineWidth = 26; ctx.lineJoin = "round"; ctx.lineCap = "round"; ctx.stroke();
+    ctx.strokeStyle = "#18222f"; ctx.lineWidth = 21; ctx.stroke();
+
+    for (var i = 0; i < v.guards.length; i++) {
+      var g = v.guards[i];
+      var gx = px(g.at), gy = py(g.at) - 34;
+      var c = g.at + 0.12 * Math.sin(g.w * v.t + g.ph);
+      var ax = px(c - 0.065), ay = py(c - 0.065), bx = px(c + 0.065), by = py(c + 0.065);
+      ctx.fillStyle = "rgba(255,224,138,0.26)";
+      ctx.beginPath(); ctx.moveTo(gx, gy);
+      ctx.lineTo(gx + (ax - gx) * 1.4, gy + (ay - gy) * 1.4);
+      ctx.lineTo(gx + (bx - gx) * 1.4, gy + (by - gy) * 1.4);
+      ctx.closePath(); ctx.fill();
+      ctx.fillStyle = "#ff6b5c"; ctx.fillRect(gx - 4, gy - 4, 8, 9);
+      ctx.fillStyle = "#e6eef7"; ctx.fillRect(gx - 3, gy - 9, 6, 5);
+    }
+
+    var sx = px(v.s), sy = py(v.s), lit = glLit(v, v.s);
+    ctx.fillStyle = lit ? "#ffd7a0" : "#1d3a37";
+    ctx.fillRect(sx - 4, sy - 4, 8, 10);
+    ctx.fillStyle = lit ? "#ffe9c7" : "#6ad9c0";
+    ctx.fillRect(sx - 3, sy - 9, 6, 5);
+
+    ctx.fillStyle = "rgba(230,238,247,0.14)"; ctx.fillRect(8, H - 8, W - 16, 3);
+    ctx.fillStyle = v.alarm > 0.7 ? "#ff4f5a" : "#ffe08a";
+    ctx.fillRect(8, H - 8, (W - 16) * v.alarm, 3);
+  }
+
   /* ---------- wire up ---------- */
-  var painters = { snake: drawSnake, road: drawRoad, lander: drawLander, flap: drawFlap, brick: drawBrick, maze: drawMaze, arch: drawArch, rocks: drawRocks, loom: drawLoom, invade: drawInvade, fuse: drawFuse, pong: drawPong, lamps: drawLamps, climb: drawClimb, lanes: drawLanes, swing: drawSwing, mine: drawMine, sky: drawSky, paint: drawFence, rails: drawRails, night: drawNight, flip: drawFlip, twin: drawTwin };
+  var painters = { snake: drawSnake, road: drawRoad, lander: drawLander, flap: drawFlap, brick: drawBrick, maze: drawMaze, arch: drawArch, rocks: drawRocks, loom: drawLoom, invade: drawInvade, fuse: drawFuse, pong: drawPong, lamps: drawLamps, climb: drawClimb, lanes: drawLanes, swing: drawSwing, mine: drawMine, sky: drawSky, paint: drawFence, rails: drawRails, night: drawNight, flip: drawFlip, twin: drawTwin, creep: drawCreep };
   Array.prototype.forEach.call(document.querySelectorAll("[data-demo]"), function (c) {
     var fn = painters[c.dataset.demo];
     if (fn) register(c, fn, c.dataset.demo === "flap" || c.dataset.demo === "brick" || c.dataset.demo === "maze" || c.dataset.demo === "arch" ||
                        c.dataset.demo === "rocks" || c.dataset.demo === "loom" ||
-                       c.dataset.demo === "invade" || c.dataset.demo === "fuse" || c.dataset.demo === "pong" || c.dataset.demo === "lamps" || c.dataset.demo === "climb" || c.dataset.demo === "lanes" || c.dataset.demo === "swing" || c.dataset.demo === "mine" || c.dataset.demo === "sky" || c.dataset.demo === "paint" || c.dataset.demo === "rails" || c.dataset.demo === "night" || c.dataset.demo === "flip" || c.dataset.demo === "twin");
+                       c.dataset.demo === "invade" || c.dataset.demo === "fuse" || c.dataset.demo === "pong" || c.dataset.demo === "lamps" || c.dataset.demo === "climb" || c.dataset.demo === "lanes" || c.dataset.demo === "swing" || c.dataset.demo === "mine" || c.dataset.demo === "sky" || c.dataset.demo === "paint" || c.dataset.demo === "rails" || c.dataset.demo === "night" || c.dataset.demo === "flip" || c.dataset.demo === "twin" || c.dataset.demo === "creep");
   });
 
   if (window.ResizeObserver) {
