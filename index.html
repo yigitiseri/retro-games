@@ -63,6 +63,7 @@
     --maden:   #ffc23d;
     --fisek:   #ff6ea8;
     --boya:    #e8452f;
+    --ray:     #4cd97b;
 
     --cell-font: "Press Start 2P", ui-monospace, "Courier New", monospace;
     --read-font: "VT323", ui-monospace, "Courier New", monospace;
@@ -254,6 +255,7 @@
   .maden { --accent: var(--maden); }
   .fisek { --accent: var(--fisek); }
   .boya { --accent: var(--boya); }
+  .ray { --accent: var(--ray); }
 
   /* ---------- footer ---------- */
   .foot {
@@ -584,6 +586,17 @@
         <h2>BOYA</h2>
         <p>The only cabinet here where you take ground instead of surviving it. Leave the paint and the brush drags a wet line behind it; bring it back to colour and everything you closed off floods in. Every sheet is a new colour, so you can see how far you got &mdash; and an ink blot that touches a line still wet costs you the page.</p>
         <span class="keys">Hold to paint &middot; Arrows</span>
+        <span class="play">&#9654; PLAY</span>
+      </div>
+    </a>
+
+    <a class="cab ray" href="games/ray/">
+      <div class="tube"><canvas data-demo="rails" aria-hidden="true"></canvas></div>
+      <div class="plate">
+        <span class="no">CABINET NO. 22 &mdash; 1979</span>
+        <h2>RAY</h2>
+        <p>The strategy cabinet. There is no brake and no steering &mdash; you lay the rail ahead of the train, left, ahead or right, and it takes whatever line you built. Ties arrive one at a time from the depot, so a long straight burns them faster than they come; straight track is fast and pays double, and every bend hands the speed back. Run out of rail and you derail.</p>
+        <span class="keys">Tap left &middot; middle &middot; right</span>
         <span class="play">&#9654; PLAY</span>
       </div>
     </a>
@@ -2585,13 +2598,170 @@
     ctx.fillRect(v.c * T - 1, v.r * T - 1, T + 2, T + 2);
   }
 
+
+  /* ---------- ray: the rail goes down ahead of a train that cannot stop ----------
+     The tube is on its side, so what is north in the cabinet runs east here. */
+  var ry = null;
+  function ryCol(v, q) {
+    var col = { rock: -1, crate: -1 };
+    if (q > 4) {
+      if (Math.random() < 0.60) col.rock = 1 + Math.floor(Math.random() * (v.RW - 2));
+      if (Math.random() < 0.42) {
+        var c = Math.floor(Math.random() * v.RW);
+        if (c !== col.rock) col.crate = c;
+      }
+    }
+    v.cols[q] = col;
+  }
+  function ryInit(W, H) {
+    var RW = 6, T = H / RW;
+    var v = { W: W, RW: RW, T: T, cols: [], top: -1, path: [], ti: 0, tf: 0,
+              cam: 0, last: 0, lay: 0, used: {}, puffs: [], t: 0 };
+    for (var q = 0; q <= Math.ceil(W / T) + 8; q++) { ryCol(v, q); v.top = q; }
+    var p0 = RW >> 1;
+    for (var k = 0; k <= 3; k++) {
+      v.path.push({ q: k, p: p0 });
+      v.used[k + "," + p0] = 1;
+      v.cols[k].rock = -1; v.cols[k].crate = -1;
+    }
+    v.cam = 1;
+    return v;
+  }
+  function ryFree(v, q, p) {
+    if (p < 0 || p >= v.RW) return false;
+    while (q > v.top) { v.top++; ryCol(v, v.top); }
+    return v.cols[q].rock !== p && !v.used[q + "," + p];
+  }
+  function ryPick(v) {
+    var h = v.path[v.path.length - 1], best = null, bv = -1e9;
+    var opts = [[h.q + 1, h.p, 9], [h.q, h.p - 1, 0], [h.q, h.p + 1, 0]];
+    for (var i = 0; i < opts.length; i++) {
+      var q = opts[i][0], p = opts[i][1];
+      if (!ryFree(v, q, p)) continue;
+      var val = opts[i][2] + Math.random() * 2;
+      if (v.cols[q].crate === p) val += 24;
+      var on = (ryFree(v, q + 1, p) ? 1 : 0) + (ryFree(v, q, p - 1) ? 1 : 0) + (ryFree(v, q, p + 1) ? 1 : 0);
+      if (!on) val -= 500;                       // never lay into a cell you cannot leave
+      if (val > bv) { bv = val; best = { q: q, p: p }; }
+    }
+    return best;
+  }
+  function ryPos(v, g, out) {
+    var i = Math.min(v.path.length - 1, Math.max(0, Math.floor(g))), t = g - i;
+    var a = v.path[i], b = v.path[Math.min(i + 1, v.path.length - 1)];
+    out.x = v.W * 0.34 + ((a.q + (b.q - a.q) * t) - v.cam) * v.T + v.T / 2;
+    out.y = (a.p + (b.p - a.p) * t) * v.T + v.T / 2;
+    out.ax = b.q - a.q; out.ay = b.p - a.p;
+    return out;
+  }
+  var ryP = { x: 0, y: 0, ax: 1, ay: 0 }, ryQ = { x: 0, y: 0, ax: 1, ay: 0 };
+  function drawRails(ctx, W, H, now) {
+    if (!ry || ry.W !== W) ry = ryInit(W, H);
+    var v = ry, T = v.T, dt = Math.min(0.05, (now - (v.last || now)) / 1000);
+    v.last = now; v.t += dt;
+
+    v.lay -= dt;
+    if (v.lay <= 0 && v.path.length - 1 - v.ti < 4) {
+      var n = ryPick(v);
+      if (n) { v.path.push(n); v.used[n.q + "," + n.p] = 1; v.lay = 0.16; }
+      else v.lay = 0.4;
+    }
+    v.tf += 2.1 * dt;
+    while (v.tf >= 1 && v.ti + 1 < v.path.length) {
+      v.tf -= 1; v.ti++;
+      var node = v.path[v.ti];
+      if (v.cols[node.q] && v.cols[node.q].crate === node.p) {
+        v.cols[node.q].crate = -1;
+        for (var b = 0; b < 5; b++)
+          v.puffs.push({ x: 0, y: 0, q: node.q, p: node.p, t: 0,
+                         vx: (Math.random() - 0.5) * 34, vy: (Math.random() - 0.5) * 34 });
+      }
+    }
+    if (v.tf > 1) v.tf = 1;
+    v.cam += ((v.path[v.ti].q) - v.cam) * Math.min(1, dt * 4);
+
+    // the field
+    ctx.fillStyle = "#498853";
+    ctx.fillRect(0, 0, W, H);
+    var q0 = Math.floor(v.cam - W / T), q1 = Math.ceil(v.cam + W / T) + 2;
+    for (var q = q0; q <= q1; q++) {
+      var col = v.cols[q];
+      var x = W * 0.34 + (q - v.cam) * T;
+      if (x > W + T || x < -T) continue;
+      for (var p = 0; p < v.RW; p++) {
+        var hh = ((q * 73856093) ^ (p * 19349663)) >>> 0, f = (hh % 1000) / 1000;
+        ctx.fillStyle = f < 0.5 ? "#44814d" : "#55965d";
+        ctx.globalAlpha = 0.34;
+        ctx.fillRect(x - 6 + f * 10, p * T - 6 + f * 12, T + 8, T + 6);
+        ctx.globalAlpha = 1;
+      }
+      if (!col) continue;
+      if (col.rock >= 0) {
+        var rx = x + T / 2, ryy = col.rock * T + T / 2, rr = T * 0.34;
+        ctx.fillStyle = "#5f656d";                 // a stone, not another box
+        ctx.beginPath(); ctx.arc(rx, ryy, rr, 0, 6.3); ctx.fill();
+        ctx.fillStyle = "#8a9098";
+        ctx.beginPath(); ctx.arc(rx - rr * 0.22, ryy - rr * 0.26, rr * 0.62, 0, 6.3); ctx.fill();
+      }
+      if (col.crate >= 0) {
+        ctx.fillStyle = "#6b4a2e";
+        ctx.fillRect(x + 4, col.crate * T + 5, T - 8, T - 10);
+        ctx.strokeStyle = "#f2b53c"; ctx.lineWidth = 1;
+        ctx.strokeRect(x + 4.5, col.crate * T + 5.5, T - 9, T - 11);
+      }
+    }
+
+    // the rail
+    var i;
+    ctx.lineJoin = "round"; ctx.lineCap = "round";
+    ctx.beginPath();
+    for (i = 0; i < v.path.length; i++) {
+      ryPos(v, i, ryQ);
+      if (i === 0) ctx.moveTo(ryQ.x, ryQ.y); else ctx.lineTo(ryQ.x, ryQ.y);
+    }
+    ctx.strokeStyle = "rgba(60,52,38,0.62)"; ctx.lineWidth = T * 0.62; ctx.stroke();
+    ctx.strokeStyle = "#6b4a2e"; ctx.lineWidth = T * 0.34; ctx.stroke();
+    ctx.strokeStyle = "#d6dde6"; ctx.lineWidth = 1.4; ctx.stroke();
+    ryPos(v, v.path.length - 1, ryQ);
+    ctx.fillStyle = "#f2b53c";
+    ctx.beginPath(); ctx.arc(ryQ.x, ryQ.y, 2.2, 0, 6.3); ctx.fill();
+
+    // the train
+    var g = v.ti + v.tf;
+    var cars = [[g - 1.9, "#2d6b45"], [g - 0.95, "#3a3f4a"], [g, "#e0453a"]];
+    for (i = 0; i < cars.length; i++) {
+      if (cars[i][0] < 0) continue;
+      ryPos(v, cars[i][0], ryP);
+      var ang = Math.atan2(ryP.ay, ryP.ax);
+      ctx.save();
+      ctx.translate(ryP.x, ryP.y); ctx.rotate(ang);
+      ctx.fillStyle = "#1b1f27";
+      ctx.fillRect(-T * 0.34, -T * 0.28, T * 0.68, T * 0.56);
+      ctx.fillStyle = cars[i][1];
+      ctx.fillRect(-T * 0.28, -T * 0.22, T * 0.56, T * 0.44);
+      if (i === 2) { ctx.fillStyle = "#f2b53c"; ctx.fillRect(T * 0.16, -T * 0.09, T * 0.1, T * 0.18); }
+      ctx.restore();
+    }
+
+    for (i = v.puffs.length - 1; i >= 0; i--) {
+      var pf = v.puffs[i]; pf.t += dt;
+      var px = W * 0.34 + (pf.q - v.cam) * T + T / 2 + pf.vx * pf.t;
+      var py = pf.p * T + T / 2 + pf.vy * pf.t;
+      ctx.globalAlpha = Math.max(0, 1 - pf.t / 0.5);
+      ctx.fillStyle = "#f2b53c";
+      ctx.fillRect(px - 1, py - 1, 2, 2);
+      ctx.globalAlpha = 1;
+      if (pf.t > 0.5) v.puffs.splice(i, 1);
+    }
+  }
+
   /* ---------- wire up ---------- */
-  var painters = { snake: drawSnake, road: drawRoad, lander: drawLander, flap: drawFlap, brick: drawBrick, maze: drawMaze, arch: drawArch, rocks: drawRocks, loom: drawLoom, invade: drawInvade, fuse: drawFuse, pong: drawPong, lamps: drawLamps, climb: drawClimb, lanes: drawLanes, swing: drawSwing, mine: drawMine, sky: drawSky, paint: drawFence };
+  var painters = { snake: drawSnake, road: drawRoad, lander: drawLander, flap: drawFlap, brick: drawBrick, maze: drawMaze, arch: drawArch, rocks: drawRocks, loom: drawLoom, invade: drawInvade, fuse: drawFuse, pong: drawPong, lamps: drawLamps, climb: drawClimb, lanes: drawLanes, swing: drawSwing, mine: drawMine, sky: drawSky, paint: drawFence, rails: drawRails };
   Array.prototype.forEach.call(document.querySelectorAll("[data-demo]"), function (c) {
     var fn = painters[c.dataset.demo];
     if (fn) register(c, fn, c.dataset.demo === "flap" || c.dataset.demo === "brick" || c.dataset.demo === "maze" || c.dataset.demo === "arch" ||
                        c.dataset.demo === "rocks" || c.dataset.demo === "loom" ||
-                       c.dataset.demo === "invade" || c.dataset.demo === "fuse" || c.dataset.demo === "pong" || c.dataset.demo === "lamps" || c.dataset.demo === "climb" || c.dataset.demo === "lanes" || c.dataset.demo === "swing" || c.dataset.demo === "mine" || c.dataset.demo === "sky" || c.dataset.demo === "paint");
+                       c.dataset.demo === "invade" || c.dataset.demo === "fuse" || c.dataset.demo === "pong" || c.dataset.demo === "lamps" || c.dataset.demo === "climb" || c.dataset.demo === "lanes" || c.dataset.demo === "swing" || c.dataset.demo === "mine" || c.dataset.demo === "sky" || c.dataset.demo === "paint" || c.dataset.demo === "rails");
   });
 
   if (window.ResizeObserver) {
