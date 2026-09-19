@@ -649,7 +649,7 @@
       <div class="plate">
         <span class="no">CABINET NO. 26 &mdash; 1986</span>
         <h2>GÖLGE</h2>
-        <p>FENER hides the room from you; this hides you from the guards. A walled room, four directions, and going back is a move rather than a mistake. Every wall has a gap and every gap has its own lamp sweeping across it, so you pick your door, duck behind a pillar and let the beam pass. Standing in light fills the alarm and the dark empties it &mdash; but the shift clock only buys about one beam's worth of waiting.</p>
+        <p>FENER hides the room from you; this hides you from the guards. Hold a side to walk it, let go to stand still. The corridor keeps splitting in two and each branch has its own lamp, so the question is never just when to move but which way round. Neither side is the safe one &mdash; which branch is clear depends on when you get there, and picking wrong costs you a third of the alarm bar.</p>
         <span class="keys">Hold anywhere &middot; Space</span>
         <span class="play">&#9654; PLAY</span>
       </div>
@@ -3044,79 +3044,72 @@
   }
 
 
-  /* ---------- golge: pick your door, then go ---------- */
+  /* ---------- golge: pick your side, then go ---------- */
   var gl = null;
-  function glInit(W, H) {
-    return { W: W, H: H, t: 0, last: 0, gx: 0.30, px: 0.5, py: 0.94, band: 2, wait: 0 };
-  }
+  function glInit(W, H) { return { W: W, H: H, t: 0, last: 0, p: 0, lane: 1, litL: 0, litR: 0 }; }
   function drawCreep(ctx, W, H, now) {
     if (!gl || gl.W !== W) gl = glInit(W, H);
     var v = gl, dt = Math.min(0.05, (now - (v.last || now)) / 1000);
     v.last = now; v.t += dt;
 
-    var rows = [0.30, 0.62], gaps = [0.30, 0.68];
-    ctx.fillStyle = "#070a10"; ctx.fillRect(0, 0, W, H);
-
-    // floor
-    ctx.fillStyle = "#101825";
-    ctx.fillRect(W * 0.04, H * 0.05, W * 0.92, H * 0.90);
-
-    // the two walls and their gaps
-    var gw = W * 0.15;
-    for (var r = 0; r < 2; r++) {
-      var wy = H * rows[r], gxp = W * gaps[r];
-      ctx.fillStyle = "#4a5f7d";
-      ctx.fillRect(W * 0.04, wy, gxp - gw / 2 - W * 0.04, H * 0.055);
-      ctx.fillRect(gxp + gw / 2, wy, W * 0.96 - (gxp + gw / 2), H * 0.055);
-      ctx.fillStyle = "#708aad";
-      ctx.fillRect(W * 0.04, wy, gxp - gw / 2 - W * 0.04, 1.5);
-      ctx.fillRect(gxp + gw / 2, wy, W * 0.96 - (gxp + gw / 2), 1.5);
+    ctx.fillStyle = "#0b1119"; ctx.fillRect(0, 0, W, H);
+    var cx = W / 2, dx = W * 0.17, fa = 0.24, fb = 0.76;   // the fork runs fa..fb
+    function lx(p, lane) {
+      var sp = (p > fa && p < fb) ? dx * Math.min(1, Math.min(p - fa, fb - p) / 0.05) : 0;
+      return cx + (lane ? sp : -sp);
     }
+    function py(p) { return H * (1 - p); }
 
-    // a lamp over each gap, sweeping across it
-    var lit = [0, 0];
+    // the corridor: one tube, two through the fork
+    function tube(lane, w, col) {
+      ctx.beginPath();
+      for (var p = 0; p <= 1.001; p += 0.02) {
+        var x = lx(p, lane), y = py(p);
+        if (p === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.strokeStyle = col; ctx.lineWidth = w; ctx.lineJoin = "round"; ctx.lineCap = "round"; ctx.stroke();
+    }
+    tube(0, W * 0.22, "#131b26"); tube(1, W * 0.22, "#131b26");
+    tube(0, W * 0.17, "#1b2635"); tube(1, W * 0.17, "#1b2635");
+
+    // a lamp on each branch, out of phase, so which side is clear keeps changing
+    var swL = Math.sin(v.t * 1.5), swR = Math.sin(v.t * 1.9 + 2.2);
+    var mid = (fa + fb) / 2, half = (fb - fa) / 2;
+    var cL = mid + swL * half * 0.7, cR = mid + swR * half * 0.7;
     ctx.globalCompositeOperation = "lighter";
-    for (r = 0; r < 2; r++) {
-      var wy2 = H * rows[r], gxp2 = W * gaps[r];
-      var sweep = Math.sin(v.t * (1.6 + r * 0.5) + r * 2.1);
-      var lampx = gxp2 + sweep * gw * 0.9;
-      lit[r] = Math.abs(sweep) < 0.42 ? 1 : 0;
-      var g = ctx.createRadialGradient(lampx, wy2, 1, lampx, wy2, H * 0.22);
-      g.addColorStop(0, "rgba(255,205,90,0.55)");
-      g.addColorStop(1, "rgba(255,205,90,0)");
+    [[cL, 0, -1], [cR, 1, 1]].forEach(function (b) {
+      var bx = lx(b[0], b[1]) + b[2] * W * 0.20, by = py(b[0]);
+      var g = ctx.createRadialGradient(bx, by, 1, bx, by, H * 0.30);
+      g.addColorStop(0, "rgba(255,214,120,0.50)");
+      g.addColorStop(1, "rgba(255,214,120,0.03)");
       ctx.fillStyle = g;
-      ctx.fillRect(lampx - H * 0.22, wy2 - H * 0.04, H * 0.44, H * 0.30);
-    }
+      ctx.beginPath();
+      ctx.moveTo(bx, by);
+      ctx.lineTo(lx(b[0] + 0.07, b[1]) - b[2] * W * 0.08, py(b[0] + 0.07));
+      ctx.lineTo(lx(b[0] - 0.07, b[1]) - b[2] * W * 0.08, py(b[0] - 0.07));
+      ctx.closePath(); ctx.fill();
+    });
     ctx.globalCompositeOperation = "source-over";
-    for (r = 0; r < 2; r++) {
-      var wy3 = H * rows[r], gxp3 = W * gaps[r];
-      var sweep2 = Math.sin(v.t * (1.6 + r * 0.5) + r * 2.1);
-      ctx.fillStyle = "#ff6b5c";
-      ctx.beginPath(); ctx.arc(gxp3 + sweep2 * gw * 0.9, wy3 - H * 0.015, 2.6, 0, 6.283); ctx.fill();
+    [[cL, 0, -1], [cR, 1, 1]].forEach(function (b) {
+      var bx = lx(b[0], b[1]) + b[2] * W * 0.20, by = py(b[0]);
+      ctx.fillStyle = "#ff6b5c"; ctx.fillRect(bx - 2.5, by - 3, 5, 6);
+    });
+
+    // the thief: at the mouth of the fork, take whichever branch is dark
+    v.p += 0.17 * dt;
+    if (v.p > 1) { v.p = 0; v.lane = 1; }
+    if (v.p < fa) v.lane = Math.abs(cR - mid) > Math.abs(cL - mid) ? 1 : 0;
+    var lit = Math.abs(v.p - (v.lane ? cR : cL)) < 0.055 && v.p > fa && v.p < fb;
+    var wx = lx(v.p, v.lane), wy = py(v.p);
+    if (lit) {
+      ctx.fillStyle = "rgba(255,224,138,0.30)";
+      ctx.beginPath(); ctx.arc(wx, wy, W * 0.05, 0, 6.283); ctx.fill();
     }
+    ctx.fillStyle = lit ? "#ffe9bd" : "#6ad9c0";
+    ctx.fillRect(wx - W * 0.014, wy - H * 0.022, W * 0.028, H * 0.036);
 
-    // the thief: slide to the gap, wait for the beam, then slip through
-    var target = v.band >= 2 ? gaps[1] : v.band === 1 ? gaps[0] : 0.5;
-    var wantY = v.band >= 2 ? 0.70 : v.band === 1 ? 0.38 : 0.10;
-    var dxp = target - v.px;
-    if (Math.abs(dxp) > 0.012) v.px += Math.sign(dxp) * Math.min(Math.abs(dxp), 0.40 * dt);
-    else if (v.band >= 1 && lit[v.band - 1]) v.wait = 1;                  // hold for the beam
-    else {
-      v.wait = 0;
-      v.py -= 0.34 * dt;
-      if (v.py < wantY) { v.band--; if (v.band < 0) { v.band = 2; v.py = 0.94; v.px = 0.5; } }
-    }
-    if (v.py > 0.96) v.py = 0.96;
-
-    var yx = W * v.px, yy = H * v.py, inLight = v.wait;
-    ctx.fillStyle = "#050a0e";
-    ctx.beginPath(); ctx.arc(yx, yy, 5.2, 0, 6.283); ctx.fill();
-    ctx.fillStyle = inLight ? "#fff0cc" : "#6ad9c0";
-    ctx.beginPath(); ctx.arc(yx, yy, 4, 0, 6.283); ctx.fill();
-
-    // the OUT door
     ctx.strokeStyle = "#6ad9c0"; ctx.lineWidth = 1.5;
-    ctx.strokeRect(W * 0.44, H * 0.055, W * 0.12, H * 0.05);
+    ctx.strokeRect(cx - W * 0.07, H * 0.03, W * 0.14, H * 0.04);
   }
 
   /* ---------- wire up ---------- */

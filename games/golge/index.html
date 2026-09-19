@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
-<meta name="description" content="GÖLGE — a walled room where every gap has a lamp on it, and going back is a move">
+<meta name="description" content="GÖLGE — a corridor that keeps splitting in two, where neither branch is the safe one">
 <meta name="theme-color" content="#08090e">
 <style>
   :root {
@@ -23,8 +23,6 @@
     --ink:    #070a10;
     --floor:  #131b26;
     --floor2: #18222f;
-    --wall:   #2b3a4d;
-    --wallt:  #3d5169;
     --beam:   #ffe08a;
     --guard:  #ff6b5c;
     --you:    #6ad9c0;
@@ -41,8 +39,8 @@
          user-select: none; touch-action: none; overscroll-behavior: none; }
   #wrap { position: fixed; inset: 0; }
   canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; }
-  .scrim { position: absolute; left: 0; right: 0; top: 0; height: 150px; z-index: 1; pointer-events: none;
-           background: linear-gradient(180deg, rgba(7,10,16,0.92), rgba(7,10,16,0.45) 60%, rgba(7,10,16,0)); }
+  .scrim { position: absolute; left: 0; right: 0; top: 0; height: 170px; z-index: 1; pointer-events: none;
+           background: linear-gradient(180deg, rgba(7,10,16,0.88), rgba(7,10,16,0.45) 55%, rgba(7,10,16,0)); }
 
   .hud { position: absolute; top: 0; left: 0; right: 0;
     padding: calc(env(safe-area-inset-top, 0px) + 10px) calc(var(--gut, 0px) + 12px) 0;
@@ -60,24 +58,9 @@
   .bar { position: absolute; left: calc(var(--gut, 0px) + 12px); right: calc(var(--gut, 0px) + 12px);
     top: calc(env(safe-area-inset-top, 0px) + 74px); height: 7px;
     background: rgba(230,238,247,0.10); border-radius: 4px; overflow: hidden; z-index: 2; pointer-events: none; }
-  .bar i { display: block; height: 100%; width: 100%; transform-origin: left center; transform: scaleX(0);
+  .bar i { display: block; height: 100%; width: 100%; transform-origin: left center;
            background: linear-gradient(90deg, #7a5a12, var(--beam), var(--alarm)); }
   .bar u { position: absolute; top: -3px; width: 2px; height: 13px; background: rgba(230,238,247,0.35); }
-
-  .pads { position: absolute; left: calc(var(--gut, 0px) + var(--pi, 14px));
-    right: calc(var(--gut, 0px) + var(--pi, 14px));
-    bottom: var(--pb, 14px); height: var(--ph, 150px);
-    display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: 1fr 1fr;
-    grid-template-areas: ". u ." "l d r"; gap: var(--pg, 6px); z-index: 2; }
-  .pd { border-radius: 10px; border: 2px solid rgba(230,238,247,0.16);
-    background: linear-gradient(180deg, rgba(230,238,247,0.09), rgba(230,238,247,0.02));
-    display: grid; place-content: center; cursor: pointer; color: var(--you);
-    transition: transform 60ms, filter 60ms, opacity 90ms; }
-  .pd svg { width: clamp(22px, 7vw, 30px); height: clamp(22px, 7vw, 30px); display: block; }
-  .pd.hot { transform: translateY(2px) scale(0.98); filter: brightness(1.7);
-            border-color: var(--you); box-shadow: 0 0 20px -5px var(--you); }
-  .pd.off { opacity: 0.28; }
-  .pu { grid-area: u; } .pl { grid-area: l; } .pdn { grid-area: d; } .pr { grid-area: r; }
 
   .screen { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center;
     gap: 15px; text-align: center; padding: 26px; z-index: 3;
@@ -92,6 +75,21 @@
   .lines b { color: var(--beam); }
   .lines .bad { color: var(--alarm); }
   .lines .ok { color: var(--you); }
+
+  .pads { position: absolute; left: calc(var(--gut, 0px) + var(--pi, 14px));
+    right: calc(var(--gut, 0px) + var(--pi, 14px));
+    bottom: var(--pb, 14px); height: var(--ph, 132px);
+    display: grid; grid-template-columns: 1fr 1fr; gap: var(--pg, 12px); z-index: 2; }
+  .pd { border-radius: 12px; border: 2px solid rgba(230,238,247,0.16);
+    background: linear-gradient(180deg, rgba(230,238,247,0.09), rgba(230,238,247,0.02));
+    display: grid; place-content: center; gap: 4px; cursor: pointer; color: var(--you);
+    font-family: var(--hud); transition: transform 60ms, filter 60ms, border-color 90ms; }
+  .pd .ar { font-size: clamp(22px, 8vw, 32px); line-height: 1; }
+  .pd .lb { font-size: 7px; letter-spacing: 0.18em; color: var(--dim); }
+  .pd.hot { transform: translateY(2px) scale(0.985); filter: brightness(1.6);
+            border-color: var(--you); box-shadow: 0 0 22px -5px var(--you); }
+  .pd.lit { border-color: var(--beam); color: var(--beam); }
+  .pd.lit .lb { color: rgba(255,224,138,0.75); }
   .btn { margin-top: 4px; font-family: var(--hud); font-size: 11px; letter-spacing: 0.14em;
     padding: 14px 28px; color: #06120f; border: 0; border-radius: 4px; cursor: pointer;
     background: linear-gradient(180deg, #bff3e7, var(--you));
@@ -110,14 +108,14 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Retro Games Arcade">
 <meta property="og:title" content="GÖLGE — Retro Games Arcade">
-<meta property="og:description" content="GÖLGE — a walled room where every gap has a lamp on it, and going back is a move">
+<meta property="og:description" content="GÖLGE — a corridor that keeps splitting in two, where neither branch is the safe one">
 <meta property="og:url" content="https://yigitiseri.github.io/retro-games/games/golge/">
 <meta property="og:image" content="https://yigitiseri.github.io/retro-games/assets/social-card.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="GÖLGE — Retro Games Arcade">
-<meta name="twitter:description" content="GÖLGE — a walled room where every gap has a lamp on it, and going back is a move">
+<meta name="twitter:description" content="GÖLGE — a corridor that keeps splitting in two, where neither branch is the safe one">
 <meta name="twitter:image" content="https://yigitiseri.github.io/retro-games/assets/social-card.png">
 
 <!-- Cloudflare Web Analytics: no cookies, no client-side storage -->
@@ -136,7 +134,7 @@
       <div class="k" style="margin-top:5px">BEST</div><div class="best" id="hBest">0</div>
     </div>
     <div class="mid">
-      <div class="k">SHIFT ENDS</div><div class="v" id="hClock">8.0</div>
+      <div class="k">SHIFT ENDS</div><div class="v" id="hClock">10.0</div>
     </div>
     <div class="right">
       <div class="k">ROOM</div><div class="best" id="hRoom">1</div>
@@ -146,29 +144,27 @@
   <div class="bar"><i id="hBar"></i><u id="hMark"></u></div>
 
   <div class="pads" id="pads">
-    <div class="pd pu"  data-d="0" aria-label="up"><svg viewBox="0 0 24 24"><path d="M12 4 L21 15 H15 V21 H9 V15 H3 Z" fill="currentColor"/></svg></div>
-    <div class="pd pl"  data-d="1" aria-label="left"><svg viewBox="0 0 24 24"><path d="M4 12 L15 3 V9 H21 V15 H15 V21 Z" fill="currentColor"/></svg></div>
-    <div class="pd pdn" data-d="2" aria-label="down"><svg viewBox="0 0 24 24"><path d="M12 20 L3 9 H9 V3 H15 V9 H21 Z" fill="currentColor"/></svg></div>
-    <div class="pd pr"  data-d="3" aria-label="right"><svg viewBox="0 0 24 24"><path d="M20 12 L9 21 V15 H3 V9 H9 V3 Z" fill="currentColor"/></svg></div>
+    <div class="pd pl" data-l="0"><span class="ar">&#9664;</span><span class="lb">LEFT</span></div>
+    <div class="pd pr" data-l="1"><span class="ar">&#9654;</span><span class="lb">RIGHT</span></div>
   </div>
 
   <div class="screen" id="startScreen">
     <div class="title">GÖLGE</div>
-    <div class="sub">GO ROUND, NOT THROUGH</div>
+    <div class="sub">PICK YOUR SIDE</div>
     <div class="lines">
-      Cross the room to the <b>OUT</b> door. Four directions &mdash; and
-      going <b>back</b> is a move, not a mistake.
+      <b>Hold a side to walk it. Let go to stand still.</b> The corridor
+      keeps splitting in two, and each branch has its own lamp.
     </div>
     <div class="lines" style="font-size:16px;opacity:0.84">
-      Standing in a lamp fills the alarm; standing in the dark empties it.
-      Every wall has a gap and every gap has a lamp on it, so you must pick
-      your door, duck behind a pillar, and let the sweep go past &mdash; but
-      the shift clock only buys you about one beam's worth of waiting.
-      <span class="ok">Every room can be crossed</span>, and
-      <span class="bad">never without taking some light.</span>
+      Standing in a beam fills the alarm; the dark empties it. Every room
+      can be crossed, but <b>never without taking some light</b>, and the
+      shift clock will not let you wait all night. Neither branch is the
+      safe one &mdash; <span class="ok">which side is clear depends on when
+      you get there</span>. Fill the bar and you are
+      <span class="bad">seen</span>.
     </div>
     <button class="btn" id="btnStart">SLIP IN</button>
-    <div class="hintline">ARROWS OR WASD &middot; SPACE</div>
+    <div class="hintline">HOLD &#9664; OR &#9654; &middot; ARROW KEYS</div>
   </div>
 
   <div class="screen" id="overScreen" hidden>
@@ -189,252 +185,210 @@
   "use strict";
 
   /* ============================================================
-     GÖLGE -- a room, not a corridor.
+     GÖLGE -- the side-on corridor from before, which now FORKS.
 
-     The first version gave you one control, hold to walk, along one
-     axis. That meant the only decision you could ever make was WHEN,
-     and the measurements agreed: the best route was a straight walk
-     and the alarm bar was decoration.
+     v1 gave you one control along one line, so the only decision
+     you could ever make was WHEN to walk. Adding a back button does
+     not fix that, and I measured it four different ways before
+     believing it: a beam always passes over you, so standing still
+     does everything retreating would, and the shift clock punishes
+     covering the same ground twice. A perfect player needed to walk
+     back in 3% of rooms; a player with a realistic 0.9s of lookahead
+     did WORSE with a back button than without one.
 
-     Now the room is two-dimensional and walled into bands. Every wall
-     has one or two gaps, every gap has its own lamp sweeping across
-     it, and pillars cast real line-of-sight shadow you can hide in.
-     So the decision is also WHERE: which door, from which side, and
-     whether to hold back a beat or pay the light and go.
+     A fork is a decision the clock cannot dominate. The corridor
+     splits in two and rejoins, three times a room, and each branch
+     has its own beam. Hold a side to walk it.
 
-     Three things the measurements forced, each of which had left the
-     game with no decision in it:
-
-       - Scattered pillars let a dark route exist around everything.
-         Median forced alarm was 0.00. Walls with gaps fixed that.
-       - A wall with two gaps only had one lamp, so the other gap was
-         a free door. One lamp per gap took gap coverage to 90% and
-         no gap is a free door now.
-       - The shift clock was so loose that waiting was always free,
-         so the best route never had to take any light. Cutting it to
-         8s -- about 2.8s of slack over the 5.2s crossing, roughly
-         0.6 of a lamp sweep -- means you can hold back for one beam
-         and must pay for the others.
-
-     Measured over 478 rooms across 12 levels: every one crossable,
-     median least peak alarm 0.24 against a 0.85 cap, worst 0.84. The
-     best route is 52% forward and 48% sideways, needs a lateral move
-     in 100% of rooms, and takes 1.93x the steps of a straight climb.
+     Measured over 480 rooms: 98% of forks have no permanent right
+     answer -- which branch is cheaper depends on when you arrive.
+     The left branch is the better call 47% of the time, so neither
+     side is simply the safe one, and taking the wrong branch costs
+     0.58s of extra light, which is 0.36 of the alarm bar against a
+     0.85 cap. Median forced peak 0.22: every room crossable, none
+     of them clean.
      ============================================================ */
 
-  var wrap = document.getElementById("wrap");
-  var cv = document.getElementById("c");
-  var ctx = cv.getContext("2d", { alpha: false });
-
   var VW = 420, VH = 780, MIN_VH = 720;
+  var V = 96;
+  var FILL = 0.62, DRAIN = 0.85;
+  var CAP = 0.85;
+  var MAX_PARTS = 150;
+
+  var NFORK = 3, FORK_LEN = 180, SINGLE_LEN = 56;
+  var L = NFORK * FORK_LEN + (NFORK + 1) * SINGLE_LEN;
+  var SHIFT = (L / V) * 1.45;
+  var LANE_DX = 54;                    // how far the two branches sit apart
+  var PAD_H = 132, PAD_B = 14, PAD_I = 14, PAD_G = 12;
+
+  var cv = document.getElementById("c");
+  var ctx = cv.getContext("2d");
+  var wrap = document.getElementById("wrap");
+  var hScore = document.getElementById("hScore");
+  var hBest = document.getElementById("hBest");
+  var hClock = document.getElementById("hClock");
+  var hRoom = document.getElementById("hRoom");
+  var hLoot = document.getElementById("hLoot");
+  var hBar = document.getElementById("hBar");
+  var hMark = document.getElementById("hMark");
+  var startScreen = document.getElementById("startScreen");
+  var overScreen = document.getElementById("overScreen");
+  var overTitle = document.getElementById("overTitle");
+  var overScore = document.getElementById("overScore");
+  var overBest = document.getElementById("overBest");
+  var overRooms = document.getElementById("overRooms");
+  var overLoot = document.getElementById("overLoot");
+  var pdEl = [document.querySelector('.pd[data-l="0"]'), document.querySelector('.pd[data-l="1"]')];
+
   var scale = 1, originX = 0, dpr = 1;
-
-  /* ---------- the model, identical to the one that was measured ---------- */
-  var W = 15, H = 15, CELL = 26;
-  var SPEED = 5.2, STEP = 1 / SPEED;
-  var FILL = 0.62, DRAIN = 0.90;
-  var SHIFT = 8, CAP = 0.85;
-  var ROWS = [3, 7, 11];
-
-  var PAD_H = 142, PAD_B = 14, PAD_I = 14, PAD_G = 6, BOARD = W * CELL;
-
-  function idx(x, y) { return y * W + x; }
-  function inside(x, y) { return x >= 0 && x < W && y >= 0 && y < H; }
-  function angDiff(a, b) { var d = (a - b) % (Math.PI * 2); if (d > Math.PI) d -= Math.PI * 2; if (d < -Math.PI) d += Math.PI * 2; return d; }
-
   var seed = (Math.random() * 4294967296) >>> 0, lockSeed = false;
   function rnd() { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; }
 
-  function traceClear(solid, x0, y0, x1, y1) {
-    var dx = Math.abs(x1 - x0), dy = Math.abs(y1 - y0);
-    var sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1, err = dx - dy;
-    var x = x0, y = y0, guard = 0;
-    while (guard++ < 200) {
-      if (x === x1 && y === y1) return true;
-      var e2 = 2 * err;
-      if (e2 > -dy) { err -= dy; x += sx; }
-      if (e2 < dx) { err += dx; y += sy; }
-      if (!(x === x1 && y === y1) && solid[idx(x, y)]) return false;
+  /* ---------------- the corridor ---------------- */
+  function buildBands() {
+    var out = [], p = 0;
+    for (var i = 0; i < NFORK; i++) {
+      out.push({ fork: 0, a: p, b: p + SINGLE_LEN }); p += SINGLE_LEN;
+      out.push({ fork: 1, a: p, b: p + FORK_LEN, k: i }); p += FORK_LEN;
     }
-    return true;
+    out.push({ fork: 0, a: p, b: p + SINGLE_LEN });
+    return out;
+  }
+  var BANDS = buildBands();
+  function bandIdx(arc) {
+    for (var i = 0; i < BANDS.length; i++) if (arc >= BANDS[i].a && arc < BANDS[i].b) return i;
+    return BANDS.length - 1;
   }
 
-  function connected(solid) {
-    var seen = new Uint8Array(W * H), q = [], head = 0, start = -1, i;
-    for (i = 0; i < W * H; i++) if (!solid[i]) { start = i; break; }
-    if (start < 0) return false;
-    q.push(start); seen[start] = 1;
-    while (head < q.length) {
-      var c = q[head++], cx = c % W, cy = (c / W) | 0;
-      var nb = [[cx + 1, cy], [cx - 1, cy], [cx, cy + 1], [cx, cy - 1]];
-      for (var k = 0; k < 4; k++) {
-        var nx = nb[k][0], ny = nb[k][1];
-        if (!inside(nx, ny) || solid[idx(nx, ny)] || seen[idx(nx, ny)]) continue;
-        seen[idx(nx, ny)] = 1; q.push(idx(nx, ny));
-      }
-    }
-    var open = 0, hit = 0;
-    for (i = 0; i < W * H; i++) if (!solid[i]) { open++; hit += seen[i]; }
-    return open === hit;
+  // the corridor still wanders across the screen the way it used to
+  var spine = [];
+  function makeSpine() {
+    spine = [];
+    for (var i = 0; i <= 8; i++) spine.push(VW / 2 + Math.sin(i * 1.1 + rnd() * 0.4) * 34);
+  }
+  function spineX(arc) {
+    var n = spine.length - 1, seg = L / n;
+    var i = Math.max(0, Math.min(n - 1, Math.floor(arc / seg)));
+    var f = (arc - i * seg) / seg;
+    return spine[i] + (spine[i + 1] - spine[i]) * f;
+  }
+  // how far apart the branches are here: 0 in a single stretch, opening out
+  // over the first and last 26px of a fork so the split reads as a split
+  function spread(arc) {
+    var B = BANDS[bandIdx(arc)];
+    if (!B.fork) return 0;
+    var into = Math.min(arc - B.a, B.b - arc);
+    return LANE_DX * Math.max(0, Math.min(1, into / 26));
+  }
+  function laneX(arc, lane) { return spineX(arc) + (lane ? 1 : -1) * spread(arc); }
+
+  var DWELL = 0.7;
+  function sweep(g, t) {
+    var u = Math.sin(g.w * t + g.ph);
+    return g.at + g.span * (u < 0 ? -Math.pow(-u, DWELL) : Math.pow(u, DWELL));
   }
 
-  function visibility(room) {
-    var vis = [];
-    for (var g = 0; g < room.guards.length; g++) {
-      var m = new Uint8Array(W * H), gx = Math.floor(room.guards[g].x), gy = Math.floor(room.guards[g].y);
-      for (var y = 0; y < H; y++) for (var x = 0; x < W; x++)
-        m[idx(x, y)] = traceClear(room.solid, gx, gy, x, y) ? 1 : 0;
-      vis.push(m);
-    }
-    return vis;
-  }
-
-  function rollRoom(level) {
-    var solid = new Uint8Array(W * H), x, y, k;
-    var guards = [], gates = [];
-    for (var r = 0; r < ROWS.length; r++) {
-      var wy = ROWS[r], nGaps = rnd() < 0.45 ? 2 : 1, gaps = [];
-      for (k = 0; k < nGaps; k++)
-        for (var t2 = 0; t2 < 40; t2++) {
-          var gx = 1 + Math.floor(rnd() * (W - 2));
-          var clash = false;
-          for (var z = 0; z < gaps.length; z++) if (Math.abs(gaps[z] - gx) < 3) clash = true;
-          if (clash) continue;
-          gaps.push(gx); break;
+  var guards = [], loot = [], level = 1, rolls = 1;
+  function rollRoom(lv) {
+    var gs = [];
+    for (var i = 0; i < BANDS.length; i++) {
+      var B = BANDS[i];
+      if (B.fork) {
+        for (var lane = 0; lane < 2; lane++) {
+          var width = 30 + rnd() * 20;
+          var span = (B.b - B.a) / 2 - width * 0.4;
+          var speed = (70 + rnd() * 90) * (1 + lv * 0.035);
+          gs.push({ at: (B.a + B.b) / 2, span: span, width: width,
+                    w: speed / span, ph: rnd() * 6.283, lane: lane, band: i,
+                    side: lane ? 1 : -1 });
         }
-      for (x = 0; x < W; x++) if (gaps.indexOf(x) < 0) solid[idx(x, wy)] = 1;
-      gates.push({ y: wy, gaps: gaps });
-      // one lamp per gap, aimed at its own gap. a gap without a lamp is a
-      // free door, and a free door is why the alarm bar used to never move.
-      for (k = 0; k < gaps.length; k++) {
-        var gi = gaps[k];
-        var lx = Math.max(1, Math.min(W - 2, gi + (rnd() < 0.5 ? -1 : 1) * (1 + Math.floor(rnd() * 2))));
-        var ly = wy - 1;
-        if (solid[idx(lx, ly)]) ly = wy - 2;
-        var aim = Math.atan2((wy + 0.9) - (ly + 0.5), (gi + 0.5) - (lx + 0.5));
-        guards.push({ x: lx + 0.5, y: ly + 0.5, reach: 8 + rnd() * 3,
-          half: 0.42 + rnd() * 0.24, base: aim, amp: 0.26 + rnd() * 0.30,
-          w: (1.05 + rnd() * 0.95) * (rnd() < 0.5 ? -1 : 1), ph: rnd() * Math.PI * 2, gate: r });
+      } else if (rnd() < 0.45 + lv * 0.03) {
+        var w2 = 24 + rnd() * 16, sp = (B.b - B.a) / 2;
+        gs.push({ at: (B.a + B.b) / 2, span: sp, width: w2,
+                  w: (40 + rnd() * 60) * (1 + lv * 0.03) / Math.max(8, sp),
+                  ph: rnd() * 6.283, lane: -1, band: i, side: rnd() < 0.5 ? -1 : 1 });
       }
     }
-    var extra = Math.min(3, Math.floor(level / 3));
-    for (var e = 0; e < extra; e++)
-      for (var t3 = 0; t3 < 60; t3++) {
-        x = 1 + Math.floor(rnd() * (W - 2)); y = 1 + Math.floor(rnd() * (H - 2));
-        if (solid[idx(x, y)] || ROWS.indexOf(y) >= 0) continue;
-        guards.push({ x: x + 0.5, y: y + 0.5, reach: 5 + rnd() * 3.5,
-          half: 0.26 + rnd() * 0.26, base: rnd() * Math.PI * 2, amp: 0.9 + rnd() * 1.4,
-          w: (0.8 + rnd() * 1.0) * (rnd() < 0.5 ? -1 : 1), ph: rnd() * Math.PI * 2, gate: -1 });
-        break;
-      }
-    var want = 5 + Math.floor(rnd() * 6);
-    for (var tries = 0; tries < 200 && want > 0; tries++) {
-      x = 1 + Math.floor(rnd() * (W - 2)); y = 1 + Math.floor(rnd() * (H - 2));
-      if (solid[idx(x, y)]) continue;
-      var near = false;
-      for (var rr2 = 0; rr2 < ROWS.length; rr2++) if (Math.abs(ROWS[rr2] - y) < 2) near = true;
-      if (near) continue;
-      solid[idx(x, y)] = 1;
-      if (!connected(solid)) solid[idx(x, y)] = 0; else want--;
-    }
-    var entry = { x: W >> 1, y: H - 1 };
-    while (solid[idx(entry.x, entry.y)]) entry.x = (entry.x + 1) % W;
-    var exit = { x: 1 + Math.floor(rnd() * (W - 2)), y: 0 };
-    while (solid[idx(exit.x, exit.y)]) exit.x = (exit.x + 1) % W;
-    var loot = [];
-    for (var L = 0; L < 3; L++)
-      for (var t4 = 0; t4 < 60; t4++) {
-        x = Math.floor(rnd() * W); y = 1 + Math.floor(rnd() * (H - 2));
-        if (solid[idx(x, y)]) continue;
-        var dup = false;
-        for (var q2 = 0; q2 < loot.length; q2++) if (loot[q2].x === x && loot[q2].y === y) dup = true;
-        if (dup || (x === entry.x && y === entry.y)) continue;
-        loot.push({ x: x, y: y, got: 0 }); break;
-      }
-    var room = { solid: solid, guards: guards, gates: gates, entry: entry, exit: exit, loot: loot };
-    room.vis = visibility(room);
-    return room;
+    return gs;
   }
 
-  function litAt(room, x, y, t) {
-    if (!inside(x, y)) return false;
-    var cx = x + 0.5, cy = y + 0.5;
-    for (var g = 0; g < room.guards.length; g++) {
-      if (!room.vis[g][idx(x, y)]) continue;
-      var gd = room.guards[g], dx = cx - gd.x, dy = cy - gd.y;
-      if (dx * dx + dy * dy > gd.reach * gd.reach) continue;
-      var c = gd.base + gd.amp * Math.sin(gd.w * t + gd.ph);
-      if (Math.abs(angDiff(Math.atan2(dy, dx), c)) <= gd.half) return true;
+  function litIn(gs, arc, lane, t) {
+    var bi = bandIdx(arc);
+    for (var i = 0; i < gs.length; i++) {
+      var g = gs[i];
+      if (g.band !== bi) continue;
+      if (g.lane >= 0 && g.lane !== lane) continue;
+      if (Math.abs(arc - sweep(g, t)) <= g.width) return true;
     }
     return false;
   }
 
-  function litWindow(room, x, y, t0, t1) {
-    for (var k = 0; k <= 4; k++) if (litAt(room, x, y, t0 + (t1 - t0) * k / 4)) return true;
-    return false;
-  }
-
-  // the promise, checked before the room is ever shown: a route from the
-  // entry to the OUT door, inside the shift, whose alarm never passes the cap
-  var MOVX = [0, 1, -1, 0, 0], MOVY = [0, 0, 0, 1, -1];
-  function crossUnder(room, cap) {
-    var N = Math.ceil(SHIFT / STEP), n = W * H;
-    var cur = new Float64Array(n).fill(Infinity);
-    cur[idx(room.entry.x, room.entry.y)] = 0;
-    var goal = idx(room.exit.x, room.exit.y);
-    if (goal === idx(room.entry.x, room.entry.y)) return 0;
-    for (var s = 0; s < N; s++) {
-      var t0 = s * STEP, t1 = t0 + STEP;
-      var next = new Float64Array(n).fill(Infinity);
-      for (var c = 0; c < n; c++) {
-        var a = cur[c];
+  /* Can this room be crossed keeping the alarm under `cap` before the shift
+     ends? Same dynamic program as before, now carrying which branch you are
+     on as well as where you are. Crossing between branches is charged the
+     worse of the two, because you are between them while you do it. */
+  function crossUnder(gs, cap) {
+    var dt = 0.05, ds = V * dt, N = Math.ceil(L / ds), steps = Math.ceil(SHIFT / dt);
+    var cur = [new Float64Array(N + 1).fill(Infinity), new Float64Array(N + 1).fill(Infinity)];
+    cur[0][0] = 0; cur[1][0] = 0;
+    for (var k = 0; k < steps; k++) {
+      var t = k * dt;
+      var next = [new Float64Array(N + 1).fill(Infinity), new Float64Array(N + 1).fill(Infinity)];
+      for (var ln = 0; ln < 2; ln++) for (var i = 0; i <= N; i++) {
+        var a = cur[ln][i];
         if (a === Infinity) continue;
-        var cx = c % W, cy = (c / W) | 0;
-        var litHere = litWindow(room, cx, cy, t0, t1);
-        for (var m = 0; m < 5; m++) {
-          var nx = cx + MOVX[m], ny = cy + MOVY[m];
-          if (!inside(nx, ny) || room.solid[idx(nx, ny)]) continue;
-          var ni = idx(nx, ny);
-          var lit = litWindow(room, nx, ny, t0, t1) || (m > 0 && litHere);
-          var na = lit ? a + FILL * STEP : a - DRAIN * STEP;
-          if (na > cap) continue;
-          if (na < 0) na = 0;
-          if (na < next[ni]) next[ni] = na;
+        for (var m = 0; m <= 1; m++) {
+          var j = i + m;
+          if (j > N) continue;
+          var inFork = BANDS[bandIdx(j * ds)].fork;
+          for (var nl = 0; nl < 2; nl++) {
+            if (nl !== ln && !(inFork && m === 1)) continue;
+            var lit = litIn(gs, j * ds, nl, t);
+            if (nl !== ln) lit = lit || litIn(gs, j * ds, ln, t);
+            var na = lit ? a + FILL * dt : a - DRAIN * dt;
+            if (na > cap) continue;
+            if (na < 0) na = 0;
+            if (na < next[nl][j]) next[nl][j] = na;
+          }
         }
       }
       cur = next;
-      if (cur[goal] < Infinity) return s + 1;
+      if (Math.min(cur[0][N], cur[1][N]) < Infinity) return t;
     }
     return -1;
   }
 
-  var lastRolls = 1;
-  function newRoom(level) {
-    for (var tries = 1; tries <= 40; tries++) {
-      var r = rollRoom(level);
-      if (crossUnder(r, CAP) >= 0) { lastRolls = tries; return r; }
+  /* ---------------- run state ---------------- */
+  var state = "start", score = 0, best = 0, lootGot = 0;
+  var s = 0, lane = 0, alarm = 0, clock = SHIFT, tRun = 0;
+  var walkDir = -1;                 // -1 not walking, else the lane held
+  var parts = [], pops = [], shake = 0, flash = 0, overWait = 0, litNow = false;
+
+  function newRoom() {
+    rolls = 0;
+    for (var tries = 0; tries < 40; tries++) {
+      rolls++;
+      var gs = rollRoom(level);
+      if (crossUnder(gs, CAP) >= 0) { guards = gs; break; }
+      if (tries === 39) guards = rollRoom(1);
     }
-    lastRolls = 41;
-    return rollRoom(1);
+    makeSpine();
+    loot = [];
+    var want = 2 + Math.floor(level / 3);
+    for (var i = 0; i < want; i++) {
+      var at = L * (0.12 + 0.76 * (i + rnd() * 0.7) / want);
+      loot.push({ at: at, lane: BANDS[bandIdx(at)].fork ? (rnd() < 0.5 ? 0 : 1) : 0, got: false });
+    }
+    s = 0; lane = 0; alarm = 0; clock = SHIFT; tRun = 0; walkDir = -1;
+    // recompute for the new room: leaving the old room's value in place made
+    // the glow on the walker disagree with the meter for one frame
+    litNow = litIn(guards, 0, 0, 0);
   }
 
-  /* ---------- run state ----------------------------------------- */
-  var state = "start";
-  var score = 0, best = 0, roomNo = 1, lootGot = 0, alarm = 0, clock = SHIFT;
-  var room = null, px = 0, py = 0, stepping = null, held = -1, litNow = false;
-  var pops = [], tRun = 0, caught = 0, flash = 0;
-  var padHot = [0, 0, 0, 0], padOff = [0, 0, 0, 0];
-
-  function enterRoom(lv) {
-    room = newRoom(lv);
-    px = room.entry.x; py = room.entry.y;
-    stepping = null; alarm = 0; clock = SHIFT; tRun = 0; litNow = false;
-  }
-
-  function reset() {
+  function resetRun() {
     if (!lockSeed) seed = (Math.random() * 4294967296) >>> 0;
-    score = 0; roomNo = 1; lootGot = 0; pops = []; caught = 0; flash = 0;
-    enterRoom(1);
+    score = 0; level = 1; lootGot = 0; parts = []; pops = []; shake = 0; flash = 0;
+    newRoom();
   }
 
   var AC = null;
@@ -448,301 +402,280 @@
     g.gain.exponentialRampToValueAtTime(0.0001, a.currentTime + dur);
     o.connect(g); g.connect(a.destination); o.start(); o.stop(a.currentTime + dur);
   }
-
-  function addPop(cx, cy, txt, col) {
-    pops.push({ x: cx, y: cy, t: 0, txt: txt, col: col });
-    if (pops.length > 8) pops.shift();
+  function burst(x, y, c) {
+    if (parts.length > MAX_PARTS) return;
+    parts.push({ x: x, y: y, vx: (Math.random() - 0.5) * 150, vy: (Math.random() - 0.5) * 150 - 40, t: 0, c: c });
   }
+  function addPop(x, y, txt, col) { pops.push({ x: x, y: y, t: 0, txt: txt, col: col }); if (pops.length > 8) pops.shift(); }
 
-  function tryStep(d) {
-    if (stepping || state !== "play") return false;
-    var nx = px + [0, -1, 0, 1][d], ny = py + [-1, 0, 1, 0][d];
-    if (!inside(nx, ny) || room.solid[idx(nx, ny)]) return false;
-    stepping = { fx: px, fy: py, tx: nx, ty: ny, t: 0 };
-    return true;
-  }
-
-  function arrive() {
-    px = stepping.tx; py = stepping.ty; stepping = null;
-    for (var i = 0; i < room.loot.length; i++) {
-      var L = room.loot[i];
-      if (!L.got && L.x === px && L.y === py) {
-        L.got = 1; lootGot++; score += 60;
-        addPop(px, py, "+60", "#ffc857"); blip(880, 0.08, "square", 0.05);
-      }
-    }
-    if (px === room.exit.x && py === room.exit.y) {
-      var bonus = 100 + roomNo * 10;
-      score += bonus;
-      addPop(px, py, "+" + bonus, "#6ad9c0");
-      blip(660, 0.12, "square", 0.055);
-      roomNo++;
-      enterRoom(roomNo);
-    }
-  }
-
-  function gameOver(why) {
-    state = "over";
-    caught = 1;
-    document.getElementById("overTitle").textContent = why;
-    if (score > best) { best = score; saveNum("golge-best", best); document.getElementById("overTitle").classList.add("best"); }
-    else document.getElementById("overTitle").classList.remove("best");
-    document.getElementById("overScore").textContent = fmt(score);
-    document.getElementById("overBest").textContent = fmt(best);
-    document.getElementById("overRooms").textContent = roomNo - 1;
-    document.getElementById("overLoot").textContent = lootGot;
-    document.getElementById("overScreen").hidden = false;
+  function caught(why) {
+    state = "over"; overWait = 0.95; shake = 1; flash = 0.8;
+    for (var i = 0; i < 26; i++) burst(laneX(s, lane), screenY(s), i % 2 ? "#ff4f5a" : "#ffe08a");
+    overTitle.textContent = why;
+    if (score > best) { best = score; saveNum("golge-best", best); overTitle.classList.add("best"); }
+    else overTitle.classList.remove("best");
+    overScore.textContent = fmt(score);
+    overBest.textContent = fmt(best);
+    overRooms.textContent = level - 1;
+    overLoot.textContent = lootGot;
+    overScreen.hidden = false;
     blip(90, 0.4, "sawtooth", 0.08);
-    syncHud();
   }
 
-  function start() {
-    reset(); state = "play";
-    document.getElementById("startScreen").hidden = true;
-    document.getElementById("overScreen").hidden = true;
+  function startRun() {
+    resetRun(); state = "play";
+    startScreen.hidden = true; overScreen.hidden = true;
     syncHud();
   }
 
   function step(dt) {
-    for (var i = 0; i < 4; i++) if (padHot[i] > 0) padHot[i] = Math.max(0, padHot[i] - dt);
-    for (i = pops.length - 1; i >= 0; i--) { pops[i].t += dt; if (pops[i].t > 0.9) pops.splice(i, 1); }
-    flash = Math.max(0, flash - dt * 3);
-    if (state !== "play") return;
     tRun += dt;
-    clock -= dt;
-
-    if (stepping) {
-      stepping.t += dt;
-      if (stepping.t >= STEP) arrive();
+    shake = Math.max(0, shake - dt * 2.4);
+    flash = Math.max(0, flash - dt * 2);
+    for (var i = parts.length - 1; i >= 0; i--) {
+      var p = parts[i]; p.t += dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 220 * dt;
+      if (p.t > 0.7) parts.splice(i, 1);
     }
-    if (!stepping && held >= 0) tryStep(held);
+    for (i = pops.length - 1; i >= 0; i--) { pops[i].t += dt; if (pops[i].t > 0.9) pops.splice(i, 1); }
+    if (state === "over") { overWait = Math.max(0, overWait - dt); return; }
+    if (state !== "play") return;
 
-    // light is charged exactly as the feasibility check charges it: the cell
-    // you are in, plus the one you are stepping off, while the step lasts
-    litNow = litAt(room, px, py, tRun);
-    if (stepping) litNow = litAt(room, stepping.tx, stepping.ty, tRun) || litAt(room, stepping.fx, stepping.fy, tRun);
+    clock -= dt;
+    if (walkDir >= 0) {
+      // you can only change branch inside a fork; elsewhere the corridor is one
+      if (BANDS[bandIdx(s)].fork) lane = walkDir;
+      s = Math.min(L, s + V * dt);
+      if (!BANDS[bandIdx(s)].fork) lane = walkDir;
+    }
+
+    litNow = litIn(guards, s, lane, tRun);
     alarm += (litNow ? FILL : -DRAIN) * dt;
     if (alarm < 0) alarm = 0;
-    if (litNow) flash = Math.min(1, flash + dt * 2);
-    if (alarm >= 1) { alarm = 1; gameOver("SEEN"); return; }
-    if (clock <= 0) { clock = 0; gameOver("SHIFT OVER"); return; }
+
+    for (i = 0; i < loot.length; i++) {
+      var Lt = loot[i];
+      if (Lt.got) continue;
+      if (Math.abs(s - Lt.at) < 16 && (!BANDS[bandIdx(Lt.at)].fork || Lt.lane === lane)) {
+        Lt.got = true; lootGot++; score += 70;
+        addPop(laneX(Lt.at, Lt.lane), screenY(Lt.at), "+70", "#ffc857");
+        blip(880, 0.08, "square", 0.05);
+      }
+    }
+
+    if (alarm >= 1) { alarm = 1; caught("SEEN"); return; }
+    if (clock <= 0) { clock = 0; caught("SHIFT OVER"); return; }
+    if (s >= L) {
+      var bonus = 120 + level * 12;
+      score += bonus;
+      addPop(laneX(L, lane), screenY(L), "+" + bonus, "#6ad9c0");
+      blip(660, 0.12, "square", 0.055);
+      level++;
+      newRoom();
+    }
     syncHud();
   }
 
-  /* ---------- drawing ------------------------------------------- */
-  function boardY() {
-    var padTop = VH - PAD_B - PAD_H;
-    // the board is width-limited, so a tall phone has slack. put a bit above
-    // and the rest below, where the thumb sits, rather than all in one lump.
-    return Math.max(112, Math.round(100 + (padTop - 100 - H * CELL) * 0.38));
-  }
-  function bx() { return Math.round((VW - BOARD) / 2); }
+  /* ---------------- drawing ---------------- */
+  function camY() { return Math.max(0, Math.min(L - 1, s)) - 160; }
+  function screenY(arc) { return VH * 0.72 - (arc - camY()) * 0.86; }
 
-  function draw() {
-    var ox = bx(), oy = boardY(), x, y, i;
-    ctx.fillStyle = "#070a10";
-    ctx.fillRect(0, 0, VW, VH);
-    if (!room) return;
-
-    // floor
-    for (y = 0; y < H; y++) for (x = 0; x < W; x++) {
-      if (room.solid[idx(x, y)]) continue;
-      ctx.fillStyle = ((x + y) & 1) ? "#0e151e" : "#111925";
-      ctx.fillRect(ox + x * CELL, oy + y * CELL, CELL, CELL);
-      ctx.fillStyle = "rgba(0,0,0,0.22)";
-      ctx.fillRect(ox + x * CELL, oy + y * CELL + CELL - 1, CELL, 1);
-      ctx.fillRect(ox + x * CELL + CELL - 1, oy + y * CELL, 1, CELL);
+  function tube(fromArc, toArc, lane, w, style) {
+    ctx.beginPath();
+    for (var a = fromArc; a <= toArc + 0.01; a += 8) {
+      var x = laneX(Math.min(a, toArc), lane), y = screenY(Math.min(a, toArc));
+      if (a === fromArc) ctx.moveTo(x, y); else ctx.lineTo(x, y);
     }
+    ctx.strokeStyle = style; ctx.lineWidth = w; ctx.lineJoin = "round"; ctx.lineCap = "round";
+    ctx.stroke();
+  }
 
-    // light, drawn cell by cell from the very function the rules use, so
-    // what you see and what the alarm charges you for cannot disagree.
-    // additive, or it blends to a flat tan and reads as another floor tile.
-    ctx.globalCompositeOperation = "lighter";
-    for (y = 0; y < H; y++) for (x = 0; x < W; x++) {
-      if (room.solid[idx(x, y)] || !litAt(room, x, y, tRun)) continue;
-      var near = 99;
-      for (i = 0; i < room.guards.length; i++) {
-        var gd = room.guards[i];
-        var d = Math.sqrt((x + 0.5 - gd.x) * (x + 0.5 - gd.x) + (y + 0.5 - gd.y) * (y + 0.5 - gd.y));
-        if (room.vis[i][idx(x, y)] && d < near) near = d;
+  function drawFloor() {
+    ctx.fillStyle = "#0b1119";
+    ctx.fillRect(0, 0, VW, VH);
+    for (var bi = 0; bi < BANDS.length; bi++) {
+      var B = BANDS[bi];
+      var lanes = B.fork ? [0, 1] : [0];
+      for (var q = 0; q < lanes.length; q++) {
+        tube(B.a, B.b, lanes[q], B.fork ? 54 : 74, "#131b26");
+        tube(B.a, B.b, lanes[q], B.fork ? 46 : 66, "#1b2635");
+        tube(B.a, B.b, lanes[q], B.fork ? 46 : 66, "rgba(230,238,247,0.05)");
       }
-      var a = Math.max(0.30, 0.86 - near * 0.052);
-      ctx.fillStyle = "rgba(255,205,90," + a.toFixed(3) + ")";
-      ctx.fillRect(ox + x * CELL, oy + y * CELL, CELL, CELL);
-      ctx.fillStyle = "rgba(255,248,222," + (a * 0.55).toFixed(3) + ")";
-      ctx.fillRect(ox + x * CELL + 3, oy + y * CELL + 3, CELL - 6, CELL - 6);
+    }
+    for (var b = 0; b <= L; b += 46) {
+      var Bb = BANDS[bandIdx(b)], yy = screenY(b);
+      if (yy < -30 || yy > VH + 30) continue;
+      var ls = Bb.fork ? [0, 1] : [0], hw = Bb.fork ? 22 : 30;
+      for (var z = 0; z < ls.length; z++) {
+        ctx.fillStyle = "rgba(230,238,247,0.05)";
+        ctx.fillRect(laneX(b, ls[z]) - hw, yy - 1, hw * 2, 2);
+      }
+    }
+    var ex = laneX(L, lane), ey = screenY(L);
+    ctx.fillStyle = "#6ad9c0";
+    ctx.globalAlpha = 0.20 + 0.10 * Math.sin(tRun * 3);
+    ctx.fillRect(ex - 40, ey - 26, 80, 30);
+    ctx.globalAlpha = 1;
+    ctx.fillRect(ex - 34, ey - 4, 68, 4);
+    ctx.font = '8px "Press Start 2P", monospace';
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText("OUT", ex, ey - 16);
+  }
+
+  function drawBeams() {
+    // additive, so overlapping cones pool into brighter light instead of
+    // blending down into a flat olive
+    ctx.globalCompositeOperation = "lighter";
+    for (var i = 0; i < guards.length; i++) {
+      var g = guards[i];
+      var gl = g.lane < 0 ? 0 : g.lane;
+      var px = laneX(g.at, gl) + g.side * (BANDS[g.band].fork ? 58 : 86);
+      var py = screenY(g.at);
+      if (py < -200 || py > VH + 200) continue;
+      var c = sweep(g, tRun);
+      var aArc = Math.max(BANDS[g.band].a, c - g.width), bArc = Math.min(BANDS[g.band].b, c + g.width);
+      var ax = laneX(aArc, gl), ay = screenY(aArc);
+      var bx = laneX(bArc, gl), by = screenY(bArc);
+      var e1x = px + (ax - px) * 1.5, e1y = py + (ay - py) * 1.5;
+      var e2x = px + (bx - px) * 1.5, e2y = py + (by - py) * 1.5;
+      var grd = ctx.createRadialGradient(px, py, 4, px, py, 190);
+      grd.addColorStop(0, "rgba(255,214,120,0.50)");
+      grd.addColorStop(1, "rgba(255,214,120,0.04)");
+      ctx.fillStyle = grd;
+      ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(e1x, e1y); ctx.lineTo(e2x, e2y); ctx.closePath(); ctx.fill();
+      ctx.globalCompositeOperation = "source-over";
+      ctx.fillStyle = "#2a1f22"; ctx.fillRect(px - 9, py - 11, 18, 22);
+      ctx.fillStyle = "#ff6b5c"; ctx.fillRect(px - 7, py - 9, 14, 11);
+      ctx.fillStyle = "#e6eef7"; ctx.fillRect(px - 5, py - 18, 10, 8);
+      ctx.fillStyle = "#ffe08a"; ctx.fillRect(px - 3 + g.side * 4, py - 4, 6, 4);
+      ctx.globalCompositeOperation = "lighter";
     }
     ctx.globalCompositeOperation = "source-over";
-
-    // walls and pillars
-    for (y = 0; y < H; y++) for (x = 0; x < W; x++) {
-      if (!room.solid[idx(x, y)]) continue;
-      var wx = ox + x * CELL, wy = oy + y * CELL;
-      ctx.fillStyle = "#4a5f7d";
-      ctx.fillRect(wx, wy, CELL, CELL);
-      ctx.fillStyle = "#708aad";
-      ctx.fillRect(wx, wy, CELL, 5);
-      ctx.fillStyle = "#2b3a4d";
-      ctx.fillRect(wx, wy + CELL - 5, CELL, 5);
-      ctx.fillStyle = "rgba(7,10,16,0.30)";
-      ctx.fillRect(wx, wy, 2, CELL);
-    }
-
-    // the OUT door
-    var ex = ox + room.exit.x * CELL, ey = oy + room.exit.y * CELL;
-    ctx.fillStyle = "rgba(106,217,192,0.24)";
-    ctx.fillRect(ex, ey, CELL, CELL);
-    ctx.strokeStyle = "#6ad9c0"; ctx.lineWidth = 2;
-    ctx.strokeRect(ex + 1, ey + 1, CELL - 2, CELL - 2);
-    ctx.fillStyle = "#6ad9c0";
-    ctx.font = "6px 'Press Start 2P', monospace";
-    ctx.textAlign = "center";
-    ctx.fillText("OUT", ex + CELL / 2, ey - 4);
-
-    // loot
-    for (i = 0; i < room.loot.length; i++) {
-      var L = room.loot[i];
-      if (L.got) continue;
-      var lx = ox + L.x * CELL + CELL / 2, ly = oy + L.y * CELL + CELL / 2;
-      var bob = Math.sin(tRun * 4 + i) * 1.5;
-      ctx.fillStyle = "#ffc857";
-      ctx.beginPath(); ctx.arc(lx, ly + bob, 5.5, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = "rgba(255,255,255,0.7)";
-      ctx.beginPath(); ctx.arc(lx - 1.6, ly + bob - 1.8, 1.8, 0, Math.PI * 2); ctx.fill();
-    }
-
-    // lamp posts
-    for (i = 0; i < room.guards.length; i++) {
-      var g = room.guards[i];
-      var gx = ox + g.x * CELL, gy = oy + g.y * CELL;
-      var c = g.base + g.amp * Math.sin(g.w * tRun + g.ph);
-      ctx.fillStyle = "rgba(255,216,116,0.18)";
-      ctx.beginPath(); ctx.arc(gx, gy, 13, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = "#1a2230";
-      ctx.beginPath(); ctx.arc(gx, gy, 7.5, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = "#ff6b5c";
-      ctx.beginPath(); ctx.arc(gx, gy, 6, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = "#fff3cf";
-      ctx.beginPath();
-      ctx.arc(gx + Math.cos(c) * 6.5, gy + Math.sin(c) * 6.5, 3.4, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    // you
-    var sx = px, sy = py;
-    if (stepping) {
-      var k = Math.min(1, stepping.t / STEP);
-      sx = stepping.fx + (stepping.tx - stepping.fx) * k;
-      sy = stepping.fy + (stepping.ty - stepping.fy) * k;
-    }
-    var yx = ox + sx * CELL + CELL / 2, yy = oy + sy * CELL + CELL / 2;
-    if (litNow) {
-      ctx.fillStyle = "rgba(255,224,138,0.30)";
-      ctx.beginPath(); ctx.arc(yx, yy, 13, 0, Math.PI * 2); ctx.fill();
-    }
-    ctx.fillStyle = "#050a0e";
-    ctx.beginPath(); ctx.arc(yx, yy, 10, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = litNow ? "#fff0cc" : "#6ad9c0";
-    ctx.beginPath(); ctx.arc(yx, yy, 8, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = "rgba(5,10,14,0.60)";
-    ctx.beginPath(); ctx.arc(yx, yy - 1.5, 3.4, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = litNow ? "#ff4f5a" : "rgba(106,217,192,0.55)";
-    ctx.lineWidth = 1.6;
-    ctx.beginPath(); ctx.arc(yx, yy, 12.5, 0, Math.PI * 2); ctx.stroke();
-
-    // board edge
-    ctx.strokeStyle = "rgba(112,138,173,0.55)"; ctx.lineWidth = 3;
-    ctx.strokeRect(ox - 2, oy - 2, BOARD + 4, H * CELL + 4);
-    ctx.strokeStyle = "rgba(7,10,16,0.9)"; ctx.lineWidth = 1;
-    ctx.strokeRect(ox - 4, oy - 4, BOARD + 8, H * CELL + 8);
-
-    // pops
-    ctx.textAlign = "center";
-    for (i = 0; i < pops.length; i++) {
-      var p = pops[i], al = 1 - p.t / 0.9;
-      ctx.globalAlpha = al;
-      ctx.fillStyle = p.col;
-      ctx.font = "8px 'Press Start 2P', monospace";
-      ctx.fillText(p.txt, ox + p.x * CELL + CELL / 2, oy + p.y * CELL - p.t * 22);
-      ctx.globalAlpha = 1;
-    }
-    ctx.textAlign = "left";
   }
 
-  /* ---------- HUD ----------------------------------------------- */
-  var hScore = document.getElementById("hScore"), hBest = document.getElementById("hBest");
-  var hClock = document.getElementById("hClock"), hRoom = document.getElementById("hRoom");
-  var hLoot = document.getElementById("hLoot"), hBar = document.getElementById("hBar");
-  var hMark = document.getElementById("hMark");
-  var pdEl = [];
-  for (var q = 0; q < 4; q++) pdEl.push(document.querySelector('.pd[data-d="' + q + '"]'));
+  function drawLoot() {
+    for (var i = 0; i < loot.length; i++) {
+      if (loot[i].got) continue;
+      var y = screenY(loot[i].at);
+      if (y < -20 || y > VH + 20) continue;
+      var x = laneX(loot[i].at, loot[i].lane);
+      var bob = Math.sin(tRun * 4 + i) * 2;
+      ctx.fillStyle = "#ffc857";
+      ctx.beginPath(); ctx.arc(x, y + bob, 6, 0, 6.283); ctx.fill();
+      ctx.fillStyle = "rgba(255,255,255,0.75)";
+      ctx.beginPath(); ctx.arc(x - 1.8, y + bob - 2, 2, 0, 6.283); ctx.fill();
+    }
+  }
 
+  function drawWalker() {
+    var x = laneX(s, lane), y = screenY(s);
+    var bob = walkDir >= 0 ? Math.sin(tRun * 12) * 1.4 : 0;
+    if (litNow) {
+      ctx.fillStyle = "rgba(255,224,138,0.28)";
+      ctx.beginPath(); ctx.arc(x, y, 20, 0, 6.283); ctx.fill();
+    }
+    ctx.fillStyle = "rgba(0,0,0,0.35)";
+    ctx.beginPath(); ctx.ellipse(x, y + 11, 9, 3.5, 0, 0, 6.283); ctx.fill();
+    ctx.fillStyle = litNow ? "#ffe9bd" : "#6ad9c0";
+    ctx.fillRect(x - 6, y - 12 + bob, 12, 16);
+    ctx.fillStyle = litNow ? "#fff6e2" : "#9df0e0";
+    ctx.fillRect(x - 4, y - 19 + bob, 8, 8);
+    ctx.fillStyle = "rgba(11,17,25,0.65)";
+    ctx.fillRect(x - 4, y - 8 + bob, 8, 3);
+  }
+
+  function draw() {
+    ctx.save();
+    if (shake > 0) ctx.translate((Math.random() - 0.5) * 9 * shake, (Math.random() - 0.5) * 9 * shake);
+    drawFloor();
+    drawBeams();
+    drawLoot();
+    drawWalker();
+    for (var i = 0; i < parts.length; i++) {
+      var p = parts[i];
+      ctx.globalAlpha = 1 - p.t / 0.7;
+      ctx.fillStyle = p.c;
+      ctx.fillRect(p.x - 2, p.y - 2, 4, 4);
+      ctx.globalAlpha = 1;
+    }
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    for (i = 0; i < pops.length; i++) {
+      var q = pops[i];
+      ctx.globalAlpha = 1 - q.t / 0.9;
+      ctx.fillStyle = q.col;
+      ctx.font = '9px "Press Start 2P", monospace';
+      ctx.fillText(q.txt, q.x, q.y - q.t * 26);
+      ctx.globalAlpha = 1;
+    }
+    ctx.restore();
+    if (flash > 0) {
+      ctx.fillStyle = "rgba(255,79,90," + (flash * 0.35).toFixed(3) + ")";
+      ctx.fillRect(0, 0, VW, VH);
+    }
+  }
+
+  /* ---------------- HUD ---------------- */
   function fmt(n) { return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
+  function saveNum(k, v) { try { localStorage.setItem(k, String(v)); } catch (e) {} }
+  function loadNum(k) { try { var v = parseInt(localStorage.getItem(k), 10); return isFinite(v) ? v : 0; } catch (e) { return 0; } }
   function syncHud() {
     hScore.textContent = fmt(score);
     hBest.textContent = fmt(best);
     hBest.classList.toggle("lead", score >= best && score > 0);
-    hClock.textContent = clock.toFixed(1);
-    hClock.classList.toggle("tight", clock < 2.5);
-    hRoom.textContent = roomNo;
+    hClock.textContent = Math.max(0, clock).toFixed(1);
+    hClock.classList.toggle("tight", clock < 3);
+    hRoom.textContent = level;
     hLoot.textContent = lootGot;
-    hBar.style.transform = "scaleX(" + alarm.toFixed(3) + ")";
+    hBar.style.transform = "scaleX(" + Math.min(1, alarm).toFixed(3) + ")";
     hMark.style.left = (CAP * 100) + "%";
   }
-
   function syncPads() {
-    for (var i = 0; i < 4; i++) {
-      var hot = padHot[i] > 0 || held === i;
+    var inFork = state === "play" && BANDS[bandIdx(s)].fork;
+    for (var i = 0; i < 2; i++) {
+      var hot = walkDir === i;
       if (pdEl[i]._hot !== hot) { pdEl[i]._hot = hot; pdEl[i].classList.toggle("hot", hot); }
-      var nx = px + [0, -1, 0, 1][i], ny = py + [-1, 0, 1, 0][i];
-      var bad = state !== "play" || !room || !inside(nx, ny) || room.solid[idx(nx, ny)];
-      if (padOff[i] !== bad) { padOff[i] = bad; pdEl[i].classList.toggle("off", bad); }
+      // tell you which branch the light is on right now, since that is the
+      // whole question the fork asks
+      var warn = inFork && litIn(guards, s + 30, i, tRun);
+      if (pdEl[i]._lit !== warn) { pdEl[i]._lit = warn; pdEl[i].classList.toggle("lit", warn); }
     }
   }
 
-  function saveNum(k, v) { try { localStorage.setItem(k, String(v)); } catch (e) {} }
-  function loadNum(k) { try { var v = parseInt(localStorage.getItem(k), 10); return isFinite(v) ? v : 0; } catch (e) { return 0; } }
-
-  /* ---------- input --------------------------------------------- */
-  var pads = document.getElementById("pads");
-  function padDown(e) {
-    var pd = e.target.closest ? e.target.closest(".pd") : null;
+  /* ---------------- input ---------------- */
+  function hold(l) { if (state !== "play") { startRun(); return; } walkDir = l; }
+  function lift(l) { if (walkDir === l || l === undefined) walkDir = -1; }
+  document.getElementById("pads").addEventListener("pointerdown", function (ev) {
+    var pd = ev.target.closest ? ev.target.closest(".pd") : null;
     if (!pd) return;
-    e.preventDefault();
-    var d = parseInt(pd.dataset.d, 10);
-    held = d; padHot[d] = 0.12;
-    tryStep(d);
-  }
-  function padUp() { held = -1; }
-  pads.addEventListener("pointerdown", padDown, { passive: false });
-  pads.addEventListener("pointerup", padUp);
-  pads.addEventListener("pointercancel", padUp);
-  pads.addEventListener("pointerleave", padUp);
-  window.addEventListener("pointerup", padUp);
+    ev.preventDefault();
+    hold(parseInt(pd.dataset.l, 10));
+  }, { passive: false });
+  window.addEventListener("pointerup", function () { lift(); });
+  window.addEventListener("pointercancel", function () { lift(); });
 
-  document.getElementById("btnStart").addEventListener("click", function (e) { e.stopPropagation(); start(); });
-  document.getElementById("btnAgain").addEventListener("click", function (e) { e.stopPropagation(); start(); });
-  document.getElementById("startScreen").addEventListener("pointerdown", function () { start(); });
-  document.getElementById("overScreen").addEventListener("pointerdown", function () { start(); });
+  document.getElementById("btnStart").addEventListener("click", function (e) { e.stopPropagation(); startRun(); });
+  document.getElementById("btnAgain").addEventListener("click", function (e) { e.stopPropagation(); startRun(); });
+  startScreen.addEventListener("pointerdown", function () { startRun(); });
+  overScreen.addEventListener("pointerdown", function () { if (overWait <= 0) startRun(); });
 
-  var KEYS = { ArrowUp: 0, KeyW: 0, ArrowLeft: 1, KeyA: 1, ArrowDown: 2, KeyS: 2, ArrowRight: 3, KeyD: 3 };
+  var KL = { ArrowLeft: 0, KeyA: 0, ArrowRight: 1, KeyD: 1 };
   window.addEventListener("keydown", function (e) {
-    if (e.code === "Space" || e.code === "Enter") { if (state !== "play") { e.preventDefault(); start(); } return; }
-    if (e.code === "KeyR") { e.preventDefault(); start(); return; }
-    var d = KEYS[e.code];
-    if (d !== undefined) { e.preventDefault(); held = d; padHot[d] = 0.12; tryStep(d); }
+    if (e.code === "Space" || e.code === "Enter" || e.code === "KeyR") {
+      if (state !== "play" || e.code === "KeyR") { e.preventDefault(); startRun(); }
+      return;
+    }
+    var l = KL[e.code];
+    if (l !== undefined) { e.preventDefault(); hold(l); }
   });
   window.addEventListener("keyup", function (e) {
-    var d = KEYS[e.code];
-    if (d !== undefined && held === d) held = -1;
+    var l = KL[e.code];
+    if (l !== undefined) lift(l);
   });
 
-  /* ---------- layout -------------------------------------------- */
+  /* ---------------- layout ---------------- */
   function resize() {
     dpr = Math.min(window.devicePixelRatio || 1, 2.5);
     var w = wrap.clientWidth, h = wrap.clientHeight;
-    cv.width = Math.round(w * dpr);
-    cv.height = Math.round(h * dpr);
+    cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
     scale = Math.min((w * dpr) / VW, (h * dpr) / MIN_VH);
     originX = Math.round(((w * dpr) - VW * scale) / 2);
     VH = (h * dpr) / scale;
@@ -754,11 +687,10 @@
     ctx.setTransform(scale, 0, 0, scale, originX, 0);
     render();
   }
-
   function render() {
     ctx.save();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.fillStyle = "#04060b";
+    ctx.fillStyle = "#05080d";
     ctx.fillRect(0, 0, cv.width, cv.height);
     ctx.restore();
     draw();
@@ -783,7 +715,7 @@
   }
 
   best = loadNum("golge-best");
-  reset();
+  resetRun();
   syncHud();
   resize();
   if (window.ResizeObserver) new ResizeObserver(resize).observe(wrap);
