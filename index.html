@@ -649,7 +649,7 @@
       <div class="plate">
         <span class="no">CABINET NO. 26 &mdash; 1986</span>
         <h2>GÖLGE</h2>
-        <p>FENER hides the room from you; this hides you from the guards. Hold to walk, let go to stand still &mdash; that is the whole control. Standing in a beam fills the alarm and standing in the dark empties it, so every room is a question of how much light you are willing to take. Every room can be crossed, but none of them without taking some, and the shift clock will not let you wait all night.</p>
+        <p>FENER hides the room from you; this hides you from the guards. A walled room, four directions, and going back is a move rather than a mistake. Every wall has a gap and every gap has its own lamp sweeping across it, so you pick your door, duck behind a pillar and let the beam pass. Standing in light fills the alarm and the dark empties it &mdash; but the shift clock only buys about one beam's worth of waiting.</p>
         <span class="keys">Hold anywhere &middot; Space</span>
         <span class="play">&#9654; PLAY</span>
       </div>
@@ -3044,62 +3044,79 @@
   }
 
 
-  /* ---------- golge: wait for the dark, then go ---------- */
+  /* ---------- golge: pick your door, then go ---------- */
   var gl = null;
   function glInit(W, H) {
-    return { W: W, H: H, last: 0, t: 0, s: 0, alarm: 0,
-             guards: [{ at: 0.32, ph: 0.4, w: 1.5 }, { at: 0.66, ph: 2.3, w: 1.9 }] };
-  }
-  function glLit(v, s) {
-    for (var i = 0; i < v.guards.length; i++) {
-      var g = v.guards[i], d = s - g.at;
-      if (Math.abs(d - 0.12 * Math.sin(g.w * v.t + g.ph)) <= 0.065) return true;
-    }
-    return false;
+    return { W: W, H: H, t: 0, last: 0, gx: 0.30, px: 0.5, py: 0.94, band: 2, wait: 0 };
   }
   function drawCreep(ctx, W, H, now) {
     if (!gl || gl.W !== W) gl = glInit(W, H);
     var v = gl, dt = Math.min(0.05, (now - (v.last || now)) / 1000);
     v.last = now; v.t += dt;
 
-    var ahead = glLit(v, Math.min(1, v.s + 0.05));
-    if (!ahead || v.alarm < 0.3) v.s += 0.20 * dt;
-    v.alarm += (glLit(v, v.s) ? 0.55 : -0.8) * dt;
-    v.alarm = Math.max(0, Math.min(1, v.alarm));
-    if (v.s >= 1) { v.s = 0; v.alarm = 0; }
-
+    var rows = [0.30, 0.62], gaps = [0.30, 0.68];
     ctx.fillStyle = "#070a10"; ctx.fillRect(0, 0, W, H);
-    var y0 = H * 0.5;
-    function px(s) { return 10 + s * (W - 20); }
-    function py(s) { return y0 + Math.sin(s * 5.0) * (H * 0.22); }
-    ctx.beginPath();
-    for (var a = 0; a <= 1.001; a += 0.02) { if (a === 0) ctx.moveTo(px(a), py(a)); else ctx.lineTo(px(a), py(a)); }
-    ctx.strokeStyle = "#131b26"; ctx.lineWidth = 26; ctx.lineJoin = "round"; ctx.lineCap = "round"; ctx.stroke();
-    ctx.strokeStyle = "#18222f"; ctx.lineWidth = 21; ctx.stroke();
 
-    for (var i = 0; i < v.guards.length; i++) {
-      var g = v.guards[i];
-      var gx = px(g.at), gy = py(g.at) - 34;
-      var c = g.at + 0.12 * Math.sin(g.w * v.t + g.ph);
-      var ax = px(c - 0.065), ay = py(c - 0.065), bx = px(c + 0.065), by = py(c + 0.065);
-      ctx.fillStyle = "rgba(255,224,138,0.26)";
-      ctx.beginPath(); ctx.moveTo(gx, gy);
-      ctx.lineTo(gx + (ax - gx) * 1.4, gy + (ay - gy) * 1.4);
-      ctx.lineTo(gx + (bx - gx) * 1.4, gy + (by - gy) * 1.4);
-      ctx.closePath(); ctx.fill();
-      ctx.fillStyle = "#ff6b5c"; ctx.fillRect(gx - 4, gy - 4, 8, 9);
-      ctx.fillStyle = "#e6eef7"; ctx.fillRect(gx - 3, gy - 9, 6, 5);
+    // floor
+    ctx.fillStyle = "#101825";
+    ctx.fillRect(W * 0.04, H * 0.05, W * 0.92, H * 0.90);
+
+    // the two walls and their gaps
+    var gw = W * 0.15;
+    for (var r = 0; r < 2; r++) {
+      var wy = H * rows[r], gxp = W * gaps[r];
+      ctx.fillStyle = "#4a5f7d";
+      ctx.fillRect(W * 0.04, wy, gxp - gw / 2 - W * 0.04, H * 0.055);
+      ctx.fillRect(gxp + gw / 2, wy, W * 0.96 - (gxp + gw / 2), H * 0.055);
+      ctx.fillStyle = "#708aad";
+      ctx.fillRect(W * 0.04, wy, gxp - gw / 2 - W * 0.04, 1.5);
+      ctx.fillRect(gxp + gw / 2, wy, W * 0.96 - (gxp + gw / 2), 1.5);
     }
 
-    var sx = px(v.s), sy = py(v.s), lit = glLit(v, v.s);
-    ctx.fillStyle = lit ? "#ffd7a0" : "#1d3a37";
-    ctx.fillRect(sx - 4, sy - 4, 8, 10);
-    ctx.fillStyle = lit ? "#ffe9c7" : "#6ad9c0";
-    ctx.fillRect(sx - 3, sy - 9, 6, 5);
+    // a lamp over each gap, sweeping across it
+    var lit = [0, 0];
+    ctx.globalCompositeOperation = "lighter";
+    for (r = 0; r < 2; r++) {
+      var wy2 = H * rows[r], gxp2 = W * gaps[r];
+      var sweep = Math.sin(v.t * (1.6 + r * 0.5) + r * 2.1);
+      var lampx = gxp2 + sweep * gw * 0.9;
+      lit[r] = Math.abs(sweep) < 0.42 ? 1 : 0;
+      var g = ctx.createRadialGradient(lampx, wy2, 1, lampx, wy2, H * 0.22);
+      g.addColorStop(0, "rgba(255,205,90,0.55)");
+      g.addColorStop(1, "rgba(255,205,90,0)");
+      ctx.fillStyle = g;
+      ctx.fillRect(lampx - H * 0.22, wy2 - H * 0.04, H * 0.44, H * 0.30);
+    }
+    ctx.globalCompositeOperation = "source-over";
+    for (r = 0; r < 2; r++) {
+      var wy3 = H * rows[r], gxp3 = W * gaps[r];
+      var sweep2 = Math.sin(v.t * (1.6 + r * 0.5) + r * 2.1);
+      ctx.fillStyle = "#ff6b5c";
+      ctx.beginPath(); ctx.arc(gxp3 + sweep2 * gw * 0.9, wy3 - H * 0.015, 2.6, 0, 6.283); ctx.fill();
+    }
 
-    ctx.fillStyle = "rgba(230,238,247,0.14)"; ctx.fillRect(8, H - 8, W - 16, 3);
-    ctx.fillStyle = v.alarm > 0.7 ? "#ff4f5a" : "#ffe08a";
-    ctx.fillRect(8, H - 8, (W - 16) * v.alarm, 3);
+    // the thief: slide to the gap, wait for the beam, then slip through
+    var target = v.band >= 2 ? gaps[1] : v.band === 1 ? gaps[0] : 0.5;
+    var wantY = v.band >= 2 ? 0.70 : v.band === 1 ? 0.38 : 0.10;
+    var dxp = target - v.px;
+    if (Math.abs(dxp) > 0.012) v.px += Math.sign(dxp) * Math.min(Math.abs(dxp), 0.40 * dt);
+    else if (v.band >= 1 && lit[v.band - 1]) v.wait = 1;                  // hold for the beam
+    else {
+      v.wait = 0;
+      v.py -= 0.34 * dt;
+      if (v.py < wantY) { v.band--; if (v.band < 0) { v.band = 2; v.py = 0.94; v.px = 0.5; } }
+    }
+    if (v.py > 0.96) v.py = 0.96;
+
+    var yx = W * v.px, yy = H * v.py, inLight = v.wait;
+    ctx.fillStyle = "#050a0e";
+    ctx.beginPath(); ctx.arc(yx, yy, 5.2, 0, 6.283); ctx.fill();
+    ctx.fillStyle = inLight ? "#fff0cc" : "#6ad9c0";
+    ctx.beginPath(); ctx.arc(yx, yy, 4, 0, 6.283); ctx.fill();
+
+    // the OUT door
+    ctx.strokeStyle = "#6ad9c0"; ctx.lineWidth = 1.5;
+    ctx.strokeRect(W * 0.44, H * 0.055, W * 0.12, H * 0.05);
   }
 
   /* ---------- wire up ---------- */
