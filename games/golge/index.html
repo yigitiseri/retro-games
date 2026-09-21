@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
-<meta name="description" content="GÖLGE — a corridor that keeps splitting in two, where neither branch is the safe one">
+<meta name="description" content="GÖLGE — a corridor that keeps splitting in two, where holding a button gets you caught">
 <meta name="theme-color" content="#08090e">
 <style>
   :root {
@@ -108,14 +108,14 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Retro Games Arcade">
 <meta property="og:title" content="GÖLGE — Retro Games Arcade">
-<meta property="og:description" content="GÖLGE — a corridor that keeps splitting in two, where neither branch is the safe one">
+<meta property="og:description" content="GÖLGE — a corridor that keeps splitting in two, where holding a button gets you caught">
 <meta property="og:url" content="https://yigitiseri.github.io/retro-games/games/golge/">
 <meta property="og:image" content="https://yigitiseri.github.io/retro-games/assets/social-card.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="GÖLGE — Retro Games Arcade">
-<meta name="twitter:description" content="GÖLGE — a corridor that keeps splitting in two, where neither branch is the safe one">
+<meta name="twitter:description" content="GÖLGE — a corridor that keeps splitting in two, where holding a button gets you caught">
 <meta name="twitter:image" content="https://yigitiseri.github.io/retro-games/assets/social-card.png">
 
 <!-- Cloudflare Web Analytics: no cookies, no client-side storage -->
@@ -156,12 +156,12 @@
       keeps splitting in two, and each branch has its own lamp.
     </div>
     <div class="lines" style="font-size:16px;opacity:0.84">
-      Standing in a beam fills the alarm; the dark empties it. Every room
-      can be crossed, but <b>never without taking some light</b>, and the
-      shift clock will not let you wait all night. Neither branch is the
-      safe one &mdash; <span class="ok">which side is clear depends on when
-      you get there</span>. Fill the bar and you are
-      <span class="bad">seen</span>.
+      A beam fills the alarm faster than the dark can empty it, so
+      <b>you cannot simply hold a side and walk</b> &mdash; standing still
+      in the shadow is how you get the bar back down. The shift clock will
+      not let you wait all night either. Neither branch is the safe one:
+      <span class="ok">which side is clear depends on when you get
+      there</span>. Fill the bar and you are <span class="bad">seen</span>.
     </div>
     <button class="btn" id="btnStart">SLIP IN</button>
     <div class="hintline">HOLD &#9664; OR &#9654; &middot; ARROW KEYS</div>
@@ -211,13 +211,19 @@
 
   var VW = 420, VH = 780, MIN_VH = 720;
   var V = 96;
-  var FILL = 0.62, DRAIN = 0.85;
+  // Walking has to COST. At fill 0.62 / drain 0.85 the alarm only rose if
+  // you were lit more than 58% of the time, and a straight walk is lit 58%
+  // at best -- so simply holding a button crossed 63% of rooms and the
+  // meter was decoration. The break-even is now 38%, below what any walk
+  // costs you, so moving fills the bar and only standing in the dark
+  // empties it. Holding a button now crosses 8%.
+  var FILL = 1.00, DRAIN = 0.62;
   var CAP = 0.85;
   var MAX_PARTS = 150;
 
-  var NFORK = 3, FORK_LEN = 180, SINGLE_LEN = 56;
+  var NFORK = 3, FORK_LEN = 240, SINGLE_LEN = 56;
   var L = NFORK * FORK_LEN + (NFORK + 1) * SINGLE_LEN;
-  var SHIFT = (L / V) * 1.45;
+  var SHIFT = (L / V) * 1.9;    // room to wait, now that waiting is the game
   var LANE_DX = 54;                    // how far the two branches sit apart
   var PAD_H = 132, PAD_B = 14, PAD_I = 14, PAD_G = 12;
 
@@ -294,16 +300,21 @@
     for (var i = 0; i < BANDS.length; i++) {
       var B = BANDS[i];
       if (B.fork) {
+        // The two lamps of a fork must be out of step. Rolled independently
+        // they sometimes swept together, and a fork whose branches light at
+        // the same moment is not a choice at all.
+        var ph0 = rnd() * 6.283, sp0 = 70 + rnd() * 90;
         for (var lane = 0; lane < 2; lane++) {
-          var width = 30 + rnd() * 20;
+          var width = 55 + rnd() * 35;
           var span = (B.b - B.a) / 2 - width * 0.4;
-          var speed = (70 + rnd() * 90) * (1 + lv * 0.035);
+          var speed = (lane ? sp0 * (1.28 + rnd() * 0.45) : sp0) * (1 + lv * 0.035);
+          var ph = lane ? ph0 + 2.1 + rnd() * 2.1 : ph0;
           gs.push({ at: (B.a + B.b) / 2, span: span, width: width,
-                    w: speed / span, ph: rnd() * 6.283, lane: lane, band: i,
+                    w: speed / span, ph: ph, lane: lane, band: i,
                     side: lane ? 1 : -1 });
         }
       } else if (rnd() < 0.45 + lv * 0.03) {
-        var w2 = 24 + rnd() * 16, sp = (B.b - B.a) / 2;
+        var w2 = 36 + rnd() * 24, sp = (B.b - B.a) / 2;
         gs.push({ at: (B.a + B.b) / 2, span: sp, width: w2,
                   w: (40 + rnd() * 60) * (1 + lv * 0.03) / Math.max(8, sp),
                   ph: rnd() * 6.283, lane: -1, band: i, side: rnd() < 0.5 ? -1 : 1 });
@@ -329,10 +340,23 @@
      worse of the two, because you are between them while you do it. */
   function crossUnder(gs, cap) {
     var dt = 0.05, ds = V * dt, N = Math.ceil(L / ds), steps = Math.ceil(SHIFT / dt);
+    // Precompute the light once per (lane, place, tick). Asking litIn inside
+    // the inner loop meant walking the guard list about nine million times
+    // and cost 95ms a room, which is a visible hitch between rooms.
+    var W1 = N + 1;
+    var LT = [new Uint8Array(W1 * steps), new Uint8Array(W1 * steps)];
+    for (var pk = 0; pk < steps; pk++) {
+      var pt = pk * dt, pb = pk * W1;
+      for (var pi = 0; pi <= N; pi++) {
+        var parc = pi * ds;
+        LT[0][pb + pi] = litIn(gs, parc, 0, pt) ? 1 : 0;
+        LT[1][pb + pi] = litIn(gs, parc, 1, pt) ? 1 : 0;
+      }
+    }
     var cur = [new Float64Array(N + 1).fill(Infinity), new Float64Array(N + 1).fill(Infinity)];
     cur[0][0] = 0; cur[1][0] = 0;
     for (var k = 0; k < steps; k++) {
-      var t = k * dt;
+      var t = k * dt, rowBase = k * W1;
       var next = [new Float64Array(N + 1).fill(Infinity), new Float64Array(N + 1).fill(Infinity)];
       for (var ln = 0; ln < 2; ln++) for (var i = 0; i <= N; i++) {
         var a = cur[ln][i];
@@ -343,8 +367,8 @@
           var inFork = BANDS[bandIdx(j * ds)].fork;
           for (var nl = 0; nl < 2; nl++) {
             if (nl !== ln && !(inFork && m === 1)) continue;
-            var lit = litIn(gs, j * ds, nl, t);
-            if (nl !== ln) lit = lit || litIn(gs, j * ds, ln, t);
+            var lit = LT[nl][rowBase + j] === 1;
+            if (nl !== ln) lit = lit || LT[ln][rowBase + j] === 1;
             var na = lit ? a + FILL * dt : a - DRAIN * dt;
             if (na > cap) continue;
             if (na < 0) na = 0;
