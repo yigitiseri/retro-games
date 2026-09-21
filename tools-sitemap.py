@@ -31,3 +31,25 @@ html = open(idx, encoding='utf-8').read()
 cards = len(re.findall(r'<a class="cab ', html))
 assert cards == len(games), 'menu lists %d cabinets but games/ holds %d' % (cards, len(games))
 print('sitemap.xml: %d urls, %d cabinets' % (len(pages), len(games)))
+
+# The root README drifted for twelve cabinets before anyone noticed, so it is
+# checked here against the same source of truth as the sitemap: the menu.
+def check_readme(n):
+
+    md = open(os.path.join(root, "README.md"), encoding="utf-8").read()
+    rows = re.findall(r"^\| \[\*\*", md, re.M)
+    assert len(rows) == n, (
+        "README lists %d cabinets, the menu has %d" % (len(rows), n))
+    words = {13: "Thirteen", 14: "Fourteen", 15: "Fifteen", 16: "Sixteen",
+             17: "Seventeen", 18: "Eighteen", 19: "Nineteen", 20: "Twenty",
+             21: "Twenty-one", 22: "Twenty-two", 23: "Twenty-three",
+             24: "Twenty-four", 25: "Twenty-five", 26: "Twenty-six",
+             27: "Twenty-seven", 28: "Twenty-eight"}
+    want = words.get(n)
+    if want:
+        assert md.startswith("# Retro Games\n\n%s arcade cabinets," % want), (
+            "README opening line does not say %r" % want)
+    print("README.md: %d cabinets, opening line agrees" % len(rows))
+
+
+check_readme(cards)
