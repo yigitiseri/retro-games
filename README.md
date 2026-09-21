@@ -1,6 +1,6 @@
 # Retro Games
 
-Twenty-five arcade cabinets, each a single self-contained HTML file. No build step, no
+Twenty-six arcade cabinets, each a single self-contained HTML file. No build step, no
 dependencies, no framework — open any `index.html` in a browser and it runs.
 All of them are built for a phone first: touch controls, a screen that fills the
 space it is given, and a keyboard fallback on desktop.
@@ -32,6 +32,7 @@ space it is given, and a keyboard fallback on desktop.
 | [**İKİZ**](games/ikiz/) | Every other cabinet here gives you one thing to control. This one gives you two, and one input for both — going left for one twin sends the other right. Catch the fruit on either side, dodge the bombs on both. A safe lane always exists and no bomb is ever allowed into it; the fruit is what pulls you out. The hard part is not your thumb, it is that you cannot watch both halves at once. | [`games/ikiz/index.html`](games/ikiz/index.html) |
 | [**GÖLGE**](games/golge/) | FENER hides the room from you; this hides you from the guards. Hold a side to walk it, let go to stand still — and a beam fills the alarm faster than the dark empties it, so holding a button and walking gets you caught. The corridor keeps splitting in two and each branch has its own lamp. Neither side is the safe one: which branch is clear depends on when you get there, and picking wrong costs you half the bar. | [`games/golge/index.html`](games/golge/index.html) |
 | [**NABIZ**](games/nabiz/) | Four drums, four speeds, and only one strike per beat between them. Sooner or later two come due on the same beat and you cannot serve both — so you clear one early, which costs you almost nothing and pays you almost nothing. Waiting for the line pays the drum's whole count. Every pattern can be played clean, and the cabinet checks that before it deals one. | [`games/nabiz/index.html`](games/nabiz/index.html) |
+| [**DENGE**](games/denge/) | A tower does not topple at its base. At every joint the weight above has to sit over the crate below, so a crate placed badly ten floors down is a debt, and later crates go deliberately off-centre to pay it back. The crate also leaves the crane carrying the crane’s speed, so dropping at the middle of the swing throws it furthest. Stacking them straight is not the answer. | [`games/denge/index.html`](games/denge/index.html) |
 
 `index.html` at the root is the arcade menu: every cabinet in turn,
 each with a live attract-mode preview of the game running in miniature. It is
@@ -86,4 +87,5 @@ games/
   ikiz/      index.html
   golge/     index.html
   nabiz/     index.html
+  denge/     index.html
 ```

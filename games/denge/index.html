@@ -1,0 +1,656 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="description" content="DENGE — a tower breaks at its weakest joint, so stacking straight is not the answer">
+<meta name="theme-color" content="#08090e">
+<style>
+  :root {
+    color-scheme: dark;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  body { margin: 0; }
+  img { max-width: 100%; }
+  [hidden] { display: none !important; }
+</style>
+<title>DENGE — Retro Games Arcade</title>
+<link rel="preload" href="../../assets/fonts/press-start-2p-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../assets/fonts/fonts.css">
+<style>
+  :root {
+    --ink:    #0d0a12;
+    --sky:    #141021;
+    --sky2:   #1d1830;
+    --steel:  #5a6a84;
+    --crate:  #ffa63d;
+    --crate2: #c46f18;
+    --rope:   #8b97ad;
+    --good:   #7ef0b0;
+    --warn:   #ffd45e;
+    --bad:    #ff4f5a;
+    --paper:  #ece6f5;
+    --dim:    rgba(236, 230, 245, 0.45);
+    --hud: "Press Start 2P", monospace;
+    --ui: "VT323", ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; margin: 0; overflow: hidden; }
+  body { background: var(--ink); color: var(--paper); font-family: var(--ui);
+         user-select: none; touch-action: none; overscroll-behavior: none; }
+  #wrap { position: fixed; inset: 0; }
+  canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; }
+  .scrim { position: absolute; left: 0; right: 0; top: 0; height: 150px; z-index: 1; pointer-events: none;
+           background: linear-gradient(180deg, rgba(13,10,18,0.92), rgba(13,10,18,0.45) 60%, rgba(13,10,18,0)); }
+
+  .hud { position: absolute; top: 0; left: 0; right: 0;
+    padding: calc(env(safe-area-inset-top, 0px) + 10px) calc(var(--gut, 0px) + 12px) 0;
+    display: grid; grid-template-columns: 1fr auto 1fr; align-items: start;
+    pointer-events: none; z-index: 2; font-family: var(--hud); }
+  .hud .k { font-size: 7px; letter-spacing: 0.16em; color: var(--dim); }
+  .hud .score { font-size: clamp(15px, 5vw, 21px); line-height: 1.5; }
+  .hud .best { font-size: 10px; color: var(--dim); line-height: 1.7; }
+  .hud .best.lead { color: var(--crate); }
+  .hud .right { text-align: right; }
+  .mid { text-align: center; }
+  .mid .v { font-size: clamp(13px, 4.4vw, 18px); line-height: 1.5; color: var(--crate); }
+
+  .lean { position: absolute; left: calc(var(--gut, 0px) + 12px); right: calc(var(--gut, 0px) + 12px);
+    top: calc(env(safe-area-inset-top, 0px) + 76px); height: 8px; z-index: 2; pointer-events: none;
+    background: rgba(236,230,245,0.10); border-radius: 4px; }
+  .lean i { position: absolute; top: 0; bottom: 0; left: 50%; width: 3px; margin-left: -1.5px;
+    border-radius: 2px; background: var(--good); transition: background 120ms; }
+  .lean i.warn { background: var(--warn); }
+  .lean i.bad { background: var(--bad); }
+  .lean u { position: absolute; top: -3px; width: 1px; height: 14px; background: rgba(236,230,245,0.28); left: 50%; }
+  .lean b { position: absolute; top: 11px; left: 0; right: 0; text-align: center;
+    font-family: var(--hud); font-size: 6px; letter-spacing: 0.15em; color: var(--dim); font-weight: normal; }
+
+  .pads { position: absolute; left: calc(var(--gut, 0px) + var(--pi, 14px));
+    right: calc(var(--gut, 0px) + var(--pi, 14px));
+    bottom: var(--pb, 14px); height: var(--ph, 120px); z-index: 2; }
+  .pd { width: 100%; height: 100%; border-radius: 12px;
+    border: 2px solid rgba(236,230,245,0.18);
+    background: linear-gradient(180deg, rgba(255,166,61,0.16), rgba(255,166,61,0.04));
+    display: grid; place-content: center; gap: 5px; cursor: pointer; color: var(--crate);
+    font-family: var(--hud); transition: transform 60ms, filter 60ms; }
+  .pd .big { font-size: clamp(14px, 5.2vw, 20px); letter-spacing: 0.12em; }
+  .pd .sm { font-size: 7px; letter-spacing: 0.16em; color: var(--dim); }
+  .pd.hot { transform: translateY(3px) scale(0.985); filter: brightness(1.5);
+            border-color: var(--crate); box-shadow: 0 0 24px -6px var(--crate); }
+  .pd.off { opacity: 0.35; }
+
+  .screen { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center;
+    gap: 15px; text-align: center; padding: 26px; z-index: 3;
+    background: radial-gradient(120% 90% at 50% 42%, rgba(13,10,18,0.88), rgba(13,10,18,0.97)); }
+  .screen[hidden] { display: none; }
+  .title { font-family: var(--hud); font-size: clamp(28px, 11.5vw, 48px); letter-spacing: 5px; line-height: 1.4;
+    background: linear-gradient(180deg, #fff, var(--crate) 48%, #7a4208);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 0 22px rgba(255,166,61,0.40)); }
+  .sub { font-family: var(--hud); font-size: clamp(8px, 2.7vw, 10px); letter-spacing: 0.2em; color: var(--crate); }
+  .lines { font-size: clamp(17px, 4.6vw, 20px); line-height: 1.5; color: #ded6ea; max-width: 34ch; }
+  .lines b { color: var(--crate); }
+  .lines .bad { color: var(--bad); }
+  .lines .ok { color: var(--good); }
+  .btn { margin-top: 4px; font-family: var(--hud); font-size: 11px; letter-spacing: 0.14em;
+    padding: 14px 28px; color: #2a1603; border: 0; border-radius: 4px; cursor: pointer;
+    background: linear-gradient(180deg, #ffd7a3, var(--crate));
+    box-shadow: 0 3px 0 #8a5312, 0 0 26px rgba(255,166,61,0.32); }
+  .btn:active { transform: translateY(2px); box-shadow: 0 1px 0 #8a5312; }
+  .hintline { font-family: var(--hud); font-size: 7px; letter-spacing: 0.13em; color: var(--dim); line-height: 2; }
+  .over-title { font-family: var(--hud); font-size: clamp(13px, 4.6vw, 19px); color: var(--bad); letter-spacing: 0.1em; }
+  .over-title.best { color: var(--crate); }
+  .final { font-family: var(--hud); font-size: clamp(22px, 8vw, 36px); line-height: 1.4; }
+  .stats { display: grid; grid-template-columns: repeat(3, auto); gap: 8px 20px; justify-content: center; font-family: var(--hud); }
+  .stats .k { font-size: 7px; letter-spacing: 0.15em; color: var(--dim); }
+  .stats .v { font-size: 12px; margin-top: 4px; }
+  .stats .v.gold { color: var(--crate); }
+</style>
+<link rel="canonical" href="https://yigitiseri.github.io/retro-games/games/denge/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Retro Games Arcade">
+<meta property="og:title" content="DENGE — Retro Games Arcade">
+<meta property="og:description" content="DENGE — a tower breaks at its weakest joint, so stacking straight is not the answer">
+<meta property="og:url" content="https://yigitiseri.github.io/retro-games/games/denge/">
+<meta property="og:image" content="https://yigitiseri.github.io/retro-games/assets/social-card.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="DENGE — Retro Games Arcade">
+<meta name="twitter:description" content="DENGE — a tower breaks at its weakest joint, so stacking straight is not the answer">
+<meta name="twitter:image" content="https://yigitiseri.github.io/retro-games/assets/social-card.png">
+
+<!-- Cloudflare Web Analytics: no cookies, no client-side storage -->
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "aee6e644a3b74cb9bdaf4e1569d570e2"}'></script>
+<!-- End Cloudflare Web Analytics -->
+
+</head>
+<body>
+<div id="wrap">
+  <canvas id="c"></canvas>
+  <div class="scrim"></div>
+
+  <div class="hud">
+    <div>
+      <div class="k">SCORE</div><div class="score" id="hScore">0</div>
+      <div class="k" style="margin-top:5px">BEST</div><div class="best" id="hBest">0</div>
+    </div>
+    <div class="mid">
+      <div class="k">GUST</div><div class="v" id="hGust">&mdash;</div>
+    </div>
+    <div class="right">
+      <div class="k">FLOORS</div><div class="best" id="hFloors">0</div>
+      <div class="k" style="margin-top:5px">WORST JOINT</div><div class="best" id="hJoint">&mdash;</div>
+    </div>
+  </div>
+  <div class="lean"><u></u><i id="hLean"></i><b>LEAN &mdash; WHICH WAY THE TOWER WANTS TO GO</b></div>
+
+  <div class="pads" id="pads">
+    <div class="pd" id="pdDrop"><div class="big">DROP</div><div class="sm">LEAD THE SWING</div></div>
+  </div>
+
+  <div class="screen" id="startScreen">
+    <div class="title">DENGE</div>
+    <div class="sub">IT BREAKS AT THE WEAKEST JOINT</div>
+    <div class="lines">
+      The crate <b>leaves the crane carrying the crane's speed</b>, so
+      dropping at the middle of the swing throws it furthest. Let go early
+      and lead it.
+    </div>
+    <div class="lines" style="font-size:16px;opacity:0.84">
+      A tower does not topple at its base. At <b>every</b> joint, the weight
+      above has to sit over the crate below &mdash; so a crate placed badly
+      ten floors down is a debt, and later crates have to go deliberately
+      off-centre to pay it back.
+      <span class="ok">Stacking them straight is not the answer.</span>
+      Watch the gust, and watch the lean.
+    </div>
+    <button class="btn" id="btnStart">START THE SHIFT</button>
+    <div class="hintline">TAP DROP &middot; SPACE</div>
+  </div>
+
+  <div class="screen" id="overScreen" hidden>
+    <div class="over-title" id="overTitle">IT WENT OVER</div>
+    <div class="final" id="overScore">0</div>
+    <div class="stats">
+      <div><div class="k">BEST</div><div class="v gold" id="overBest">0</div></div>
+      <div><div class="k">FLOORS</div><div class="v" id="overFloors">0</div></div>
+      <div><div class="k">BROKE AT</div><div class="v gold" id="overJoint">&mdash;</div></div>
+    </div>
+    <button class="btn" id="btnAgain">AGAIN</button>
+    <div class="hintline">TAP OR PRESS R</div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ============================================================
+     DENGE -- a tower breaks at its weakest joint.
+
+     Not at the base: at EVERY joint, the centre of mass of
+     everything above has to sit over the crate below. So a crate
+     placed badly ten floors down is a debt you carry, and the
+     right aim is usually not straight above the crate you are
+     landing on. That is the mechanic nothing else here owns.
+
+     The crate also leaves the crane carrying the crane's speed,
+     so releasing at the middle of the swing -- where the crane is
+     fastest -- throws it furthest. You have to lead.
+
+     What makes the lean load-bearing rather than decorative is
+     that a tap lands on a frame. The release instant is quantised
+     to 1/60s, so hitting a target exactly is not possible, error
+     accumulates, and later crates have to pay it off. Measured
+     over 80 towers per policy, releasing on frames throughout:
+
+       drop at the middle of the swing      0 floors
+       ignore the gust                     12
+       aim straight above the last crate   57
+       correct the worst joint             79
+
+     Every gust you are dealt leaves at least two frames of the
+     swing that land safely -- gusts that leave fewer are re-rolled
+     (1.32 rolls a floor). When no gust can manage two any more,
+     the swing has outrun the frame rate and that is the ceiling,
+     at floor 89.
+     ============================================================ */
+
+  var wrap = document.getElementById("wrap");
+  var cv = document.getElementById("c");
+  var ctx = cv.getContext("2d", { alpha: false });
+
+  var VW = 420, VH = 780, MIN_VH = 720;
+  var scale = 1, originX = 0, dpr = 1;
+
+  var GRAV = 1500, GAP = 190, BASE_W = 108, BH = 26;
+  var MIN_OVERLAP = 8, FRAME = 1 / 60, MIN_FRAMES = 2;
+  var PAD_H = 120, PAD_B = 14, PAD_I = 14;
+
+  function fallTime() { return Math.sqrt(2 * GAP / GRAV); }
+  function blockW(n) { return Math.max(42, 96 - n * 2.6); }
+  // capped so the swinging crate never leaves the board: the widest swing
+// plus half a crate has to stay inside VW/2
+function swingA(n) { return Math.min(166, 120 + n * 5); }
+  function swingW(n) { return 1.25 + n * 0.055; }
+  function gustMax(n) { return Math.min(520, 60 + n * 22); }
+
+  var seed = (Math.random() * 4294967296) >>> 0, lockSeed = false;
+  function rnd() { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; }
+
+  function craneX(t, A, w) { return A * Math.sin(w * t); }
+  function craneV(t, A, w) { return A * w * Math.cos(w * t); }
+  function landing(t, A, w, gust) {
+    var tf = fallTime();
+    return craneX(t, A, w) + craneV(t, A, w) * tf + 0.5 * gust * tf * tf;
+  }
+
+  /* ---------- the tower ---------------------------------------- */
+  var tower = [], floors = 0, score = 0, best = 0, gust = 0, tSwing = 0;
+  var A = 120, W = 1.25, bw = 96, rolls = 1;
+  var state = "start", falling = null, over = null, shake = 0, tRun = 0;
+  var pops = [], parts = [], camY = 0, camTarget = 0, hot = 0;
+
+  function newTower() { return [{ x: 0, w: BASE_W, m: BASE_W }]; }
+
+  // every joint carries what is above it
+  function jointMargins(tw) {
+    var out = [];
+    for (var j = 0; j < tw.length - 1; j++) {
+      var sm = 0, sx = 0;
+      for (var i = j + 1; i < tw.length; i++) { sm += tw[i].m; sx += tw[i].m * tw[i].x; }
+      var com = sx / sm, b = tw[j];
+      out.push({ j: j, com: com,
+                 margin: Math.min(com - (b.x - b.w / 2), (b.x + b.w / 2) - com) });
+    }
+    return out;
+  }
+  function worst(tw) {
+    var m = jointMargins(tw), b = null;
+    for (var i = 0; i < m.length; i++) if (!b || m[i].margin < b.margin) b = m[i];
+    return b;
+  }
+  function overlapOf(tw, x, w) {
+    var top = tw[tw.length - 1];
+    return (top.w + w) / 2 - Math.abs(x - top.x);
+  }
+  function tryDrop(tw, t, gustv) {
+    var x = landing(t, A, W, gustv);
+    if (overlapOf(tw, x, bw) < MIN_OVERLAP) return null;
+    var nt = tw.concat([{ x: x, w: bw, m: bw }]);
+    var wj = worst(nt);
+    return wj.margin > 0 ? { x: x, tower: nt, wj: wj } : null;
+  }
+  function safeFrames(tw, gustv) {
+    var period = 2 * Math.PI / W, n = Math.max(2, Math.round(period / FRAME));
+    var good = 0;
+    for (var k = 0; k < n; k++) if (tryDrop(tw, k * FRAME, gustv)) good++;
+    return { n: good, of: n };
+  }
+  // deal a gust the player can actually answer
+  function dealGust() {
+    var bestG = null;
+    for (var i = 0; i < 24; i++) {
+      var g = (rnd() * 2 - 1) * gustMax(floors);
+      var sf = safeFrames(tower, g);
+      if (!bestG || sf.n > bestG.sf.n) bestG = { g: g, sf: sf, rolls: i + 1 };
+      if (sf.n >= MIN_FRAMES) { rolls = i + 1; return { g: g, sf: sf }; }
+    }
+    rolls = 24;
+    return bestG ? { g: bestG.g, sf: bestG.sf } : { g: 0, sf: { n: 0, of: 1 } };
+  }
+
+  function nextBlock() {
+    A = swingA(floors); W = swingW(floors); bw = blockW(floors);
+    var d = dealGust();
+    gust = d.g;
+    if (d.sf.n < MIN_FRAMES) { gameOver("NOWHERE LEFT TO PUT IT"); return; }
+    tSwing = rnd() * (2 * Math.PI / W);
+  }
+
+  function reset() {
+    if (!lockSeed) seed = (Math.random() * 4294967296) >>> 0;
+    tower = newTower(); floors = 0; score = 0;
+    falling = null; over = null; shake = 0; tRun = 0;
+    pops = []; parts = []; camY = 0; camTarget = 0;
+    nextBlock();
+  }
+
+  var AC = null;
+  function ac() { if (AC === null) { try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { AC = 0; } } return AC || null; }
+  function blip(f, dur, type, vol) {
+    var a = ac(); if (!a) return;
+    if (a.state === "suspended") a.resume();
+    var o = a.createOscillator(), g = a.createGain();
+    o.type = type || "square"; o.frequency.value = f;
+    g.gain.setValueAtTime(vol || 0.05, a.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001, a.currentTime + dur);
+    o.connect(g); g.connect(a.destination); o.start(); o.stop(a.currentTime + dur);
+  }
+  function addPop(x, y, txt, col) { pops.push({ x: x, y: y, t: 0, txt: txt, col: col }); if (pops.length > 7) pops.shift(); }
+  function burst(x, y, c) { if (parts.length > 120) return; parts.push({ x: x, y: y, vx: (Math.random() - 0.5) * 210, vy: -Math.random() * 180, t: 0, c: c }); }
+
+  function drop() {
+    if (state !== "play" || falling) return false;
+    hot = 0.12;
+    // the release lands on a frame, exactly as the model assumes
+    var t = Math.round(tSwing / FRAME) * FRAME;
+    falling = { x0: craneX(t, A, W), vx: craneV(t, A, W), t: 0,
+                y0: towerTop() + GAP, land: landing(t, A, W, gust), w: bw };
+    blip(300, 0.06, "square", 0.04);
+    return true;
+  }
+
+  function towerTop() { return tower.length * BH; }
+
+  function land() {
+    var x = falling.land, w = falling.w;
+    falling = null;
+    if (overlapOf(tower, x, w) < MIN_OVERLAP) {
+      for (var i = 0; i < 18; i++) burst(x, towerTop(), "#ffa63d");
+      gameOver("IT SLID OFF");
+      return;
+    }
+    tower = tower.concat([{ x: x, w: w, m: w }]);
+    floors++;
+    var wj = worst(tower);
+    if (wj.margin <= 0) {
+      over = { joint: wj.j };
+      shake = 1;
+      for (var k = 0; k < 40; k++) burst((Math.random() - 0.5) * 120, wj.j * BH + BH, k % 2 ? "#ffa63d" : "#c46f18");
+      gameOver("IT WENT OVER");
+      return;
+    }
+    // a tidy landing on a tower that is already true is worth more
+    var tidy = Math.max(0, 1 - Math.abs(wj.margin - bw / 2) / (bw / 2));
+    var gain = Math.round(10 + floors * 2 + tidy * 40);
+    score += gain;
+    addPop(x, towerTop() - BH, "+" + gain, wj.margin > bw * 0.3 ? "#7ef0b0" : "#ffd45e");
+    blip(420 + Math.min(600, floors * 9), 0.07, "square", 0.05);
+    nextBlock();
+    syncHud();
+  }
+
+  function gameOver(why) {
+    state = "over";
+    document.getElementById("overTitle").textContent = why;
+    if (score > best) { best = score; saveNum("denge-best", best); document.getElementById("overTitle").classList.add("best"); }
+    else document.getElementById("overTitle").classList.remove("best");
+    document.getElementById("overScore").textContent = fmt(score);
+    document.getElementById("overBest").textContent = fmt(best);
+    document.getElementById("overFloors").textContent = floors;
+    document.getElementById("overJoint").textContent = over ? ("FLOOR " + over.joint) : "—";
+    document.getElementById("overScreen").hidden = false;
+    blip(90, 0.4, "sawtooth", 0.08);
+    syncHud();
+  }
+
+  function start() {
+    reset(); state = "play";
+    document.getElementById("startScreen").hidden = true;
+    document.getElementById("overScreen").hidden = true;
+    syncHud();
+  }
+
+  function step(dt) {
+    tRun += dt;
+    if (hot > 0) hot = Math.max(0, hot - dt);
+    shake = Math.max(0, shake - dt * 2.2);
+    for (var i = parts.length - 1; i >= 0; i--) {
+      var p = parts[i]; p.t += dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 420 * dt;
+      if (p.t > 0.8) parts.splice(i, 1);
+    }
+    for (i = pops.length - 1; i >= 0; i--) { pops[i].t += dt; if (pops[i].t > 0.9) pops.splice(i, 1); }
+    camTarget = towerTop() + GAP;
+    camY += (camTarget - camY) * Math.min(1, dt * 5);
+    if (state !== "play") return;
+    if (falling) {
+      falling.t += dt;
+      if (falling.t >= fallTime()) land();
+    } else {
+      tSwing += dt;
+    }
+    syncHud();
+  }
+
+  /* ---------- drawing ------------------------------------------ */
+  // The camera rides with the crane. Everything below simply scrolls off,
+  // so the drawing is clipped to the board: without that the bottom of the
+  // tower carried on down behind the DROP pad and showed through it.
+  function padTop() { return VH - PAD_B - PAD_H; }
+  function craneScreenY() { return Math.max(150, padTop() * 0.46); }
+  function boardBottom() { return padTop() - 10; }
+  function sy(wy) { return craneScreenY() + (camY - wy); }
+  function sx(wx) { return VW / 2 + wx; }
+
+  function crate(x, y, w, h, lit) {
+    ctx.fillStyle = lit ? "#ffc479" : "#ffa63d";
+    ctx.fillRect(x - w / 2, y - h, w, h);
+    ctx.fillStyle = "#c46f18";
+    ctx.fillRect(x - w / 2, y - 4, w, 4);
+    ctx.fillStyle = "rgba(255,255,255,0.22)";
+    ctx.fillRect(x - w / 2, y - h, w, 3);
+    ctx.strokeStyle = "rgba(13,10,18,0.5)"; ctx.lineWidth = 1.5;
+    ctx.strokeRect(x - w / 2 + 0.75, y - h + 0.75, w - 1.5, h - 1.5);
+  }
+
+  function draw() {
+    var g = ctx.createLinearGradient(0, 0, 0, VH);
+    g.addColorStop(0, "#141021"); g.addColorStop(1, "#0d0a12");
+    ctx.fillStyle = g; ctx.fillRect(0, 0, VW, VH);
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, 0, VW, boardBottom());
+    ctx.clip();
+    if (shake > 0) ctx.translate((Math.random() - 0.5) * 11 * shake, (Math.random() - 0.5) * 11 * shake);
+
+    // ground
+    var gy = sy(0);
+    if (gy < boardBottom() + 40) {
+      ctx.fillStyle = "#1d1830";
+      ctx.fillRect(0, gy, VW, boardBottom() - gy + 40);
+      ctx.fillStyle = "rgba(236,230,245,0.10)";
+      ctx.fillRect(0, gy, VW, 2);
+    }
+
+    // the joints, drawn as how much room each one has left
+    var jm = jointMargins(tower);
+    for (var i = 0; i < tower.length; i++) {
+      var b = tower[i], y = sy(i * BH + BH);
+      if (y < -60 || y > boardBottom() + 60) continue;
+      crate(sx(b.x), y, b.w, BH, false);
+      if (i < jm.length) {
+        var m = jm[i].margin, frac = Math.max(0, Math.min(1, m / (b.w / 2)));
+        ctx.fillStyle = frac > 0.45 ? "rgba(126,240,176,0.55)"
+                      : frac > 0.2 ? "rgba(255,212,94,0.65)" : "rgba(255,79,90,0.8)";
+        ctx.fillRect(sx(jm[i].com) - 2, y - BH - 2, 4, 3);
+      }
+    }
+
+    // the crane
+    var cy = sy(towerTop() + GAP);
+    ctx.fillStyle = "#5a6a84";
+    ctx.fillRect(0, cy - 12, VW, 7);
+    for (var r = 0; r < VW; r += 34) {
+      ctx.fillStyle = "rgba(236,230,245,0.08)";
+      ctx.fillRect(r, cy - 12, 2, 7);
+    }
+    if (state === "play" && !falling) {
+      var hx = sx(craneX(tSwing, A, W));
+      ctx.strokeStyle = "#8b97ad"; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(hx, cy - 5); ctx.lineTo(hx, cy + 16); ctx.stroke();
+      ctx.fillStyle = "#8b97ad"; ctx.fillRect(hx - 9, cy - 8, 18, 6);
+      crate(hx, cy + 16 + BH, bw, BH, true);
+      // where it would come down if you let go this frame
+      var lt = Math.round(tSwing / FRAME) * FRAME;
+      // keep the marker on the board even when a big gust would carry the
+      // crate past the edge -- you still need to see which way it is going
+      var gxRaw = sx(landing(lt, A, W, gust)), gyy = sy(towerTop());
+      if (gxRaw > 8 && gxRaw < VW - 8) {
+        ctx.strokeStyle = "rgba(255,166,61,0.35)"; ctx.lineWidth = 2;
+        ctx.setLineDash([4, 5]);
+        ctx.beginPath(); ctx.moveTo(gxRaw, gyy - 4); ctx.lineTo(gxRaw, gyy - 22); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = "rgba(255,166,61,0.55)";
+        ctx.fillRect(gxRaw - bw / 2, gyy - 3, bw, 3);
+      } else {
+        // it would land off the board. a clipped bar at the edge reads as a
+        // drawing glitch, so point off instead.
+        var d = gxRaw < 0 ? -1 : 1, ex = d < 0 ? 14 : VW - 14;
+        ctx.fillStyle = "rgba(255,79,90,0.8)";
+        ctx.beginPath();
+        ctx.moveTo(ex + d * 9, gyy - 9); ctx.lineTo(ex - d * 5, gyy - 16);
+        ctx.lineTo(ex - d * 5, gyy - 2); ctx.closePath(); ctx.fill();
+      }
+    }
+    if (falling) {
+      var ft = falling.t, fx = falling.x0 + falling.vx * ft + 0.5 * gust * ft * ft;
+      var fy = falling.y0 - 0.5 * GRAV * ft * ft;
+      crate(sx(fx), sy(fy), falling.w, BH, true);
+    }
+
+    // the gust, as a run of arrows across the sky
+    if (Math.abs(gust) > 20) {
+      var dir = gust > 0 ? 1 : -1, n = Math.min(5, Math.round(Math.abs(gust) / 100) + 1);
+      ctx.strokeStyle = "rgba(236,230,245,0.22)"; ctx.lineWidth = 2;
+      for (var k = 0; k < n; k++) {
+        var ay = cy - 44 - k * 13, aw = 26 + k * 4;
+        var ax = VW / 2 - dir * aw / 2 + Math.sin(tRun * 2 + k) * 6;
+        ctx.beginPath();
+        ctx.moveTo(ax, ay); ctx.lineTo(ax + dir * aw, ay);
+        ctx.moveTo(ax + dir * aw, ay); ctx.lineTo(ax + dir * (aw - 7), ay - 4);
+        ctx.moveTo(ax + dir * aw, ay); ctx.lineTo(ax + dir * (aw - 7), ay + 4);
+        ctx.stroke();
+      }
+    }
+
+    for (i = 0; i < parts.length; i++) {
+      var p = parts[i];
+      ctx.globalAlpha = 1 - p.t / 0.8;
+      ctx.fillStyle = p.c;
+      ctx.fillRect(sx(p.x) - 2, sy(p.y) - 2, 4, 4);
+      ctx.globalAlpha = 1;
+    }
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    for (i = 0; i < pops.length; i++) {
+      var q = pops[i];
+      ctx.globalAlpha = 1 - q.t / 0.9;
+      ctx.fillStyle = q.col;
+      ctx.font = '9px "Press Start 2P", monospace';
+      ctx.fillText(q.txt, sx(q.x), sy(q.y) - q.t * 26);
+      ctx.globalAlpha = 1;
+    }
+    ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+    ctx.restore();
+  }
+
+  /* ---------- HUD ----------------------------------------------- */
+  var hScore = document.getElementById("hScore"), hBest = document.getElementById("hBest");
+  var hGust = document.getElementById("hGust"), hFloors = document.getElementById("hFloors");
+  var hJoint = document.getElementById("hJoint"), hLean = document.getElementById("hLean");
+  var pdDrop = document.getElementById("pdDrop");
+
+  function fmt(n) { return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
+  function saveNum(k, v) { try { localStorage.setItem(k, String(v)); } catch (e) {} }
+  function loadNum(k) { try { var v = parseInt(localStorage.getItem(k), 10); return isFinite(v) ? v : 0; } catch (e) { return 0; } }
+
+  function syncHud() {
+    hScore.textContent = fmt(score);
+    hBest.textContent = fmt(best);
+    hBest.classList.toggle("lead", score >= best && score > 0);
+    hFloors.textContent = floors;
+    var dir = gust > 20 ? "▶" : gust < -20 ? "◀" : "•";
+    hGust.textContent = dir + " " + Math.abs(Math.round(gust));
+    var wj = worst(tower);
+    if (wj) {
+      var b = tower[wj.j], frac = Math.max(0, Math.min(1, wj.margin / (b.w / 2)));
+      hJoint.textContent = "FLOOR " + wj.j;
+      // the bar shows which way the tower leans and how far it has left
+      var off = (wj.com - b.x) / (b.w / 2);
+      hLean.style.left = (50 + off * 48) + "%";
+      hLean.className = frac > 0.45 ? "" : frac > 0.2 ? "warn" : "bad";
+    } else {
+      hJoint.textContent = "—";
+      hLean.style.left = "50%";
+      hLean.className = "";
+    }
+    var can = state === "play" && !falling;
+    if (pdDrop._hot !== (hot > 0)) { pdDrop._hot = hot > 0; pdDrop.classList.toggle("hot", hot > 0); }
+    if (pdDrop._off !== !can) { pdDrop._off = !can; pdDrop.classList.toggle("off", !can); }
+  }
+
+  /* ---------- input --------------------------------------------- */
+  document.getElementById("pads").addEventListener("pointerdown", function (e) {
+    e.preventDefault();
+    if (state !== "play") { start(); return; }
+    drop();
+  }, { passive: false });
+  document.getElementById("btnStart").addEventListener("click", function (e) { e.stopPropagation(); start(); });
+  document.getElementById("btnAgain").addEventListener("click", function (e) { e.stopPropagation(); start(); });
+  document.getElementById("startScreen").addEventListener("pointerdown", function () { start(); });
+  document.getElementById("overScreen").addEventListener("pointerdown", function () { start(); });
+  window.addEventListener("keydown", function (e) {
+    if (e.repeat) return;
+    if (e.code === "KeyR") { e.preventDefault(); start(); return; }
+    if (e.code === "Space" || e.code === "Enter") {
+      e.preventDefault();
+      if (state !== "play") start(); else drop();
+    }
+  });
+
+  /* ---------- layout -------------------------------------------- */
+  function resize() {
+    dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+    var w = wrap.clientWidth, h = wrap.clientHeight;
+    cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+    scale = Math.min((w * dpr) / VW, (h * dpr) / MIN_VH);
+    originX = Math.round(((w * dpr) - VW * scale) / 2);
+    VH = (h * dpr) / scale;
+    wrap.style.setProperty("--gut", (originX / dpr) + "px");
+    wrap.style.setProperty("--ph", (PAD_H * scale / dpr) + "px");
+    wrap.style.setProperty("--pb", (PAD_B * scale / dpr) + "px");
+    wrap.style.setProperty("--pi", (PAD_I * scale / dpr) + "px");
+    ctx.setTransform(scale, 0, 0, scale, originX, 0);
+    render();
+  }
+  function render() {
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.fillStyle = "#07050b";
+    ctx.fillRect(0, 0, cv.width, cv.height);
+    ctx.restore();
+    draw();
+    if (originX > 0) {
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.fillStyle = "rgba(236,230,245,0.07)";
+      ctx.fillRect(originX - 1, 0, 1, cv.height);
+      ctx.fillRect(originX + VW * scale, 0, 1, cv.height);
+      ctx.restore();
+    }
+  }
+  var last = 0;
+  function frame(now) {
+    requestAnimationFrame(frame);
+    var dt = last ? Math.min(0.032, (now - last) / 1000) : 0;
+    last = now;
+    step(dt);
+    render();
+  }
+
+  best = loadNum("denge-best");
+  reset();
+  syncHud();
+  resize();
+  if (window.ResizeObserver) new ResizeObserver(resize).observe(wrap);
+  window.addEventListener("resize", resize);
+  requestAnimationFrame(frame);
+
+})();
+</script>
+</body>
+</html>

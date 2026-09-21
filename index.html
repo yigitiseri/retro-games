@@ -69,6 +69,7 @@
     --ikiz:    #ff7ad9;
     --golge:   #6ad9c0;
     --nabiz:   #ff6b5b;
+    --denge:   #ffa63d;
 
     --cell-font: "Press Start 2P", ui-monospace, "Courier New", monospace;
     --read-font: "VT323", ui-monospace, "Courier New", monospace;
@@ -266,6 +267,7 @@
   .ikiz { --accent: var(--ikiz); }
   .golge { --accent: var(--golge); }
   .nabiz { --accent: var(--nabiz); }
+  .denge { --accent: var(--denge); }
 
   /* ---------- footer ---------- */
   .foot {
@@ -662,6 +664,17 @@
         <h2>NABIZ</h2>
         <p>Four drums, four speeds, and only one strike per beat between them. Sooner or later two come due on the same beat and you cannot serve both &mdash; so you clear one early, which costs you almost nothing and pays you almost nothing. Waiting for the line pays the drum's whole count. Every pattern can be played clean, and the cabinet checks that before it deals one.</p>
         <span class="keys">Tap the pads &middot; A S D F</span>
+        <span class="play">&#9654; PLAY</span>
+      </div>
+    </a>
+
+    <a class="cab denge" href="games/denge/">
+      <div class="tube"><canvas data-demo="stack" aria-hidden="true"></canvas></div>
+      <div class="plate">
+        <span class="no">CABINET NO. 28 &mdash; 1988</span>
+        <h2>DENGE</h2>
+        <p>A tower does not topple at its base. At every joint the weight above has to sit over the crate below, so a crate placed badly ten floors down is a debt, and later crates go deliberately off-centre to pay it back. The crate also leaves the crane carrying the crane&rsquo;s speed, so dropping at the middle of the swing throws it furthest. Stacking them straight is not the answer.</p>
+        <span class="keys">Tap DROP &middot; Space</span>
         <span class="play">&#9654; PLAY</span>
       </div>
     </a>
@@ -3169,12 +3182,76 @@
     ctx.beginPath(); ctx.arc(W / 2, hy + H * 0.09, Math.max(2.5, W * 0.016), 0, Math.PI * 2); ctx.fill();
   }
 
-  var painters = { snake: drawSnake, road: drawRoad, lander: drawLander, flap: drawFlap, brick: drawBrick, maze: drawMaze, arch: drawArch, rocks: drawRocks, loom: drawLoom, invade: drawInvade, fuse: drawFuse, pong: drawPong, lamps: drawLamps, climb: drawClimb, lanes: drawLanes, swing: drawSwing, mine: drawMine, sky: drawSky, paint: drawFence, rails: drawRails, night: drawNight, flip: drawFlip, twin: drawTwin, creep: drawCreep, pulse: drawPulse };
+
+  /* ---------- denge: it breaks at the weakest joint ---------- */
+  var dg = null;
+  function dgInit(W, H) {
+    return { W: W, H: H, t: 0, last: 0, tower: [0], lean: 0, drop: null, wait: 0.6 };
+  }
+  function drawStack(ctx, W, H, now) {
+    if (!dg || dg.W !== W) dg = dgInit(W, H);
+    var v = dg, dt = Math.min(0.05, (now - (v.last || now)) / 1000);
+    v.last = now; v.t += dt;
+
+    ctx.fillStyle = "#141021"; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = "#0d0a12"; ctx.fillRect(0, H * 0.72, W, H * 0.28);
+
+    var bh = Math.max(4, H * 0.055), bw = W * 0.26, railY = H * 0.16;
+    var amp = W * 0.30, sw = 2.1;
+    var cx = W / 2 + Math.sin(v.t * sw) * amp;
+
+    // the rail and the hook
+    ctx.fillStyle = "#5a6a84"; ctx.fillRect(0, railY, W, 3);
+    ctx.strokeStyle = "#8b97ad"; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(cx, railY + 3); ctx.lineTo(cx, railY + 10); ctx.stroke();
+
+    var baseY = H * 0.72, n = v.tower.length;
+    function crate(x, yTop, w) {
+      ctx.fillStyle = "#ffa63d"; ctx.fillRect(x - w / 2, yTop, w, bh);
+      ctx.fillStyle = "#c46f18"; ctx.fillRect(x - w / 2, yTop + bh - 2, w, 2);
+      ctx.fillStyle = "rgba(255,255,255,0.22)"; ctx.fillRect(x - w / 2, yTop, w, 1.5);
+    }
+    // the tower, drawn from the ground up
+    for (var i = 0; i < n; i++)
+      crate(W / 2 + v.tower[i], baseY - (i + 1) * bh, i === 0 ? bw * 1.25 : bw);
+
+    // the hanging crate, or the one on its way down
+    if (v.drop) {
+      v.drop.t += dt;
+      var ft = 0.42, k = Math.min(1, v.drop.t / ft);
+      var y = railY + 10 + (baseY - n * bh - railY - 10 - bh) * (k * k);
+      crate(W / 2 + v.drop.x0 + v.drop.vx * v.drop.t, y, bw);
+      if (k >= 1) {
+        var land = v.drop.x0 + v.drop.vx * ft;
+        v.tower.push(land);
+        // the tower leans, and eventually it goes
+        var sum = 0;
+        for (var q = 1; q < v.tower.length; q++) sum += v.tower[q];
+        if (v.tower.length > 7 || Math.abs(sum / (v.tower.length - 1)) > bw * 0.55)
+          v.tower = [0];
+        v.drop = null; v.wait = 0.5;
+      }
+    } else {
+      crate(cx, railY + 10, bw);
+      v.wait -= dt;
+      if (v.wait <= 0) {
+        // aim to pay back the lean, not to stack straight
+        var s2 = 0;
+        for (var z = 1; z < v.tower.length; z++) s2 += v.tower[z];
+        var want = v.tower.length > 1 ? -s2 / (v.tower.length - 1) * 0.9 : 0;
+        var vx = Math.cos(v.t * sw) * amp * sw;
+        if (Math.abs(cx - W / 2 + vx * 0.42 - want) < W * 0.05)
+          v.drop = { x0: cx - W / 2, vx: vx, t: 0 };
+      }
+    }
+  }
+
+  var painters = { snake: drawSnake, road: drawRoad, lander: drawLander, flap: drawFlap, brick: drawBrick, maze: drawMaze, arch: drawArch, rocks: drawRocks, loom: drawLoom, invade: drawInvade, fuse: drawFuse, pong: drawPong, lamps: drawLamps, climb: drawClimb, lanes: drawLanes, swing: drawSwing, mine: drawMine, sky: drawSky, paint: drawFence, rails: drawRails, night: drawNight, flip: drawFlip, twin: drawTwin, creep: drawCreep, pulse: drawPulse, stack: drawStack };
   Array.prototype.forEach.call(document.querySelectorAll("[data-demo]"), function (c) {
     var fn = painters[c.dataset.demo];
     if (fn) register(c, fn, c.dataset.demo === "flap" || c.dataset.demo === "brick" || c.dataset.demo === "maze" || c.dataset.demo === "arch" ||
                        c.dataset.demo === "rocks" || c.dataset.demo === "loom" ||
-                       c.dataset.demo === "invade" || c.dataset.demo === "fuse" || c.dataset.demo === "pong" || c.dataset.demo === "lamps" || c.dataset.demo === "climb" || c.dataset.demo === "lanes" || c.dataset.demo === "swing" || c.dataset.demo === "mine" || c.dataset.demo === "sky" || c.dataset.demo === "paint" || c.dataset.demo === "rails" || c.dataset.demo === "night" || c.dataset.demo === "flip" || c.dataset.demo === "twin" || c.dataset.demo === "creep" || c.dataset.demo === "pulse");
+                       c.dataset.demo === "invade" || c.dataset.demo === "fuse" || c.dataset.demo === "pong" || c.dataset.demo === "lamps" || c.dataset.demo === "climb" || c.dataset.demo === "lanes" || c.dataset.demo === "swing" || c.dataset.demo === "mine" || c.dataset.demo === "sky" || c.dataset.demo === "paint" || c.dataset.demo === "rails" || c.dataset.demo === "night" || c.dataset.demo === "flip" || c.dataset.demo === "twin" || c.dataset.demo === "creep" || c.dataset.demo === "pulse" || c.dataset.demo === "stack");
   });
 
   if (window.ResizeObserver) {
