@@ -1,6 +1,6 @@
 # Retro Games
 
-Twenty-eight arcade cabinets, each a single self-contained HTML file. No build step, no
+Twenty-nine arcade cabinets, each a single self-contained HTML file. No build step, no
 dependencies, no framework — open any `index.html` in a browser and it runs.
 All of them are built for a phone first: touch controls, a screen that fills the
 space it is given, and a keyboard fallback on desktop.
@@ -35,6 +35,7 @@ space it is given, and a keyboard fallback on desktop.
 | [**DENGE**](games/denge/) | A tower does not topple at its base. At every joint the weight above has to sit over the crate below, so a crate placed badly ten floors down is a debt, and later crates go deliberately off-centre to pay it back. The crate also leaves the crane carrying the crane’s speed, so dropping at the middle of the swing throws it furthest. Stacking them straight is not the answer. | [`games/denge/index.html`](games/denge/index.html) |
 | [**SEKME**](games/sekme/) | OKÇU shoots straight at things. This one does not arm until it has hit a wall, so aiming at a target does nothing at all — even the ones standing in plain sight. Aim at a wall instead and work out where the wall sends it. The sight shows only the first leg; a shot bounces seven times, so most of it is yours to picture. | [`games/sekme/index.html`](games/sekme/index.html) |
 | [**ÇAĞLAYAN**](games/caglayan/) | FİTİL is a chain you set off and watch go up in one go. This one you never touch: lay out the pins, open the tap, and hands off. Every drip that strikes a pin flips it behind itself, so the stream rewrites its own board as it pours, and a single spout ends up feeding pans right across the slab. The skill is entirely in the setup. | [`games/caglayan/index.html`](games/caglayan/index.html) |
+| [**KÖR**](games/kor/) | Everywhere else a combo pays out in points. Here it pays out in sight. The board is dark; every tile you clear charges the lamp, and the lamp is the only way to see what you are clearing. A look costs about what one look earns back, so it only pays if you get several clears out of it — and the board shifts whether you can see it or not. | [`games/kor/index.html`](games/kor/index.html) |
 
 `index.html` at the root is the arcade menu: every cabinet in turn,
 each with a live attract-mode preview of the game running in miniature. It is
@@ -92,4 +93,5 @@ games/
   denge/     index.html
   sekme/     index.html
   caglayan/  index.html
+  kor/       index.html
 ```

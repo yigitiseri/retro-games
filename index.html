@@ -72,6 +72,7 @@
     --denge:   #ffa63d;
     --sekme:   #8be9ff;
     --caglayan: #b8f0ff;
+    --kor:     #ffd15e;
 
     --cell-font: "Press Start 2P", ui-monospace, "Courier New", monospace;
     --read-font: "VT323", ui-monospace, "Courier New", monospace;
@@ -272,6 +273,7 @@
   .denge { --accent: var(--denge); }
   .sekme { --accent: var(--sekme); }
   .caglayan { --accent: var(--caglayan); }
+  .kor { --accent: var(--kor); }
 
   /* ---------- footer ---------- */
   .foot {
@@ -701,6 +703,17 @@
         <h2>ÇAĞLAYAN</h2>
         <p>FİTİL is a chain you set off and watch go up in one go. This one you never touch: lay out the pins, open the tap, and hands off. Every drip that strikes a pin flips it behind itself, so the stream rewrites its own board as it pours, and a single spout ends up feeding pans right across the slab. The skill is entirely in the setup.</p>
         <span class="keys">Tap the slots &middot; Space</span>
+        <span class="play">&#9654; PLAY</span>
+      </div>
+    </a>
+
+    <a class="cab kor" href="games/kor/">
+      <div class="tube"><canvas data-demo="blind" aria-hidden="true"></canvas></div>
+      <div class="plate">
+        <span class="no">CABINET NO. 31 &mdash; 1991</span>
+        <h2>KÖR</h2>
+        <p>Everywhere else a combo pays out in points. Here it pays out in sight. The board is dark; every tile you clear charges the lamp, and the lamp is the only way to see what you are clearing. A look costs about what one look earns back, so it only pays if you get several clears out of it &mdash; and the board shifts whether you can see it or not.</p>
+        <span class="keys">Tap tiles &middot; Space to look</span>
         <span class="play">&#9654; PLAY</span>
       </div>
     </a>
@@ -3436,12 +3449,76 @@
     }
   }
 
-  var painters = { snake: drawSnake, road: drawRoad, lander: drawLander, flap: drawFlap, brick: drawBrick, maze: drawMaze, arch: drawArch, rocks: drawRocks, loom: drawLoom, invade: drawInvade, fuse: drawFuse, pong: drawPong, lamps: drawLamps, climb: drawClimb, lanes: drawLanes, swing: drawSwing, mine: drawMine, sky: drawSky, paint: drawFence, rails: drawRails, night: drawNight, flip: drawFlip, twin: drawTwin, creep: drawCreep, pulse: drawPulse, stack: drawStack, bank: drawBank, drip: drawDrip };
+
+  /* ---------- kor: the combo is the light ---------- */
+  var kr = null;
+  function krInit(W, H) {
+    var g = [], seed = 3;
+    function rr() { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; }
+    for (var r = 0; r < 6; r++) { var row = []; for (var c = 0; c < 5; c++) row.push(Math.floor(rr() * 4)); g.push(row); }
+    return { W: W, H: H, last: 0, t: 0, g: g, lit: 1.1, charge: 0, seed: seed, pop: null };
+  }
+  function drawBlind(ctx, W, H, now) {
+    if (!kr || kr.W !== W) kr = krInit(W, H);
+    var v = kr, dt = Math.min(0.05, (now - (v.last || now)) / 1000);
+    v.last = now; v.t += dt;
+    function rr() { v.seed = (v.seed * 1664525 + 1013904223) >>> 0; return v.seed / 4294967296; }
+    var COLS = 5, ROWS = 6, KC = ["#ff7a6b", "#6bd9ff", "#ffd15e", "#9d8bff"];
+    var m = W * 0.06, cw = (W - 2 * m) / COLS, ch = (H * 0.72) / ROWS, top = H * 0.13;
+
+    ctx.fillStyle = "#0a0a10"; ctx.fillRect(0, 0, W, H);
+    v.lit = Math.max(0, v.lit - dt);
+    var show = v.lit > 0 ? Math.min(1, v.lit / 0.2) : 0;
+
+    for (var r = 0; r < ROWS; r++) for (var c = 0; c < COLS; c++) {
+      var x = m + c * cw, y = top + r * ch;
+      ctx.fillStyle = ((r + c) & 1) ? "#171723" : "#1e1e2e";
+      ctx.fillRect(x, y, cw, ch);
+      if (show > 0) {
+        ctx.globalAlpha = show;
+        ctx.fillStyle = KC[v.g[r][c]];
+        ctx.fillRect(x + 2, y + 2, cw - 4, ch - 4);
+        ctx.globalAlpha = 1;
+      } else {
+        ctx.fillStyle = "rgba(236,233,245,0.06)";
+        ctx.fillRect(x + 2, y + 2, cw - 4, ch - 4);
+      }
+    }
+
+    // the charge bar: the only thing that buys another look
+    var bw = (W - 2 * m) * Math.min(1, v.charge / 7);
+    ctx.fillStyle = "rgba(236,233,245,0.10)";
+    ctx.fillRect(m, top - H * 0.06, W - 2 * m, H * 0.025);
+    ctx.fillStyle = "#ffd15e";
+    ctx.fillRect(m, top - H * 0.06, bw, H * 0.025);
+
+    // clear a run every so often; each clear charges the lamp
+    if (!v.pop) v.pop = { t: 0.55 };
+    v.pop.t -= dt;
+    if (v.pop.t <= 0) {
+      v.pop.t = 0.55;
+      // find any run of three in a column
+      var found = null;
+      for (c = 0; c < COLS && !found; c++)
+        for (r = 0; r + 2 < ROWS; r++)
+          if (v.g[r][c] === v.g[r + 1][c] && v.g[r][c] === v.g[r + 2][c]) { found = [r, c]; break; }
+      if (found) {
+        for (var k = 0; k < 3; k++) v.g[found[0] + k][found[1]] = Math.floor(rr() * 4);
+        v.charge += 3;
+      } else {
+        var rc = Math.floor(rr() * COLS), kind = Math.floor(rr() * 4);
+        for (k = 0; k < 3; k++) v.g[k][rc] = kind;
+      }
+      if (v.charge >= 7) { v.charge = 0; v.lit = 1.1; }
+    }
+  }
+
+  var painters = { snake: drawSnake, road: drawRoad, lander: drawLander, flap: drawFlap, brick: drawBrick, maze: drawMaze, arch: drawArch, rocks: drawRocks, loom: drawLoom, invade: drawInvade, fuse: drawFuse, pong: drawPong, lamps: drawLamps, climb: drawClimb, lanes: drawLanes, swing: drawSwing, mine: drawMine, sky: drawSky, paint: drawFence, rails: drawRails, night: drawNight, flip: drawFlip, twin: drawTwin, creep: drawCreep, pulse: drawPulse, stack: drawStack, bank: drawBank, drip: drawDrip, blind: drawBlind };
   Array.prototype.forEach.call(document.querySelectorAll("[data-demo]"), function (c) {
     var fn = painters[c.dataset.demo];
     if (fn) register(c, fn, c.dataset.demo === "flap" || c.dataset.demo === "brick" || c.dataset.demo === "maze" || c.dataset.demo === "arch" ||
                        c.dataset.demo === "rocks" || c.dataset.demo === "loom" ||
-                       c.dataset.demo === "invade" || c.dataset.demo === "fuse" || c.dataset.demo === "pong" || c.dataset.demo === "lamps" || c.dataset.demo === "climb" || c.dataset.demo === "lanes" || c.dataset.demo === "swing" || c.dataset.demo === "mine" || c.dataset.demo === "sky" || c.dataset.demo === "paint" || c.dataset.demo === "rails" || c.dataset.demo === "night" || c.dataset.demo === "flip" || c.dataset.demo === "twin" || c.dataset.demo === "creep" || c.dataset.demo === "pulse" || c.dataset.demo === "stack" || c.dataset.demo === "bank" || c.dataset.demo === "drip");
+                       c.dataset.demo === "invade" || c.dataset.demo === "fuse" || c.dataset.demo === "pong" || c.dataset.demo === "lamps" || c.dataset.demo === "climb" || c.dataset.demo === "lanes" || c.dataset.demo === "swing" || c.dataset.demo === "mine" || c.dataset.demo === "sky" || c.dataset.demo === "paint" || c.dataset.demo === "rails" || c.dataset.demo === "night" || c.dataset.demo === "flip" || c.dataset.demo === "twin" || c.dataset.demo === "creep" || c.dataset.demo === "pulse" || c.dataset.demo === "stack" || c.dataset.demo === "bank" || c.dataset.demo === "drip" || c.dataset.demo === "blind");
   });
 
   if (window.ResizeObserver) {
