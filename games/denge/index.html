@@ -485,27 +485,10 @@ function swingA(n) { return Math.min(166, 120 + n * 5); }
       ctx.beginPath(); ctx.moveTo(hx, cy - 5); ctx.lineTo(hx, cy + 16); ctx.stroke();
       ctx.fillStyle = "#8b97ad"; ctx.fillRect(hx - 9, cy - 8, 18, 6);
       crate(hx, cy + 16 + BH, bw, BH, true);
-      // where it would come down if you let go this frame
-      var lt = Math.round(tSwing / FRAME) * FRAME;
-      // keep the marker on the board even when a big gust would carry the
-      // crate past the edge -- you still need to see which way it is going
-      var gxRaw = sx(landing(lt, A, W, gust)), gyy = sy(towerTop());
-      if (gxRaw > 8 && gxRaw < VW - 8) {
-        ctx.strokeStyle = "rgba(255,166,61,0.35)"; ctx.lineWidth = 2;
-        ctx.setLineDash([4, 5]);
-        ctx.beginPath(); ctx.moveTo(gxRaw, gyy - 4); ctx.lineTo(gxRaw, gyy - 22); ctx.stroke();
-        ctx.setLineDash([]);
-        ctx.fillStyle = "rgba(255,166,61,0.55)";
-        ctx.fillRect(gxRaw - bw / 2, gyy - 3, bw, 3);
-      } else {
-        // it would land off the board. a clipped bar at the edge reads as a
-        // drawing glitch, so point off instead.
-        var d = gxRaw < 0 ? -1 : 1, ex = d < 0 ? 14 : VW - 14;
-        ctx.fillStyle = "rgba(255,79,90,0.8)";
-        ctx.beginPath();
-        ctx.moveTo(ex + d * 9, gyy - 9); ctx.lineTo(ex - d * 5, gyy - 16);
-        ctx.lineTo(ex - d * 5, gyy - 2); ctx.closePath(); ctx.fill();
-      }
+      // No landing marker. It used to draw a dashed line and a bar where
+      // the crate would come down, which solved the cabinet for you: the
+      // skill is meant to be reading the crane's speed and leading it, and
+      // a marker turns that into waiting for a bar to line up.
     }
     if (falling) {
       var ft = falling.t, fx = falling.x0 + falling.vx * ft + 0.5 * gust * ft * ft;
