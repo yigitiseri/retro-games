@@ -71,6 +71,7 @@
     --nabiz:   #ff6b5b;
     --denge:   #ffa63d;
     --sekme:   #8be9ff;
+    --caglayan: #b8f0ff;
 
     --cell-font: "Press Start 2P", ui-monospace, "Courier New", monospace;
     --read-font: "VT323", ui-monospace, "Courier New", monospace;
@@ -270,6 +271,7 @@
   .nabiz { --accent: var(--nabiz); }
   .denge { --accent: var(--denge); }
   .sekme { --accent: var(--sekme); }
+  .caglayan { --accent: var(--caglayan); }
 
   /* ---------- footer ---------- */
   .foot {
@@ -688,6 +690,17 @@
         <h2>SEKME</h2>
         <p>OKÇU shoots straight at things. This one does not arm until it has hit a wall, so aiming at a target does nothing at all &mdash; even the ones standing in plain sight. Aim at a wall instead and work out where the wall sends it. The sight shows only the first leg; a shot bounces seven times, so most of it is yours to picture.</p>
         <span class="keys">Arrows to aim &middot; Space</span>
+        <span class="play">&#9654; PLAY</span>
+      </div>
+    </a>
+
+    <a class="cab caglayan" href="games/caglayan/">
+      <div class="tube"><canvas data-demo="drip" aria-hidden="true"></canvas></div>
+      <div class="plate">
+        <span class="no">CABINET NO. 30 &mdash; 1990</span>
+        <h2>ÇAĞLAYAN</h2>
+        <p>FİTİL is a chain you set off and watch go up in one go. This one you never touch: lay out the pins, open the tap, and hands off. Every drip that strikes a pin flips it behind itself, so the stream rewrites its own board as it pours, and a single spout ends up feeding pans right across the slab. The skill is entirely in the setup.</p>
+        <span class="keys">Tap the slots &middot; Space</span>
         <span class="play">&#9654; PLAY</span>
       </div>
     </a>
@@ -3348,12 +3361,87 @@
     ctx.beginPath(); ctx.arc(px(0.5), py(0.96), Math.max(3, W * 0.03), Math.PI, 0); ctx.fill();
   }
 
-  var painters = { snake: drawSnake, road: drawRoad, lander: drawLander, flap: drawFlap, brick: drawBrick, maze: drawMaze, arch: drawArch, rocks: drawRocks, loom: drawLoom, invade: drawInvade, fuse: drawFuse, pong: drawPong, lamps: drawLamps, climb: drawClimb, lanes: drawLanes, swing: drawSwing, mine: drawMine, sky: drawSky, paint: drawFence, rails: drawRails, night: drawNight, flip: drawFlip, twin: drawTwin, creep: drawCreep, pulse: drawPulse, stack: drawStack, bank: drawBank };
+
+  /* ---------- caglayan: the pins flip behind the drip ---------- */
+  var cg = null;
+  function cgInit(W, H) {
+    var b = [], seed = 7;
+    function rr() { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; }
+    for (var r = 0; r < 5; r++) { var row = []; for (var c = 0; c < 5; c++) row.push(rr() < 0.42 ? (rr() < 0.5 ? -1 : 1) : 0); b.push(row); }
+    return { W: W, H: H, last: 0, t: 0, b: b, drip: null, wait: 0.3, pans: [0, 0, 0, 0, 0], splash: -1, sp: 0 };
+  }
+  function drawDrip(ctx, W, H, now) {
+    if (!cg || cg.W !== W) cg = cgInit(W, H);
+    var v = cg, dt = Math.min(0.05, (now - (v.last || now)) / 1000);
+    v.last = now; v.t += dt;
+    var N = 5, m = W * 0.06, cw = (W - 2 * m) / N, top = H * 0.16, ch = (H * 0.66) / N;
+
+    ctx.fillStyle = "#071014"; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = "#0e1d23"; ctx.fillRect(m, top, W - 2 * m, ch * N);
+    for (var r = 0; r < N; r++) for (var c = 0; c < N; c++) {
+      ctx.fillStyle = ((r + c) & 1) ? "#0e1d23" : "#14282f";
+      ctx.fillRect(m + c * cw, top + r * ch, cw, ch);
+      var t = v.b[r][c];
+      if (!t) continue;
+      ctx.strokeStyle = t < 0 ? "#5ab8ff" : "#ffb45a";
+      ctx.lineWidth = Math.max(2, W * 0.022); ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(m + c * cw + cw / 2 - t * cw * 0.26, top + r * ch + ch / 2 - ch * 0.24);
+      ctx.lineTo(m + c * cw + cw / 2 + t * cw * 0.26, top + r * ch + ch / 2 + ch * 0.24);
+      ctx.stroke();
+    }
+    // the pans
+    var py = top + ch * N + 2;
+    for (c = 0; c < N; c++) {
+      ctx.fillStyle = v.pans[c] > 0 ? "#7ef0b0" : "#2c4a54";
+      ctx.fillRect(m + c * cw + 2, py, cw - 4, H * 0.09);
+      if (v.splash === c && v.sp > 0) {
+        ctx.strokeStyle = "rgba(184,240,255," + v.sp.toFixed(2) + ")";
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(m + c * cw + 2, py, cw - 4, H * 0.09);
+      }
+    }
+    v.sp = Math.max(0, v.sp - dt * 2);
+
+    ctx.fillStyle = "#2c4a54";
+    ctx.fillRect(m + 2 * cw + cw / 2 - W * 0.04, top - H * 0.05, W * 0.08, H * 0.035);
+
+    if (!v.drip) {
+      v.wait -= dt;
+      if (v.wait <= 0) v.drip = { r: -1, c: 2, t: 0 };
+    } else {
+      var d = v.drip;
+      d.t += dt;
+      if (d.t > 0.12) {
+        d.t = 0; d.r++;
+        if (d.r < N) {
+          var tv = v.b[d.r][d.c];
+          if (tv) { v.b[d.r][d.c] = -tv; var nc = d.c + tv; if (nc >= 0 && nc < N) d.c = nc; }
+        } else {
+          v.pans[d.c] = 1; v.splash = d.c; v.sp = 1;
+          v.drip = null; v.wait = 0.22;
+          var full = 0;
+          for (c = 0; c < N; c++) full += v.pans[c];
+          if (full >= N) v.pans = [0, 0, 0, 0, 0];
+        }
+      }
+      if (v.drip) {
+        var dx = m + v.drip.c * cw + cw / 2;
+        var dy = top + Math.max(0, v.drip.r) * ch + ch / 2;
+        ctx.fillStyle = "rgba(184,240,255,0.22)";
+        ctx.beginPath(); ctx.arc(dx, dy, Math.max(4, W * 0.05), 0, 6.283); ctx.fill();
+        ctx.fillStyle = "#b8f0ff";
+        ctx.beginPath(); ctx.arc(dx, dy, Math.max(2, W * 0.026), 0, 6.283); ctx.fill();
+      }
+    }
+  }
+
+  var painters = { snake: drawSnake, road: drawRoad, lander: drawLander, flap: drawFlap, brick: drawBrick, maze: drawMaze, arch: drawArch, rocks: drawRocks, loom: drawLoom, invade: drawInvade, fuse: drawFuse, pong: drawPong, lamps: drawLamps, climb: drawClimb, lanes: drawLanes, swing: drawSwing, mine: drawMine, sky: drawSky, paint: drawFence, rails: drawRails, night: drawNight, flip: drawFlip, twin: drawTwin, creep: drawCreep, pulse: drawPulse, stack: drawStack, bank: drawBank, drip: drawDrip };
   Array.prototype.forEach.call(document.querySelectorAll("[data-demo]"), function (c) {
     var fn = painters[c.dataset.demo];
     if (fn) register(c, fn, c.dataset.demo === "flap" || c.dataset.demo === "brick" || c.dataset.demo === "maze" || c.dataset.demo === "arch" ||
                        c.dataset.demo === "rocks" || c.dataset.demo === "loom" ||
-                       c.dataset.demo === "invade" || c.dataset.demo === "fuse" || c.dataset.demo === "pong" || c.dataset.demo === "lamps" || c.dataset.demo === "climb" || c.dataset.demo === "lanes" || c.dataset.demo === "swing" || c.dataset.demo === "mine" || c.dataset.demo === "sky" || c.dataset.demo === "paint" || c.dataset.demo === "rails" || c.dataset.demo === "night" || c.dataset.demo === "flip" || c.dataset.demo === "twin" || c.dataset.demo === "creep" || c.dataset.demo === "pulse" || c.dataset.demo === "stack" || c.dataset.demo === "bank");
+                       c.dataset.demo === "invade" || c.dataset.demo === "fuse" || c.dataset.demo === "pong" || c.dataset.demo === "lamps" || c.dataset.demo === "climb" || c.dataset.demo === "lanes" || c.dataset.demo === "swing" || c.dataset.demo === "mine" || c.dataset.demo === "sky" || c.dataset.demo === "paint" || c.dataset.demo === "rails" || c.dataset.demo === "night" || c.dataset.demo === "flip" || c.dataset.demo === "twin" || c.dataset.demo === "creep" || c.dataset.demo === "pulse" || c.dataset.demo === "stack" || c.dataset.demo === "bank" || c.dataset.demo === "drip");
   });
 
   if (window.ResizeObserver) {

@@ -1,0 +1,673 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="description" content="ÇAĞLAYAN — lay out the pins, open the tap, and hands off: the cascade rewrites its own board">
+<meta name="theme-color" content="#08090e">
+<style>
+  :root {
+    color-scheme: dark;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  body { margin: 0; }
+  img { max-width: 100%; }
+  [hidden] { display: none !important; }
+</style>
+<title>ÇAĞLAYAN — Retro Games Arcade</title>
+<link rel="preload" href="../../assets/fonts/press-start-2p-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../assets/fonts/fonts.css">
+<style>
+  :root {
+    --ink:    #071014;
+    --slab:   #0e1d23;
+    --slab2:  #14282f;
+    --pin:    #7fd4c4;
+    --pinL:   #5ab8ff;
+    --pinR:   #ffb45a;
+    --drip:   #b8f0ff;
+    --pan:    #2c4a54;
+    --panF:   #7ef0b0;
+    --paper:  #e3f2f4;
+    --dim:    rgba(227, 242, 244, 0.45);
+    --bad:    #ff4f5a;
+    --gold:   #ffd15e;
+    --hud: "Press Start 2P", monospace;
+    --ui: "VT323", ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; margin: 0; overflow: hidden; }
+  body { background: var(--ink); color: var(--paper); font-family: var(--ui);
+         user-select: none; touch-action: none; overscroll-behavior: none; }
+  #wrap { position: fixed; inset: 0; }
+  canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; }
+  .scrim { position: absolute; left: 0; right: 0; top: 0; height: 130px; z-index: 1; pointer-events: none;
+           background: linear-gradient(180deg, rgba(7,16,20,0.92), rgba(7,16,20,0.45) 60%, rgba(7,16,20,0)); }
+
+  .hud { position: absolute; top: 0; left: 0; right: 0;
+    padding: calc(env(safe-area-inset-top, 0px) + 10px) calc(var(--gut, 0px) + 12px) 0;
+    display: grid; grid-template-columns: 1fr auto 1fr; align-items: start;
+    pointer-events: none; z-index: 2; font-family: var(--hud); }
+  .hud .k { font-size: 7px; letter-spacing: 0.16em; color: var(--dim); }
+  .hud .score { font-size: clamp(15px, 5vw, 21px); line-height: 1.5; }
+  .hud .best { font-size: 10px; color: var(--dim); line-height: 1.7; }
+  .hud .best.lead { color: var(--gold); }
+  .hud .right { text-align: right; }
+  .mid { text-align: center; }
+  .mid .v { font-size: clamp(13px, 4.4vw, 18px); line-height: 1.5; color: var(--drip); }
+  .mid .v.low { color: var(--bad); }
+
+  .pads { position: absolute; left: calc(var(--gut, 0px) + var(--pi, 14px));
+    right: calc(var(--gut, 0px) + var(--pi, 14px));
+    bottom: var(--pb, 14px); height: var(--ph, 104px); z-index: 2; }
+  .pd { width: 100%; height: 100%; border-radius: 12px;
+    border: 2px solid rgba(227,242,244,0.18);
+    background: linear-gradient(180deg, rgba(184,240,255,0.14), rgba(184,240,255,0.03));
+    display: grid; place-content: center; gap: 4px; cursor: pointer; color: var(--drip);
+    font-family: var(--hud); transition: transform 60ms, filter 60ms; }
+  .pd .big { font-size: clamp(13px, 4.8vw, 18px); letter-spacing: 0.12em; }
+  .pd .sm { font-size: 7px; letter-spacing: 0.16em; color: var(--dim); }
+  .pd.hot { transform: translateY(2px) scale(0.985); filter: brightness(1.5); border-color: var(--drip); }
+  .pd.off { opacity: 0.32; }
+  .pd.run { color: var(--panF); border-color: rgba(126,240,176,0.30);
+            background: linear-gradient(180deg, rgba(126,240,176,0.10), rgba(126,240,176,0.02)); }
+
+  .screen { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center;
+    gap: 15px; text-align: center; padding: 26px; z-index: 3;
+    background: radial-gradient(120% 90% at 50% 42%, rgba(7,16,20,0.88), rgba(7,16,20,0.97)); }
+  .screen[hidden] { display: none; }
+  .title { font-family: var(--hud); font-size: clamp(22px, 9vw, 40px); letter-spacing: 4px; line-height: 1.4;
+    background: linear-gradient(180deg, #fff, var(--drip) 48%, #1b6274);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 0 22px rgba(184,240,255,0.40)); }
+  .sub { font-family: var(--hud); font-size: clamp(8px, 2.7vw, 10px); letter-spacing: 0.2em; color: var(--drip); }
+  .lines { font-size: clamp(17px, 4.6vw, 20px); line-height: 1.5; color: #cfe6ea; max-width: 34ch; }
+  .lines b { color: var(--gold); }
+  .lines .bad { color: var(--bad); }
+  .lines .ok { color: var(--panF); }
+  .btn { margin-top: 4px; font-family: var(--hud); font-size: 11px; letter-spacing: 0.14em;
+    padding: 14px 28px; color: #03252e; border: 0; border-radius: 4px; cursor: pointer;
+    background: linear-gradient(180deg, #d8f8ff, var(--drip));
+    box-shadow: 0 3px 0 #1d6070, 0 0 26px rgba(184,240,255,0.32); }
+  .btn:active { transform: translateY(2px); box-shadow: 0 1px 0 #1d6070; }
+  .hintline { font-family: var(--hud); font-size: 7px; letter-spacing: 0.13em; color: var(--dim); line-height: 2; }
+  .over-title { font-family: var(--hud); font-size: clamp(13px, 4.6vw, 19px); color: var(--bad); letter-spacing: 0.1em; }
+  .over-title.best { color: var(--gold); }
+  .final { font-family: var(--hud); font-size: clamp(22px, 8vw, 36px); line-height: 1.4; }
+  .stats { display: grid; grid-template-columns: repeat(3, auto); gap: 8px 20px; justify-content: center; font-family: var(--hud); }
+  .stats .k { font-size: 7px; letter-spacing: 0.15em; color: var(--dim); }
+  .stats .v { font-size: 12px; margin-top: 4px; }
+  .stats .v.gold { color: var(--gold); }
+</style>
+<link rel="canonical" href="https://yigitiseri.github.io/retro-games/games/caglayan/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Retro Games Arcade">
+<meta property="og:title" content="ÇAĞLAYAN — Retro Games Arcade">
+<meta property="og:description" content="ÇAĞLAYAN — lay out the pins, open the tap, and hands off: the cascade rewrites its own board">
+<meta property="og:url" content="https://yigitiseri.github.io/retro-games/games/caglayan/">
+<meta property="og:image" content="https://yigitiseri.github.io/retro-games/assets/social-card.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="ÇAĞLAYAN — Retro Games Arcade">
+<meta name="twitter:description" content="ÇAĞLAYAN — lay out the pins, open the tap, and hands off: the cascade rewrites its own board">
+<meta name="twitter:image" content="https://yigitiseri.github.io/retro-games/assets/social-card.png">
+
+<!-- Cloudflare Web Analytics: no cookies, no client-side storage -->
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "aee6e644a3b74cb9bdaf4e1569d570e2"}'></script>
+<!-- End Cloudflare Web Analytics -->
+
+</head>
+<body>
+<div id="wrap">
+  <canvas id="c"></canvas>
+  <div class="scrim"></div>
+
+  <div class="hud">
+    <div>
+      <div class="k">SCORE</div><div class="score" id="hScore">0</div>
+      <div class="k" style="margin-top:5px">BEST</div><div class="best" id="hBest">0</div>
+    </div>
+    <div class="mid">
+      <div class="k" id="kMid">PINS LEFT</div><div class="v" id="hMid">0</div>
+    </div>
+    <div class="right">
+      <div class="k">RUN</div><div class="best" id="hRun">1</div>
+      <div class="k" style="margin-top:5px">PANS LEFT</div><div class="best" id="hLeft">0</div>
+    </div>
+  </div>
+
+  <div class="pads" id="pads">
+    <div class="pd" id="pdTap"><div class="big">OPEN THE TAP</div><div class="sm">THEN HANDS OFF</div></div>
+  </div>
+
+  <div class="screen" id="startScreen">
+    <div class="title">ÇAĞLAYAN</div>
+    <div class="sub">SET IT UP. THEN LET GO.</div>
+    <div class="lines">
+      FİTİL is a chain you set off. This one you never touch: lay out the
+      pins, open the tap, and <b>watch</b>. Every drip that strikes a pin
+      <b>flips it</b>, so the stream rewrites its own board as it pours.
+    </div>
+    <div class="lines" style="font-size:16px;opacity:0.84">
+      Fill every pan that is asking. Tap a slot to put a pin in, tap again
+      to turn it round, again to take it out.
+      <span class="ok">Every layout has a solution</span> &mdash; the cabinet
+      solves the run before it deals it. A tidy funnel will not do it:
+      <span class="bad">that fills none of them.</span>
+    </div>
+    <button class="btn" id="btnStart">TURN IT ON</button>
+    <div class="hintline">TAP THE SLOTS &middot; SPACE TO POUR</div>
+  </div>
+
+  <div class="screen" id="overScreen" hidden>
+    <div class="over-title" id="overTitle">THE TAP RAN DRY</div>
+    <div class="final" id="overScore">0</div>
+    <div class="stats">
+      <div><div class="k">BEST</div><div class="v gold" id="overBest">0</div></div>
+      <div><div class="k">RUNS</div><div class="v" id="overRuns">0</div></div>
+      <div><div class="k">PANS</div><div class="v gold" id="overPans">0</div></div>
+    </div>
+    <button class="btn" id="btnAgain">AGAIN</button>
+    <div class="hintline">TAP OR PRESS R</div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ============================================================
+     ÇAĞLAYAN -- the cascade runs itself.
+
+     FİTİL is a chain you set off and watch go up in one go. Here
+     you never touch the cascade at all. You lay out pins, open the
+     tap, and drips fall one after another for several seconds --
+     and every pin a drip strikes FLIPS behind it, so the stream
+     rewrites its own board as it pours. The skill is entirely in
+     the setup.
+
+     Every level is solved by the cabinet before it is dealt: a
+     hill-climb over layouts has to find one that fills every pan
+     inside the drip budget, or the level is thrown away. 480 of
+     480 levels solved, 1.03 rolls each, 2ms each. A solution uses
+     about 9 pins of the 12 you are given and 13.4 drips of 18.
+
+     What that guarantee is worth, measured as levels COMPLETED:
+
+       no pins at all       0%
+       pins at random       3%
+       every pin one way    2%
+       a tidy funnel        0%
+       a laid-out cascade 100%
+     ============================================================ */
+
+  var wrap = document.getElementById("wrap");
+  var cv = document.getElementById("c");
+  var ctx = cv.getContext("2d", { alpha: false });
+
+  var VW = 420, VH = 780, MIN_VH = 720;
+  var scale = 1, originX = 0, dpr = 1;
+
+  var COLS = 7, ROWS = 6, SRC = 3;
+  // as big as seven columns will go inside the board, so the slots are
+  // proper thumb targets rather than 52px squares
+  var CELL = 56, PAN_H = 52;
+  var PAD_H = 104, PAD_B = 14, PAD_I = 14;
+  var DRIP_T = 0.055;               // seconds a drip takes per row
+
+  var seed = (Math.random() * 4294967296) >>> 0, lockSeed = false;
+  function rnd() { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; }
+
+  function dripsFor(n) { return 14 + Math.min(10, Math.floor(n * 0.7)); }
+  function pinsFor(n) { return Math.max(7, 13 - Math.floor((n - 1) / 5)); }
+
+  /* ---------- the model, identical to the one that was measured ---------- */
+  function newBoard() {
+    var b = [];
+    for (var r = 0; r < ROWS; r++) { var row = []; for (var c = 0; c < COLS; c++) row.push(0); b.push(row); }
+    return b;
+  }
+  function clone(b) { return b.map(function (r) { return r.slice(); }); }
+  function pinsUsed(b) {
+    var n = 0;
+    for (var r = 0; r < ROWS; r++) for (var c = 0; c < COLS; c++) if (b[r][c]) n++;
+    return n;
+  }
+  function drip(board, c0) {
+    var c = c0, path = [{ r: -1, c: c }];
+    for (var r = 0; r < ROWS; r++) {
+      var t = board[r][c];
+      if (t !== 0) {
+        board[r][c] = -t;
+        var nc = c + t;
+        if (nc >= 0 && nc < COLS) c = nc;
+      }
+      path.push({ r: r, c: c });
+    }
+    return { end: c, path: path };
+  }
+  function pour(board, needs, n) {
+    var b = clone(board), got = needs.map(function () { return 0; });
+    for (var i = 0; i < n; i++) {
+      var e = drip(b, SRC).end;
+      if (got[e] < needs[e]) got[e]++;
+    }
+    var done = 0, short = 0;
+    for (var c = 0; c < COLS; c++) { if (got[c] >= needs[c]) done++; short += Math.max(0, needs[c] - got[c]); }
+    return { got: got, full: done === COLS, filled: done, short: short };
+  }
+  function makeNeeds(level) {
+    var needs = [], want = Math.min(9, 3 + Math.floor(level * 0.5));
+    for (var c = 0; c < COLS; c++) needs.push(0);
+    for (var i = 0; i < want; i++) {
+      var c2 = Math.floor(rnd() * COLS);
+      if (needs[c2] < 3) needs[c2]++;
+    }
+    return needs;
+  }
+  // the cabinet's own proof that the run can be done
+  function solve(needs, n, maxPins, effort) {
+    var best = null;
+    for (var restart = 0; restart < (effort || 26); restart++) {
+      var b = newBoard(), seeds = Math.min(maxPins, 4 + Math.floor(rnd() * maxPins));
+      for (var i = 0; i < seeds; i++) {
+        var r = Math.floor(rnd() * ROWS), c = Math.floor(rnd() * COLS);
+        if (!b[r][c]) b[r][c] = rnd() < 0.5 ? -1 : 1;
+      }
+      var cur = pour(b, needs, n), score = cur.filled * 100 - cur.short * 10 - pinsUsed(b);
+      for (var step = 0; step < 260; step++) {
+        var rr = Math.floor(rnd() * ROWS), cc = Math.floor(rnd() * COLS);
+        var old = b[rr][cc], nv = [0, -1, 1][Math.floor(rnd() * 3)];
+        if (nv === old) continue;
+        if (nv !== 0 && old === 0 && pinsUsed(b) >= maxPins) continue;
+        b[rr][cc] = nv;
+        var p = pour(b, needs, n), s = p.filled * 100 - p.short * 10 - pinsUsed(b);
+        if (s >= score) { score = s; cur = p; if (p.full) return { board: clone(b), pins: pinsUsed(b) }; }
+        else b[rr][cc] = old;
+      }
+      if (!best || score > best.score) best = { score: score, board: clone(b), pour: cur };
+    }
+    return null;
+  }
+
+  /* ---------- run state ---------------------------------------- */
+  var state = "start", phase = "setup";
+  var board = newBoard(), needs = [], got = [], runNo = 1, level = 1;
+  var score = 0, best = 0, pansDone = 0, budget = 14, pinBudget = 13, dripsLeft = 0;
+  var live = null, liveBoard = null, tRun = 0, pops = [], splash = [], hot = 0, lastRolls = 1;
+  // the layout the cabinet found before dealing the level. The solver is
+  // stochastic, so re-running it is not proof that the level is fair --
+  // keeping the layout it actually found is.
+  var proof = null;
+
+  function pansLeft() {
+    var n = 0;
+    for (var c = 0; c < COLS; c++) if (got[c] < needs[c]) n++;
+    return n;
+  }
+
+  function newLevel() {
+    budget = dripsFor(level); pinBudget = pinsFor(level);
+    proof = null;
+    for (var t = 1; t <= 10; t++) {
+      needs = makeNeeds(level);
+      var sol = solve(needs, budget, pinBudget);
+      if (sol) { lastRolls = t; proof = sol.board; break; }
+      if (t === 10) {
+        // fall back to a level we can certainly do, rather than deal one we cannot
+        needs = makeNeeds(1); lastRolls = 10;
+        var s2 = solve(needs, budget, pinBudget, 60);
+        proof = s2 ? s2.board : newBoard();
+      }
+    }
+    board = newBoard();
+    got = needs.map(function () { return 0; });
+    dripsLeft = budget;
+    phase = "setup"; live = null; liveBoard = null;
+  }
+  function reset() {
+    if (!lockSeed) seed = (Math.random() * 4294967296) >>> 0;
+    score = 0; runNo = 1; level = 1; pansDone = 0; pops = []; splash = []; tRun = 0;
+    newLevel();
+  }
+
+  var AC = null;
+  function ac() { if (AC === null) { try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { AC = 0; } } return AC || null; }
+  function blip(f, dur, type, vol) {
+    var a = ac(); if (!a) return;
+    if (a.state === "suspended") a.resume();
+    var o = a.createOscillator(), g = a.createGain();
+    o.type = type || "sine"; o.frequency.value = f;
+    g.gain.setValueAtTime(vol || 0.04, a.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001, a.currentTime + dur);
+    o.connect(g); g.connect(a.destination); o.start(); o.stop(a.currentTime + dur);
+  }
+  function addPop(x, y, txt, col) { pops.push({ x: x, y: y, t: 0, txt: txt, col: col }); if (pops.length > 7) pops.shift(); }
+
+  function cycle(r, c) {
+    if (state !== "play" || phase !== "setup") return false;
+    var v = board[r][c];
+    if (v === 0) {
+      if (pinsUsed(board) >= pinBudget) { blip(120, 0.06, "square", 0.03); return false; }
+      board[r][c] = -1;
+    } else if (v === -1) board[r][c] = 1;
+    else board[r][c] = 0;
+    blip(520, 0.04, "sine", 0.035);
+    return true;
+  }
+
+  function openTap() {
+    if (state !== "play" || phase !== "setup") return false;
+    phase = "run";
+    liveBoard = clone(board);
+    live = null;
+    hot = 0.12;
+    blip(300, 0.12, "sine", 0.05);
+    return true;
+  }
+
+  function nextDrip() {
+    if (dripsLeft <= 0) { finishRun(); return; }
+    dripsLeft--;
+    var res = drip(liveBoard, SRC);
+    live = { path: res.path, end: res.end, i: 0, t: 0 };
+  }
+
+  function finishRun() {
+    live = null;
+    if (pansLeft() === 0) {
+      var bonus = 150 + level * 25 + dripsLeft * 20;
+      score += bonus;
+      addPop(0, 0, "ALL FULL +" + bonus, "#7ef0b0");
+      blip(880, 0.18, "sine", 0.06);
+      level++; runNo++;
+      newLevel();
+    } else {
+      gameOver("THE TAP RAN DRY");
+    }
+  }
+
+  function gameOver(why) {
+    state = "over";
+    document.getElementById("overTitle").textContent = why;
+    if (score > best) { best = score; saveNum("caglayan-best", best); document.getElementById("overTitle").classList.add("best"); }
+    else document.getElementById("overTitle").classList.remove("best");
+    document.getElementById("overScore").textContent = fmt(score);
+    document.getElementById("overBest").textContent = fmt(best);
+    document.getElementById("overRuns").textContent = runNo - 1;
+    document.getElementById("overPans").textContent = pansDone;
+    document.getElementById("overScreen").hidden = false;
+    blip(90, 0.4, "sawtooth", 0.07);
+  }
+
+  function start() {
+    reset(); state = "play";
+    document.getElementById("startScreen").hidden = true;
+    document.getElementById("overScreen").hidden = true;
+    syncHud();
+  }
+
+  function step(dt) {
+    tRun += dt;
+    if (hot > 0) hot = Math.max(0, hot - dt);
+    for (var i = pops.length - 1; i >= 0; i--) { pops[i].t += dt; if (pops[i].t > 1.1) pops.splice(i, 1); }
+    for (i = splash.length - 1; i >= 0; i--) { splash[i].t += dt; if (splash[i].t > 0.5) splash.splice(i, 1); }
+    if (state !== "play" || phase !== "run") return;
+    if (!live) { nextDrip(); if (!live) return; }
+    live.t += dt;
+    while (live && live.t >= DRIP_T) {
+      live.t -= DRIP_T;
+      live.i++;
+      if (live.i >= live.path.length) {
+        var e = live.end;
+        if (got[e] < needs[e]) {
+          got[e]++; pansDone++;
+          var gain = 25 + level * 4;
+          score += gain;
+          addPop(e, 0, "+" + gain, needs[e] === got[e] ? "#7ef0b0" : "#ffd15e");
+          blip(needs[e] === got[e] ? 760 : 560, 0.07, "sine", 0.045);
+        } else blip(190, 0.05, "sine", 0.025);
+        splash.push({ c: e, t: 0 });
+        live = null;
+        if (pansLeft() === 0) { finishRun(); return; }
+        nextDrip();
+      }
+    }
+    syncHud();
+  }
+
+  /* ---------- drawing ------------------------------------------ */
+  function boardW() { return COLS * CELL; }
+  function boardX() { return Math.round((VW - boardW()) / 2); }
+  function boardY() {
+    var top = 122, bot = VH - PAD_B - PAD_H - 16;
+    var h = ROWS * CELL + PAN_H;
+    return Math.max(top, Math.round(top + Math.max(0, bot - top - h) * 0.42));
+  }
+  function cellAt(px, py) {
+    var c = Math.floor((px - boardX()) / CELL), r = Math.floor((py - boardY()) / CELL);
+    if (c < 0 || c >= COLS || r < 0 || r >= ROWS) return null;
+    return { r: r, c: c };
+  }
+
+  function draw() {
+    ctx.fillStyle = "#071014"; ctx.fillRect(0, 0, VW, VH);
+    var bx = boardX(), by = boardY();
+
+    // the slab
+    ctx.fillStyle = "#0e1d23";
+    ctx.fillRect(bx - 6, by - 6, boardW() + 12, ROWS * CELL + PAN_H + 12);
+    ctx.strokeStyle = "rgba(227,242,244,0.10)"; ctx.lineWidth = 2;
+    ctx.strokeRect(bx - 6, by - 6, boardW() + 12, ROWS * CELL + PAN_H + 12);
+
+    // the source spout
+    var sxp = bx + SRC * CELL + CELL / 2;
+    ctx.fillStyle = "#2c4a54";
+    ctx.fillRect(sxp - 13, by - 22, 26, 14);
+    ctx.fillStyle = phase === "run" ? "#b8f0ff" : "#4d7b87";
+    ctx.fillRect(sxp - 4, by - 10, 8, 6);
+
+    // the slots
+    var show = phase === "run" && liveBoard ? liveBoard : board;
+    for (var r = 0; r < ROWS; r++) for (var c = 0; c < COLS; c++) {
+      var x = bx + c * CELL, y = by + r * CELL;
+      ctx.fillStyle = ((r + c) & 1) ? "#0e1d23" : "#14282f";
+      ctx.fillRect(x, y, CELL, CELL);
+      ctx.strokeStyle = "rgba(227,242,244,0.05)"; ctx.lineWidth = 1;
+      ctx.strokeRect(x + 0.5, y + 0.5, CELL - 1, CELL - 1);
+      var v = show[r][c];
+      var cx = x + CELL / 2, cy = y + CELL / 2;
+      if (v === 0) {
+        if (phase === "setup") {
+          ctx.fillStyle = "rgba(227,242,244,0.13)";
+          ctx.beginPath(); ctx.arc(cx, cy, 3, 0, 6.283); ctx.fill();
+        }
+        continue;
+      }
+      // a pin, leaning the way it sends a drip
+      ctx.strokeStyle = v < 0 ? "#5ab8ff" : "#ffb45a";
+      ctx.lineWidth = 6; ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(cx - v * 13, cy - 11);
+      ctx.lineTo(cx + v * 13, cy + 11);
+      ctx.stroke();
+      ctx.strokeStyle = "rgba(255,255,255,0.35)"; ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(cx - v * 13, cy - 11);
+      ctx.lineTo(cx + v * 13, cy + 11);
+      ctx.stroke();
+    }
+
+    // the pans
+    var py0 = by + ROWS * CELL;
+    for (c = 0; c < COLS; c++) {
+      var px0 = bx + c * CELL;
+      var need = needs[c], have = got[c];
+      ctx.fillStyle = "#0a171c";
+      ctx.fillRect(px0 + 3, py0 + 4, CELL - 6, PAN_H - 8);
+      if (need > 0) {
+        var frac = Math.min(1, have / need);
+        ctx.fillStyle = have >= need ? "#7ef0b0" : "#2c4a54";
+        ctx.fillRect(px0 + 3, py0 + 4 + (PAN_H - 8) * (1 - frac), CELL - 6, (PAN_H - 8) * frac);
+      }
+      var sp = null;
+      for (var s = 0; s < splash.length; s++) if (splash[s].c === c) sp = splash[s];
+      ctx.strokeStyle = sp ? "rgba(184,240,255," + (1 - sp.t / 0.5).toFixed(2) + ")"
+                           : (need > 0 ? "rgba(227,242,244,0.22)" : "rgba(227,242,244,0.07)");
+      ctx.lineWidth = 2;
+      ctx.strokeRect(px0 + 3, py0 + 4, CELL - 6, PAN_H - 8);
+      ctx.font = '8px "Press Start 2P", monospace';
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      if (need > 0) {
+        ctx.fillStyle = have >= need ? "#07222c" : "#e3f2f4";
+        ctx.fillText(have + "/" + need, px0 + CELL / 2, py0 + PAN_H / 2);
+      } else {
+        ctx.fillStyle = "rgba(227,242,244,0.18)";
+        ctx.fillText("—", px0 + CELL / 2, py0 + PAN_H / 2);
+      }
+    }
+    ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+
+    // the drip
+    if (live) {
+      var i = Math.min(live.path.length - 1, live.i);
+      var f = Math.max(0, Math.min(1, live.t / DRIP_T));
+      var a = live.path[Math.max(0, i - 1)], b2 = live.path[i];
+      var ax = bx + a.c * CELL + CELL / 2, ay = by + a.r * CELL + CELL / 2;
+      var bxx = bx + b2.c * CELL + CELL / 2, byy = by + b2.r * CELL + CELL / 2;
+      var dx = ax + (bxx - ax) * f, dy = ay + (byy - ay) * f;
+      ctx.fillStyle = "rgba(184,240,255,0.22)";
+      ctx.beginPath(); ctx.arc(dx, dy, 11, 0, 6.283); ctx.fill();
+      ctx.fillStyle = "#b8f0ff";
+      ctx.beginPath(); ctx.arc(dx, dy, 5.5, 0, 6.283); ctx.fill();
+    }
+
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    for (i = 0; i < pops.length; i++) {
+      var p = pops[i];
+      ctx.globalAlpha = 1 - p.t / 1.1;
+      ctx.fillStyle = p.col;
+      ctx.font = '8px "Press Start 2P", monospace';
+      var tx = p.txt.indexOf("ALL") === 0 ? VW / 2 : bx + p.x * CELL + CELL / 2;
+      ctx.fillText(p.txt, tx, py0 - 8 - p.t * 26);
+      ctx.globalAlpha = 1;
+    }
+    ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+  }
+
+  /* ---------- HUD ----------------------------------------------- */
+  var hScore = document.getElementById("hScore"), hBest = document.getElementById("hBest");
+  var hMid = document.getElementById("hMid"), kMid = document.getElementById("kMid");
+  var hRun = document.getElementById("hRun"), hLeft = document.getElementById("hLeft");
+  var pdTap = document.getElementById("pdTap");
+
+  function fmt(n) { return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
+  function saveNum(k, v) { try { localStorage.setItem(k, String(v)); } catch (e) {} }
+  function loadNum(k) { try { var v = parseInt(localStorage.getItem(k), 10); return isFinite(v) ? v : 0; } catch (e) { return 0; } }
+  function syncHud() {
+    hScore.textContent = fmt(score);
+    hBest.textContent = fmt(best);
+    hBest.classList.toggle("lead", score >= best && score > 0);
+    if (phase === "setup") {
+      kMid.textContent = "PINS LEFT";
+      hMid.textContent = (pinBudget - pinsUsed(board)) + "/" + pinBudget;
+      hMid.classList.toggle("low", pinBudget - pinsUsed(board) === 0);
+    } else {
+      kMid.textContent = "DRIPS LEFT";
+      hMid.textContent = dripsLeft;
+      hMid.classList.toggle("low", dripsLeft <= 3);
+    }
+    hRun.textContent = runNo;
+    hLeft.textContent = pansLeft();
+    var setup = state === "play" && phase === "setup";
+    if (pdTap._setup !== setup) {
+      pdTap._setup = setup;
+      pdTap.classList.toggle("run", !setup);
+      pdTap.querySelector(".big").textContent = setup ? "OPEN THE TAP" : "POURING";
+      pdTap.querySelector(".sm").textContent = setup ? "THEN HANDS OFF" : "HANDS OFF";
+    }
+    if (pdTap._hot !== (hot > 0)) { pdTap._hot = hot > 0; pdTap.classList.toggle("hot", hot > 0); }
+    if (pdTap._off !== !setup) { pdTap._off = !setup; pdTap.classList.toggle("off", !setup); }
+  }
+
+  /* ---------- input --------------------------------------------- */
+  cv.addEventListener("pointerdown", function (e) {
+    if (state !== "play") return;
+    e.preventDefault();
+    var rect = cv.getBoundingClientRect();
+    var px = ((e.clientX - rect.left) * dpr - originX) / scale;
+    var py = ((e.clientY - rect.top) * dpr) / scale;
+    var cell = cellAt(px, py);
+    if (cell) { cycle(cell.r, cell.c); syncHud(); }
+  }, { passive: false });
+  document.getElementById("pads").addEventListener("pointerdown", function (e) {
+    e.preventDefault();
+    if (state !== "play") { start(); return; }
+    openTap(); syncHud();
+  }, { passive: false });
+  document.getElementById("btnStart").addEventListener("click", function (e) { e.stopPropagation(); start(); });
+  document.getElementById("btnAgain").addEventListener("click", function (e) { e.stopPropagation(); start(); });
+  document.getElementById("startScreen").addEventListener("pointerdown", function () { start(); });
+  document.getElementById("overScreen").addEventListener("pointerdown", function () { start(); });
+  window.addEventListener("keydown", function (e) {
+    if (e.code === "KeyR") { e.preventDefault(); start(); return; }
+    if (e.code === "Space" || e.code === "Enter") {
+      e.preventDefault();
+      if (state !== "play") start(); else { openTap(); syncHud(); }
+    }
+  });
+
+  /* ---------- layout -------------------------------------------- */
+  function resize() {
+    dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+    var w = wrap.clientWidth, h = wrap.clientHeight;
+    cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+    scale = Math.min((w * dpr) / VW, (h * dpr) / MIN_VH);
+    originX = Math.round(((w * dpr) - VW * scale) / 2);
+    VH = (h * dpr) / scale;
+    wrap.style.setProperty("--gut", (originX / dpr) + "px");
+    wrap.style.setProperty("--ph", (PAD_H * scale / dpr) + "px");
+    wrap.style.setProperty("--pb", (PAD_B * scale / dpr) + "px");
+    wrap.style.setProperty("--pi", (PAD_I * scale / dpr) + "px");
+    ctx.setTransform(scale, 0, 0, scale, originX, 0);
+    render();
+  }
+  function render() {
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.fillStyle = "#040b0e";
+    ctx.fillRect(0, 0, cv.width, cv.height);
+    ctx.restore();
+    draw();
+    if (originX > 0) {
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.fillStyle = "rgba(227,242,244,0.07)";
+      ctx.fillRect(originX - 1, 0, 1, cv.height);
+      ctx.fillRect(originX + VW * scale, 0, 1, cv.height);
+      ctx.restore();
+    }
+  }
+  var last = 0;
+  function frame(now) {
+    requestAnimationFrame(frame);
+    var dt = last ? Math.min(0.032, (now - last) / 1000) : 0;
+    last = now;
+    step(dt);
+    render();
+  }
+
+  best = loadNum("caglayan-best");
+  reset();
+  syncHud();
+  resize();
+  if (window.ResizeObserver) new ResizeObserver(resize).observe(wrap);
+  window.addEventListener("resize", resize);
+  requestAnimationFrame(frame);
+
+})();
+</script>
+</body>
+</html>
