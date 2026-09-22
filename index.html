@@ -70,6 +70,7 @@
     --golge:   #6ad9c0;
     --nabiz:   #ff6b5b;
     --denge:   #ffa63d;
+    --sekme:   #8be9ff;
 
     --cell-font: "Press Start 2P", ui-monospace, "Courier New", monospace;
     --read-font: "VT323", ui-monospace, "Courier New", monospace;
@@ -268,6 +269,7 @@
   .golge { --accent: var(--golge); }
   .nabiz { --accent: var(--nabiz); }
   .denge { --accent: var(--denge); }
+  .sekme { --accent: var(--sekme); }
 
   /* ---------- footer ---------- */
   .foot {
@@ -675,6 +677,17 @@
         <h2>DENGE</h2>
         <p>A tower does not topple at its base. At every joint the weight above has to sit over the crate below, so a crate placed badly ten floors down is a debt, and later crates go deliberately off-centre to pay it back. The crate also leaves the crane carrying the crane&rsquo;s speed, so dropping at the middle of the swing throws it furthest. Stacking them straight is not the answer.</p>
         <span class="keys">Tap DROP &middot; Space</span>
+        <span class="play">&#9654; PLAY</span>
+      </div>
+    </a>
+
+    <a class="cab sekme" href="games/sekme/">
+      <div class="tube"><canvas data-demo="bank" aria-hidden="true"></canvas></div>
+      <div class="plate">
+        <span class="no">CABINET NO. 29 &mdash; 1989</span>
+        <h2>SEKME</h2>
+        <p>OKÇU shoots straight at things. This one does not arm until it has hit a wall, so aiming at a target does nothing at all &mdash; even the ones standing in plain sight. Aim at a wall instead and work out where the wall sends it. The sight shows only the first leg; a shot bounces seven times, so most of it is yours to picture.</p>
+        <span class="keys">Arrows to aim &middot; Space</span>
         <span class="play">&#9654; PLAY</span>
       </div>
     </a>
@@ -3246,12 +3259,101 @@
     }
   }
 
-  var painters = { snake: drawSnake, road: drawRoad, lander: drawLander, flap: drawFlap, brick: drawBrick, maze: drawMaze, arch: drawArch, rocks: drawRocks, loom: drawLoom, invade: drawInvade, fuse: drawFuse, pong: drawPong, lamps: drawLamps, climb: drawClimb, lanes: drawLanes, swing: drawSwing, mine: drawMine, sky: drawSky, paint: drawFence, rails: drawRails, night: drawNight, flip: drawFlip, twin: drawTwin, creep: drawCreep, pulse: drawPulse, stack: drawStack };
+
+  /* ---------- sekme: it only arms after it bounces ---------- */
+  var sk = null;
+  function skInit(W, H) {
+    return { W: W, H: H, last: 0, t: 0, ball: null, wait: 0.5,
+             blocks: [{ x: 0.22, y: 0.46, w: 0.30, h: 0.09 },
+                      { x: 0.70, y: 0.66, w: 0.22, h: 0.08 }],
+             targets: [{ x: 0.74, y: 0.30, dead: 0 }, { x: 0.26, y: 0.72, dead: 0 }] };
+  }
+  function drawBank(ctx, W, H, now) {
+    if (!sk || sk.W !== W) sk = skInit(W, H);
+    var v = sk, dt = Math.min(0.05, (now - (v.last || now)) / 1000);
+    v.last = now; v.t += dt;
+    var m = W * 0.06;
+
+    ctx.fillStyle = "#06101a"; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = "#0d1d2b"; ctx.fillRect(m, m, W - 2 * m, H - 2 * m);
+    ctx.strokeStyle = "#2f5a72"; ctx.lineWidth = 2;
+    ctx.strokeRect(m, m, W - 2 * m, H - 2 * m);
+    for (var g = 1; g < 6; g++) {
+      ctx.fillStyle = "rgba(228,242,250,0.04)";
+      ctx.fillRect(m + (W - 2 * m) * g / 6, m, 1, H - 2 * m);
+      ctx.fillRect(m, m + (H - 2 * m) * g / 6, W - 2 * m, 1);
+    }
+    function px(u) { return m + u * (W - 2 * m); }
+    function py(u) { return m + u * (H - 2 * m); }
+    for (var i = 0; i < v.blocks.length; i++) {
+      var b = v.blocks[i];
+      ctx.fillStyle = "#2f5a72";
+      ctx.fillRect(px(b.x - b.w / 2), py(b.y - b.h / 2), (W - 2 * m) * b.w, (H - 2 * m) * b.h);
+    }
+    for (i = 0; i < v.targets.length; i++) {
+      var t = v.targets[i];
+      if (t.dead > 0) { t.dead -= dt; if (t.dead <= 0) t.dead = 0; }
+      ctx.fillStyle = t.dead ? "#3d2a35" : "#ff6ba8";
+      ctx.beginPath(); ctx.arc(px(t.x), py(t.y), Math.max(3, W * 0.035), 0, 6.283); ctx.fill();
+      if (!t.dead) {
+        ctx.fillStyle = "#06101a";
+        ctx.beginPath(); ctx.arc(px(t.x), py(t.y), Math.max(1.2, W * 0.014), 0, 6.283); ctx.fill();
+      }
+    }
+
+    if (!v.ball) {
+      v.wait -= dt;
+      // the sight: only the first leg, aimed at a wall
+      var a = -0.9 + Math.sin(v.t * 0.8) * 0.5;
+      ctx.strokeStyle = "rgba(139,233,255,0.45)"; ctx.lineWidth = 1.5;
+      ctx.setLineDash([3, 4]);
+      ctx.beginPath(); ctx.moveTo(px(0.5), py(0.95));
+      ctx.lineTo(px(0.5 + Math.sin(a) * 0.5), py(0.95 - Math.cos(a) * 0.5));
+      ctx.stroke(); ctx.setLineDash([]);
+      if (v.wait <= 0) v.ball = { x: 0.5, y: 0.95, vx: Math.sin(a) * 0.55, vy: -Math.cos(a) * 0.55, b: 0, t: 0 };
+    } else {
+      var bl = v.ball;
+      bl.t += dt;
+      bl.x += bl.vx * dt; bl.y += bl.vy * dt;
+      if (bl.x < 0.03) { bl.x = 0.03; bl.vx = -bl.vx; bl.b++; }
+      if (bl.x > 0.97) { bl.x = 0.97; bl.vx = -bl.vx; bl.b++; }
+      if (bl.y < 0.03) { bl.y = 0.03; bl.vy = -bl.vy; bl.b++; }
+      if (bl.y > 0.97) { bl.y = 0.97; bl.vy = -bl.vy; bl.b++; }
+      for (i = 0; i < v.blocks.length; i++) {
+        var b2 = v.blocks[i];
+        if (Math.abs(bl.x - b2.x) < b2.w / 2 + 0.02 && Math.abs(bl.y - b2.y) < b2.h / 2 + 0.02) {
+          if (b2.w / 2 - Math.abs(bl.x - b2.x) < b2.h / 2 - Math.abs(bl.y - b2.y)) bl.vx = -bl.vx;
+          else bl.vy = -bl.vy;
+          bl.b++;
+        }
+      }
+      // armed only after a bounce -- that is the whole cabinet
+      if (bl.b > 0)
+        for (i = 0; i < v.targets.length; i++) {
+          var t2 = v.targets[i];
+          if (!t2.dead && Math.hypot(bl.x - t2.x, bl.y - t2.y) < 0.06) t2.dead = 0.9;
+        }
+      ctx.fillStyle = bl.b > 0 ? "#ffd15e" : "#8be9ff";
+      ctx.beginPath(); ctx.arc(px(bl.x), py(bl.y), Math.max(2, W * 0.022), 0, 6.283); ctx.fill();
+      if (bl.b > 0) {
+        ctx.fillStyle = "rgba(255,209,94,0.22)";
+        ctx.beginPath(); ctx.arc(px(bl.x), py(bl.y), Math.max(4, W * 0.05), 0, 6.283); ctx.fill();
+      }
+      if (bl.t > 3.4 || bl.b > 7) {
+        v.ball = null; v.wait = 0.5;
+        for (i = 0; i < v.targets.length; i++) v.targets[i].dead = 0;
+      }
+    }
+    ctx.fillStyle = "#4a86a6";
+    ctx.beginPath(); ctx.arc(px(0.5), py(0.96), Math.max(3, W * 0.03), Math.PI, 0); ctx.fill();
+  }
+
+  var painters = { snake: drawSnake, road: drawRoad, lander: drawLander, flap: drawFlap, brick: drawBrick, maze: drawMaze, arch: drawArch, rocks: drawRocks, loom: drawLoom, invade: drawInvade, fuse: drawFuse, pong: drawPong, lamps: drawLamps, climb: drawClimb, lanes: drawLanes, swing: drawSwing, mine: drawMine, sky: drawSky, paint: drawFence, rails: drawRails, night: drawNight, flip: drawFlip, twin: drawTwin, creep: drawCreep, pulse: drawPulse, stack: drawStack, bank: drawBank };
   Array.prototype.forEach.call(document.querySelectorAll("[data-demo]"), function (c) {
     var fn = painters[c.dataset.demo];
     if (fn) register(c, fn, c.dataset.demo === "flap" || c.dataset.demo === "brick" || c.dataset.demo === "maze" || c.dataset.demo === "arch" ||
                        c.dataset.demo === "rocks" || c.dataset.demo === "loom" ||
-                       c.dataset.demo === "invade" || c.dataset.demo === "fuse" || c.dataset.demo === "pong" || c.dataset.demo === "lamps" || c.dataset.demo === "climb" || c.dataset.demo === "lanes" || c.dataset.demo === "swing" || c.dataset.demo === "mine" || c.dataset.demo === "sky" || c.dataset.demo === "paint" || c.dataset.demo === "rails" || c.dataset.demo === "night" || c.dataset.demo === "flip" || c.dataset.demo === "twin" || c.dataset.demo === "creep" || c.dataset.demo === "pulse" || c.dataset.demo === "stack");
+                       c.dataset.demo === "invade" || c.dataset.demo === "fuse" || c.dataset.demo === "pong" || c.dataset.demo === "lamps" || c.dataset.demo === "climb" || c.dataset.demo === "lanes" || c.dataset.demo === "swing" || c.dataset.demo === "mine" || c.dataset.demo === "sky" || c.dataset.demo === "paint" || c.dataset.demo === "rails" || c.dataset.demo === "night" || c.dataset.demo === "flip" || c.dataset.demo === "twin" || c.dataset.demo === "creep" || c.dataset.demo === "pulse" || c.dataset.demo === "stack" || c.dataset.demo === "bank");
   });
 
   if (window.ResizeObserver) {
