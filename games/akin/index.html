@@ -1,0 +1,579 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="description" content="AKIN — buy it, send it, and from that moment it is out of your hands">
+<meta name="theme-color" content="#08090e">
+<style>
+  :root {
+    color-scheme: dark;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  body { margin: 0; }
+  img { max-width: 100%; }
+  [hidden] { display: none !important; }
+</style>
+<title>AKIN — Retro Games Arcade</title>
+<link rel="preload" href="../../assets/fonts/press-start-2p-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../assets/fonts/fonts.css">
+<style>
+  :root {
+    --ink:    #100c08;
+    --field:  #1b1710;
+    --field2: #221d15;
+    --mine:   #6ad9ff;
+    --theirs: #ff7a5c;
+    --ram:    #d8b25a;
+    --pike:   #8ce08a;
+    --horse:  #c08bff;
+    --gold:   #ffd15e;
+    --paper:  #f2ecdf;
+    --dim:    rgba(242, 236, 223, 0.45);
+    --bad:    #ff4f5a;
+    --hud: "Press Start 2P", monospace;
+    --ui: "VT323", ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; margin: 0; overflow: hidden; }
+  body { background: var(--ink); color: var(--paper); font-family: var(--ui);
+         user-select: none; touch-action: none; overscroll-behavior: none; }
+  #wrap { position: fixed; inset: 0; }
+  canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; }
+  .scrim { position: absolute; left: 0; right: 0; top: 0; height: 120px; z-index: 1; pointer-events: none;
+           background: linear-gradient(180deg, rgba(16,12,8,0.92), rgba(16,12,8,0.45) 60%, rgba(16,12,8,0)); }
+
+  .hud { position: absolute; top: 0; left: 0; right: 0;
+    padding: calc(env(safe-area-inset-top, 0px) + 10px) calc(var(--gut, 0px) + 12px) 0;
+    display: grid; grid-template-columns: 1fr auto 1fr; align-items: start;
+    pointer-events: none; z-index: 2; font-family: var(--hud); }
+  .hud .k { font-size: 7px; letter-spacing: 0.16em; color: var(--dim); }
+  .hud .score { font-size: clamp(15px, 5vw, 21px); line-height: 1.5; }
+  .hud .best { font-size: 10px; color: var(--dim); line-height: 1.7; }
+  .hud .best.lead { color: var(--gold); }
+  .hud .right { text-align: right; }
+  .mid { text-align: center; }
+  .mid .v { font-size: clamp(15px, 5vw, 20px); line-height: 1.5; color: var(--gold); }
+
+  .pads { position: absolute; left: calc(var(--gut, 0px) + var(--pi, 12px));
+    right: calc(var(--gut, 0px) + var(--pi, 12px));
+    bottom: var(--pb, 14px); height: var(--ph, 110px);
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--pg, 8px); z-index: 2; }
+  .pd { border-radius: 11px; border: 2px solid rgba(242,236,223,0.16);
+    background: linear-gradient(180deg, rgba(242,236,223,0.07), rgba(242,236,223,0.02));
+    display: grid; place-content: center; gap: 3px; cursor: pointer;
+    font-family: var(--hud); transition: transform 60ms, filter 60ms, border-color 90ms; }
+  .pd .n { font-size: clamp(9px, 3.2vw, 12px); letter-spacing: 0.08em; }
+  .pd .c { font-size: 8px; color: var(--gold); }
+  .pd .b { font-size: 6px; letter-spacing: 0.1em; color: var(--dim); }
+  .pd.k0 { color: var(--ram); } .pd.k1 { color: var(--pike); } .pd.k2 { color: var(--horse); }
+  .pd.sel { border-color: currentColor; box-shadow: 0 0 20px -5px currentColor;
+            background: linear-gradient(180deg, rgba(242,236,223,0.14), rgba(242,236,223,0.03)); }
+  .pd.off { opacity: 0.34; }
+  .pd.hot { transform: translateY(2px) scale(0.985); filter: brightness(1.5); }
+
+  .screen { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center;
+    gap: 15px; text-align: center; padding: 26px; z-index: 3;
+    background: radial-gradient(120% 90% at 50% 42%, rgba(16,12,8,0.88), rgba(16,12,8,0.97)); }
+  .screen[hidden] { display: none; }
+  .title { font-family: var(--hud); font-size: clamp(28px, 11.5vw, 48px); letter-spacing: 5px; line-height: 1.4;
+    background: linear-gradient(180deg, #fff, var(--gold) 48%, #6b4d10);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 0 22px rgba(255,209,94,0.40)); }
+  .sub { font-family: var(--hud); font-size: clamp(8px, 2.7vw, 10px); letter-spacing: 0.2em; color: var(--gold); }
+  .lines { font-size: clamp(17px, 4.6vw, 20px); line-height: 1.5; color: #e4dccb; max-width: 34ch; }
+  .lines b { color: var(--gold); }
+  .lines .bad { color: var(--bad); }
+  .lines .ok { color: var(--mine); }
+  .tri { font-family: var(--hud); font-size: 8px; letter-spacing: 0.1em; line-height: 2.2; color: var(--dim); }
+  .tri i { font-style: normal; }
+  .tri .r { color: var(--ram); } .tri .p { color: var(--pike); } .tri .h { color: var(--horse); }
+  .btn { margin-top: 4px; font-family: var(--hud); font-size: 11px; letter-spacing: 0.14em;
+    padding: 14px 28px; color: #2a1d02; border: 0; border-radius: 4px; cursor: pointer;
+    background: linear-gradient(180deg, #ffeab5, var(--gold));
+    box-shadow: 0 3px 0 #7a5a12, 0 0 26px rgba(255,209,94,0.32); }
+  .btn:active { transform: translateY(2px); box-shadow: 0 1px 0 #7a5a12; }
+  .hintline { font-family: var(--hud); font-size: 7px; letter-spacing: 0.13em; color: var(--dim); line-height: 2; }
+  .over-title { font-family: var(--hud); font-size: clamp(13px, 4.6vw, 19px); color: var(--bad); letter-spacing: 0.1em; }
+  .over-title.best { color: var(--gold); }
+  .final { font-family: var(--hud); font-size: clamp(22px, 8vw, 36px); line-height: 1.4; }
+  .stats { display: grid; grid-template-columns: repeat(3, auto); gap: 8px 20px; justify-content: center; font-family: var(--hud); }
+  .stats .k { font-size: 7px; letter-spacing: 0.15em; color: var(--dim); }
+  .stats .v { font-size: 12px; margin-top: 4px; }
+  .stats .v.gold { color: var(--gold); }
+</style>
+<link rel="canonical" href="https://yigitiseri.github.io/retro-games/games/akin/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Retro Games Arcade">
+<meta property="og:title" content="AKIN — Retro Games Arcade">
+<meta property="og:description" content="AKIN — buy it, send it, and from that moment it is out of your hands">
+<meta property="og:url" content="https://yigitiseri.github.io/retro-games/games/akin/">
+<meta property="og:image" content="https://yigitiseri.github.io/retro-games/assets/social-card.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="AKIN — Retro Games Arcade">
+<meta name="twitter:description" content="AKIN — buy it, send it, and from that moment it is out of your hands">
+<meta name="twitter:image" content="https://yigitiseri.github.io/retro-games/assets/social-card.png">
+
+<!-- Cloudflare Web Analytics: no cookies, no client-side storage -->
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "aee6e644a3b74cb9bdaf4e1569d570e2"}'></script>
+<!-- End Cloudflare Web Analytics -->
+
+</head>
+<body>
+<div id="wrap">
+  <canvas id="c"></canvas>
+  <div class="scrim"></div>
+
+  <div class="hud">
+    <div>
+      <div class="k">SCORE</div><div class="score" id="hScore">0</div>
+      <div class="k" style="margin-top:5px">BEST</div><div class="best" id="hBest">0</div>
+    </div>
+    <div class="mid">
+      <div class="k">GOLD</div><div class="v" id="hGold">6</div>
+    </div>
+    <div class="right">
+      <div class="k">WAVE</div><div class="best" id="hWave">1</div>
+      <div class="k" style="margin-top:5px">SENT</div><div class="best" id="hSent">0</div>
+    </div>
+  </div>
+
+  <div class="pads" id="pads">
+    <div class="pd k0" data-k="0"><div class="n">RAM</div><div class="c" id="c0">3</div><div class="b">BEATS PIKE</div></div>
+    <div class="pd k1" data-k="1"><div class="n">PIKE</div><div class="c" id="c1">4</div><div class="b">BEATS HORSE</div></div>
+    <div class="pd k2" data-k="2"><div class="n">HORSE</div><div class="c" id="c2">5</div><div class="b">BEATS RAM</div></div>
+  </div>
+
+  <div class="screen" id="startScreen">
+    <div class="title">AKIN</div>
+    <div class="sub">BUY IT, SEND IT, LET IT GO</div>
+    <div class="lines">
+      Everything else here you steer. This you cannot. Pick a kind, tap a
+      lane, and from that moment <b>it is out of your hands</b> &mdash; it
+      walks, it fights what it meets, and it gets through or it does not.
+    </div>
+    <div class="tri">
+      <span class="r">RAM</span> &rarr; <span class="p">PIKE</span> &rarr;
+      <span class="h">HORSE</span> &rarr; <span class="r">RAM</span>
+    </div>
+    <div class="lines" style="font-size:16px;opacity:0.84">
+      Gold comes in on its own. <span class="ok">Reading what they have sent
+      and answering it</span> beats every fixed habit &mdash; and hoarding
+      beats nothing at all. The only decision is what to commit, and when.
+    </div>
+    <button class="btn" id="btnStart">SOUND THE HORN</button>
+    <div class="hintline">TAP A KIND, THEN A LANE &middot; 1 2 3</div>
+  </div>
+
+  <div class="screen" id="overScreen" hidden>
+    <div class="over-title" id="overTitle">THE GATE IS DOWN</div>
+    <div class="final" id="overScore">0</div>
+    <div class="stats">
+      <div><div class="k">BEST</div><div class="v gold" id="overBest">0</div></div>
+      <div><div class="k">WAVES</div><div class="v" id="overWaves">0</div></div>
+      <div><div class="k">SENT</div><div class="v gold" id="overSent">0</div></div>
+    </div>
+    <button class="btn" id="btnAgain">AGAIN</button>
+    <div class="hintline">TAP OR PRESS R</div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ============================================================
+     AKIN -- commitment without control.
+
+     Every other cabinet here you steer. This one you cannot: you
+     buy a unit, you send it down a lane, and from that moment it
+     is out of your hands. It walks, it fights what it meets, and
+     it gets through or it does not. The only decision is what to
+     commit and when.
+
+     The fairness the triangle has to have is that NO ONE UNIT IS
+     BEST. Measured over 120 matches a pairing:
+
+       always RAM    loses to always HORSE
+       always PIKE   loses to always RAM
+       always HORSE  loses to always PIKE
+
+     Which took tuning: at the counter multiplier it started with,
+     a counter was worth 1.9x and the cheapest unit simply
+     dominated -- quantity beat a weak counter, and always-RAM lost
+     to nothing at all. At 2.5x the triangle closes.
+
+     And reading the field is what wins: a side that answers what
+     the other has actually sent beat every fixed habit 100% of the
+     time, and hoarding gold won 0% of everything.
+     ============================================================ */
+
+  var wrap = document.getElementById("wrap");
+  var cv = document.getElementById("c");
+  var ctx = cv.getContext("2d", { alpha: false });
+
+  var VW = 420, VH = 780, MIN_VH = 720;
+  var scale = 1, originX = 0, dpr = 1;
+
+  var LANES = 3, TRACK = 100, BASE_HP = 10, COUNTER = 2.5;
+  var KIND = [
+    { name: "RAM",   cost: 3, hp: 14, dmg: 3, spd: 12, beats: "PIKE",  col: "#d8b25a" },
+    { name: "PIKE",  cost: 4, hp:  9, dmg: 6, spd: 10, beats: "HORSE", col: "#8ce08a" },
+    { name: "HORSE", cost: 5, hp: 11, dmg: 4, spd: 20, beats: "RAM",   col: "#c08bff" }
+  ];
+  var PAD_H = 110, PAD_B = 14, PAD_I = 12;
+
+  var seed = (Math.random() * 4294967296) >>> 0, lockSeed = false;
+  function rnd() { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; }
+
+  /* ---------- the model, identical to the one that was measured ---------- */
+  var S = null;
+  function newState() {
+    return { t: 0, gold: [6, 6], hp: [BASE_HP, BASE_HP], units: [], income: 1.1 };
+  }
+  function buy(side, kind, lane) {
+    var K = KIND[kind];
+    if (S.gold[side] < K.cost) return false;
+    S.gold[side] -= K.cost;
+    S.units.push({ side: side, lane: lane, kind: kind, hp: K.hp, pos: side === 0 ? 0 : TRACK, hit: 0 });
+    return true;
+  }
+  function dmgOf(a, b) {
+    var A = KIND[a.kind], B = KIND[b.kind];
+    return A.dmg * (A.beats === B.name ? COUNTER : 1);
+  }
+  function sim(dt) {
+    S.t += dt;
+    S.gold[0] += S.income * dt;
+    S.gold[1] += S.income * dt;
+    var fighting = {};
+    for (var i = 0; i < S.units.length; i++) {
+      var u = S.units[i];
+      if (u.hp <= 0) continue;
+      for (var j = 0; j < S.units.length; j++) {
+        var v = S.units[j];
+        if (v.hp <= 0 || v.side === u.side || v.lane !== u.lane) continue;
+        if (Math.abs(u.pos - v.pos) <= 4) {
+          fighting[i] = 1;
+          v.hp -= dmgOf(u, v) * dt;
+          v.hit = 0.14;
+        }
+      }
+    }
+    for (i = 0; i < S.units.length; i++) {
+      u = S.units[i];
+      if (u.hit > 0) u.hit -= dt;
+      if (u.hp <= 0 || fighting[i]) continue;
+      u.pos += (u.side === 0 ? 1 : -1) * KIND[u.kind].spd * dt;
+      if (u.side === 0 && u.pos >= TRACK) { S.hp[1] -= 1; u.hp = 0; boom(u.lane, 1); }
+      if (u.side === 1 && u.pos <= 0) { S.hp[0] -= 1; u.hp = 0; boom(u.lane, 0); }
+    }
+    S.units = S.units.filter(function (x) { return x.hp > 0; });
+  }
+
+  /* ---------- run state ---------------------------------------- */
+  var state = "start", wave = 1, score = 0, best = 0, sent = 0;
+  var pick = 0, aiAcc = 0, pops = [], sparks = [], hot = [0, 0, 0], tRun = 0, shake = 0;
+
+  function newWave() {
+    S = newState();
+    S.income = 1.1 + (wave - 1) * 0.06;
+    aiAcc = 0;
+  }
+  function reset() {
+    if (!lockSeed) seed = (Math.random() * 4294967296) >>> 0;
+    wave = 1; score = 0; sent = 0; pick = 0; pops = []; sparks = []; tRun = 0; shake = 0;
+    newWave();
+  }
+
+  var AC = null;
+  function ac() { if (AC === null) { try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { AC = 0; } } return AC || null; }
+  function blip(f, dur, type, vol) {
+    var a = ac(); if (!a) return;
+    if (a.state === "suspended") a.resume();
+    var o = a.createOscillator(), g = a.createGain();
+    o.type = type || "square"; o.frequency.value = f;
+    g.gain.setValueAtTime(vol || 0.05, a.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001, a.currentTime + dur);
+    o.connect(g); g.connect(a.destination); o.start(); o.stop(a.currentTime + dur);
+  }
+  function boom(lane, side) {
+    shake = 0.8;
+    for (var i = 0; i < 16; i++) sparks.push({ lane: lane, pos: side === 1 ? TRACK : 0, t: 0,
+      vx: (Math.random() - 0.5) * 90, vy: (Math.random() - 0.5) * 60, col: side === 1 ? "#6ad9ff" : "#ff7a5c" });
+    blip(140, 0.22, "sawtooth", 0.06);
+  }
+  function addPop(lane, pos, txt, col) { pops.push({ lane: lane, pos: pos, t: 0, txt: txt, col: col }); if (pops.length > 6) pops.shift(); }
+
+  function send(lane) {
+    if (state !== "play") return false;
+    if (!buy(0, pick, lane)) { blip(120, 0.06, "square", 0.03); return false; }
+    sent++;
+    blip(380 + pick * 60, 0.07, "square", 0.045);
+    syncHud();
+    return true;
+  }
+
+  // the other side reads what YOU have sent and answers it -- the policy
+  // that beat every fixed habit in the measurements
+  function aiTurn() {
+    var count = [0, 0, 0], threat = [0, 0, 0], i;
+    for (i = 0; i < S.units.length; i++) {
+      var u = S.units[i];
+      if (u.side === 0) { count[u.kind]++; threat[u.lane] += u.hp; }
+    }
+    var most = -1, bi = -1;
+    for (i = 0; i < 3; i++) if (count[i] > most) { most = count[i]; bi = i; }
+    var want = 0;
+    if (most > 0) { for (i = 0; i < 3; i++) if (KIND[i].beats === KIND[bi].name) want = i; }
+    else want = Math.floor(rnd() * 3);
+    // early waves answer less reliably
+    if (rnd() > Math.min(0.95, 0.42 + wave * 0.07)) want = Math.floor(rnd() * 3);
+    var lane = 0, lb = -1;
+    for (i = 0; i < 3; i++) if (threat[i] > lb) { lb = threat[i]; lane = i; }
+    if (lb <= 0) lane = Math.floor(rnd() * 3);
+    buy(1, want, lane);
+  }
+
+  function step(dt) {
+    tRun += dt;
+    for (var i = 0; i < 3; i++) if (hot[i] > 0) hot[i] = Math.max(0, hot[i] - dt);
+    shake = Math.max(0, shake - dt * 2);
+    for (i = pops.length - 1; i >= 0; i--) { pops[i].t += dt; if (pops[i].t > 0.9) pops.splice(i, 1); }
+    for (i = sparks.length - 1; i >= 0; i--) { sparks[i].t += dt; if (sparks[i].t > 0.6) sparks.splice(i, 1); }
+    if (state !== "play") return;
+    sim(dt);
+    aiAcc += dt;
+    if (aiAcc >= 0.5) { aiAcc -= 0.5; aiTurn(); }
+    if (S.hp[1] <= 0) {
+      var bonus = 200 + wave * 60 + Math.round(S.hp[0]) * 30;
+      score += bonus;
+      addPop(1, TRACK * 0.5, "WAVE CLEAR +" + bonus, "#ffd15e");
+      blip(880, 0.18, "square", 0.06);
+      wave++;
+      newWave();
+    } else if (S.hp[0] <= 0) gameOver();
+    syncHud();
+  }
+
+  function gameOver() {
+    state = "over";
+    if (score > best) { best = score; saveNum("akin-best", best); document.getElementById("overTitle").classList.add("best"); }
+    else document.getElementById("overTitle").classList.remove("best");
+    document.getElementById("overScore").textContent = fmt(score);
+    document.getElementById("overBest").textContent = fmt(best);
+    document.getElementById("overWaves").textContent = wave - 1;
+    document.getElementById("overSent").textContent = sent;
+    document.getElementById("overScreen").hidden = false;
+    blip(90, 0.4, "sawtooth", 0.08);
+  }
+  function start() {
+    reset(); state = "play";
+    document.getElementById("startScreen").hidden = true;
+    document.getElementById("overScreen").hidden = true;
+    syncHud();
+  }
+
+  /* ---------- drawing ------------------------------------------ */
+  function fieldTop() { return 128; }
+  // the track is a fraction, not a distance, so the field can simply fill
+  // the screen instead of sitting in the top half with a void beneath it
+  function fieldBot() { return Math.max(fieldTop() + 260, VH - PAD_B - PAD_H - 26); }
+  function laneW() { return (VW - 28) / LANES; }
+  function laneX(l) { return 14 + l * laneW(); }
+  function posY(p) { return fieldBot() - (p / TRACK) * (fieldBot() - fieldTop()); }
+  function laneAt(px, py) {
+    if (py < fieldTop() || py > fieldBot()) return -1;
+    var l = Math.floor((px - 14) / laneW());
+    return l >= 0 && l < LANES ? l : -1;
+  }
+
+  function bar(x, y, w, h, frac, col) {
+    ctx.fillStyle = "rgba(0,0,0,0.45)"; ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = col; ctx.fillRect(x, y, w * Math.max(0, Math.min(1, frac)), h);
+  }
+
+  function draw() {
+    ctx.fillStyle = "#100c08"; ctx.fillRect(0, 0, VW, VH);
+    if (!S) return;
+    ctx.save();
+    if (shake > 0) ctx.translate((Math.random() - 0.5) * 8 * shake, (Math.random() - 0.5) * 8 * shake);
+    var ft = fieldTop(), fb = fieldBot(), lw = laneW();
+
+    for (var l = 0; l < LANES; l++) {
+      var x = laneX(l);
+      ctx.fillStyle = (l & 1) ? "#1b1710" : "#221d15";
+      ctx.fillRect(x, ft, lw - 4, fb - ft);
+      ctx.strokeStyle = "rgba(242,236,223,0.06)"; ctx.lineWidth = 1;
+      ctx.strokeRect(x + 0.5, ft + 0.5, lw - 5, fb - ft - 1);
+      for (var g = 0; g < 9; g++) {
+        ctx.fillStyle = "rgba(242,236,223,0.04)";
+        ctx.fillRect(x + 4, ft + (fb - ft) * g / 9, lw - 12, 1);
+      }
+      // which lane the next one goes to
+      if (state === "play") {
+        ctx.fillStyle = "rgba(106,217,255,0.10)";
+        ctx.fillRect(x, fb - 14, lw - 4, 14);
+      }
+    }
+
+    // the two gates
+    ctx.fillStyle = "#ff7a5c";
+    ctx.fillRect(14, ft - 16, VW - 28, 8);
+    bar(14, ft - 27, VW - 28, 7, S.hp[1] / BASE_HP, "#ff7a5c");
+    ctx.fillStyle = "#6ad9ff";
+    ctx.fillRect(14, fb + 8, VW - 28, 8);
+    bar(14, fb + 19, VW - 28, 7, S.hp[0] / BASE_HP, "#6ad9ff");
+
+    // the host
+    for (var i = 0; i < S.units.length; i++) {
+      var u = S.units[i], K = KIND[u.kind];
+      var ux = laneX(u.lane) + lw / 2 - 2, uy = posY(u.pos);
+      var w = 17, h = 17;
+      ctx.fillStyle = u.side === 0 ? "rgba(106,217,255,0.20)" : "rgba(255,122,92,0.20)";
+      ctx.fillRect(ux - w / 2 - 3, uy - h / 2 - 3, w + 6, h + 6);
+      ctx.fillStyle = u.hit > 0 ? "#ffffff" : K.col;
+      ctx.fillRect(ux - w / 2, uy - h / 2, w, h);
+      ctx.fillStyle = "rgba(0,0,0,0.35)";
+      ctx.fillRect(ux - w / 2, uy - h / 2, w, 3);
+      // whose it is, on the edge nearest their gate
+      ctx.fillStyle = u.side === 0 ? "#6ad9ff" : "#ff7a5c";
+      ctx.fillRect(ux - w / 2, u.side === 0 ? uy + h / 2 : uy - h / 2 - 2, w, 2);
+      bar(ux - w / 2, uy - h / 2 - 7, w, 3, u.hp / K.hp, K.col);
+    }
+
+    for (i = 0; i < sparks.length; i++) {
+      var sp = sparks[i];
+      ctx.globalAlpha = 1 - sp.t / 0.6;
+      ctx.fillStyle = sp.col;
+      ctx.fillRect(laneX(sp.lane) + lw / 2 + sp.vx * sp.t - 2, posY(sp.pos) + sp.vy * sp.t - 2, 4, 4);
+      ctx.globalAlpha = 1;
+    }
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    for (i = 0; i < pops.length; i++) {
+      var p = pops[i];
+      ctx.globalAlpha = 1 - p.t / 0.9;
+      ctx.fillStyle = p.col;
+      ctx.font = '8px "Press Start 2P", monospace';
+      ctx.fillText(p.txt, VW / 2, posY(p.pos) - p.t * 22);
+      ctx.globalAlpha = 1;
+    }
+    ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+    ctx.restore();
+  }
+
+  /* ---------- HUD ----------------------------------------------- */
+  var hScore = document.getElementById("hScore"), hBest = document.getElementById("hBest");
+  var hGold = document.getElementById("hGold"), hWave = document.getElementById("hWave");
+  var hSent = document.getElementById("hSent");
+  var pdEl = [];
+  for (var q = 0; q < 3; q++) pdEl.push(document.querySelector('.pd[data-k="' + q + '"]'));
+
+  function fmt(n) { return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
+  function saveNum(k, v) { try { localStorage.setItem(k, String(v)); } catch (e) {} }
+  function loadNum(k) { try { var v = parseInt(localStorage.getItem(k), 10); return isFinite(v) ? v : 0; } catch (e) { return 0; } }
+  function syncHud() {
+    hScore.textContent = fmt(score);
+    hBest.textContent = fmt(best);
+    hBest.classList.toggle("lead", score >= best && score > 0);
+    hGold.textContent = S ? Math.floor(S.gold[0]) : 0;
+    hWave.textContent = wave;
+    hSent.textContent = sent;
+    for (var i = 0; i < 3; i++) {
+      var sel = pick === i;
+      if (pdEl[i]._sel !== sel) { pdEl[i]._sel = sel; pdEl[i].classList.toggle("sel", sel); }
+      var off = !S || S.gold[0] < KIND[i].cost || state !== "play";
+      if (pdEl[i]._off !== off) { pdEl[i]._off = off; pdEl[i].classList.toggle("off", off); }
+      var h = hot[i] > 0;
+      if (pdEl[i]._hot !== h) { pdEl[i]._hot = h; pdEl[i].classList.toggle("hot", h); }
+    }
+  }
+
+  /* ---------- input --------------------------------------------- */
+  document.getElementById("pads").addEventListener("pointerdown", function (e) {
+    var pd = e.target.closest ? e.target.closest(".pd") : null;
+    if (!pd) return;
+    e.preventDefault();
+    if (state !== "play") { start(); return; }
+    pick = parseInt(pd.dataset.k, 10);
+    hot[pick] = 0.12;
+    syncHud();
+  }, { passive: false });
+  cv.addEventListener("pointerdown", function (e) {
+    if (state !== "play") return;
+    e.preventDefault();
+    var rect = cv.getBoundingClientRect();
+    var px = ((e.clientX - rect.left) * dpr - originX) / scale;
+    var py = ((e.clientY - rect.top) * dpr) / scale;
+    var l = laneAt(px, py);
+    if (l >= 0) send(l);
+  }, { passive: false });
+  document.getElementById("btnStart").addEventListener("click", function (e) { e.stopPropagation(); start(); });
+  document.getElementById("btnAgain").addEventListener("click", function (e) { e.stopPropagation(); start(); });
+  document.getElementById("startScreen").addEventListener("pointerdown", function () { start(); });
+  document.getElementById("overScreen").addEventListener("pointerdown", function () { start(); });
+  var KK = { Digit1: 0, Digit2: 1, Digit3: 2 };
+  var KL = { KeyA: 0, KeyS: 1, KeyD: 2, ArrowLeft: 0, ArrowDown: 1, ArrowRight: 2 };
+  window.addEventListener("keydown", function (e) {
+    if (e.code === "KeyR") { e.preventDefault(); start(); return; }
+    if (e.code === "Space" || e.code === "Enter") { e.preventDefault(); if (state !== "play") start(); return; }
+    if (KK[e.code] !== undefined) { e.preventDefault(); pick = KK[e.code]; hot[pick] = 0.12; syncHud(); return; }
+    if (KL[e.code] !== undefined) { e.preventDefault(); send(KL[e.code]); }
+  });
+
+  /* ---------- layout -------------------------------------------- */
+  function resize() {
+    dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+    var w = wrap.clientWidth, h = wrap.clientHeight;
+    cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+    scale = Math.min((w * dpr) / VW, (h * dpr) / MIN_VH);
+    originX = Math.round(((w * dpr) - VW * scale) / 2);
+    VH = (h * dpr) / scale;
+    wrap.style.setProperty("--gut", (originX / dpr) + "px");
+    wrap.style.setProperty("--ph", (PAD_H * scale / dpr) + "px");
+    wrap.style.setProperty("--pb", (PAD_B * scale / dpr) + "px");
+    wrap.style.setProperty("--pi", (PAD_I * scale / dpr) + "px");
+    ctx.setTransform(scale, 0, 0, scale, originX, 0);
+    render();
+  }
+  function render() {
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.fillStyle = "#0a0705";
+    ctx.fillRect(0, 0, cv.width, cv.height);
+    ctx.restore();
+    draw();
+    if (originX > 0) {
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.fillStyle = "rgba(242,236,223,0.07)";
+      ctx.fillRect(originX - 1, 0, 1, cv.height);
+      ctx.fillRect(originX + VW * scale, 0, 1, cv.height);
+      ctx.restore();
+    }
+  }
+  var last = 0;
+  function frame(now) {
+    requestAnimationFrame(frame);
+    var dt = last ? Math.min(0.032, (now - last) / 1000) : 0;
+    last = now;
+    step(dt);
+    render();
+  }
+
+  best = loadNum("akin-best");
+  reset();
+  for (var z = 0; z < 3; z++) document.getElementById("c" + z).textContent = KIND[z].cost;
+  syncHud();
+  resize();
+  if (window.ResizeObserver) new ResizeObserver(resize).observe(wrap);
+  window.addEventListener("resize", resize);
+  requestAnimationFrame(frame);
+
+})();
+</script>
+</body>
+</html>

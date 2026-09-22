@@ -1,6 +1,6 @@
 # Retro Games
 
-Twenty-nine arcade cabinets, each a single self-contained HTML file. No build step, no
+Thirty arcade cabinets, each a single self-contained HTML file. No build step, no
 dependencies, no framework — open any `index.html` in a browser and it runs.
 All of them are built for a phone first: touch controls, a screen that fills the
 space it is given, and a keyboard fallback on desktop.
@@ -36,6 +36,7 @@ space it is given, and a keyboard fallback on desktop.
 | [**SEKME**](games/sekme/) | OKÇU shoots straight at things. This one does not arm until it has hit a wall, so aiming at a target does nothing at all — even the ones standing in plain sight. Aim at a wall instead and work out where the wall sends it. The sight shows only the first leg; a shot bounces seven times, so most of it is yours to picture. | [`games/sekme/index.html`](games/sekme/index.html) |
 | [**ÇAĞLAYAN**](games/caglayan/) | FİTİL is a chain you set off and watch go up in one go. This one you never touch: lay out the pins, open the tap, and hands off. Every drip that strikes a pin flips it behind itself, so the stream rewrites its own board as it pours, and a single spout ends up feeding pans right across the slab. The skill is entirely in the setup. | [`games/caglayan/index.html`](games/caglayan/index.html) |
 | [**KÖR**](games/kor/) | Everywhere else a combo pays out in points. Here it pays out in sight. The board is dark; every tile you clear charges the lamp, and the lamp is the only way to see what you are clearing. A look costs about what one look earns back, so it only pays if you get several clears out of it — and the board shifts whether you can see it or not. | [`games/kor/index.html`](games/kor/index.html) |
+| [**AKIN**](games/akin/) | Everything else here you steer. This you cannot: pick a kind, tap a lane, and from that moment it is out of your hands — it walks, it fights what it meets, and it gets through or it does not. Ram beats pike, pike beats horse, horse beats ram, and no one of them is best. The only decision is what to commit, and when. | [`games/akin/index.html`](games/akin/index.html) |
 
 `index.html` at the root is the arcade menu: every cabinet in turn,
 each with a live attract-mode preview of the game running in miniature. It is
@@ -94,4 +95,5 @@ games/
   sekme/     index.html
   caglayan/  index.html
   kor/       index.html
+  akin/      index.html
 ```
