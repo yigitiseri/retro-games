@@ -40,12 +40,14 @@ def check_readme(n):
     rows = re.findall(r"^\| \[\*\*", md, re.M)
     assert len(rows) == n, (
         "README lists %d cabinets, the menu has %d" % (len(rows), n))
-    words = {13: "Thirteen", 14: "Fourteen", 15: "Fifteen", 16: "Sixteen",
-             17: "Seventeen", 18: "Eighteen", 19: "Nineteen", 20: "Twenty",
-             21: "Twenty-one", 22: "Twenty-two", 23: "Twenty-three",
-             24: "Twenty-four", 25: "Twenty-five", 26: "Twenty-six",
-             27: "Twenty-seven", 28: "Twenty-eight"}
-    want = words.get(n)
+    ones = ["Zero", "One", "Two", "Three", "Four", "Five", "Six", "Seven",
+            "Eight", "Nine", "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen",
+            "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen"]
+    tens = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy",
+            "Eighty", "Ninety"]
+    want = (ones[n] if n < 20 else
+            tens[n // 10] + ("-" + ones[n % 10].lower() if n % 10 else "")
+            ) if 0 < n < 100 else None
     if want:
         assert md.startswith("# Retro Games\n\n%s arcade cabinets," % want), (
             "README opening line does not say %r" % want)

@@ -1,6 +1,6 @@
 # Retro Games
 
-Thirty arcade cabinets, each a single self-contained HTML file. No build step, no
+Thirty-one arcade cabinets, each a single self-contained HTML file. No build step, no
 dependencies, no framework — open any `index.html` in a browser and it runs.
 All of them are built for a phone first: touch controls, a screen that fills the
 space it is given, and a keyboard fallback on desktop.
@@ -37,6 +37,7 @@ space it is given, and a keyboard fallback on desktop.
 | [**ÇAĞLAYAN**](games/caglayan/) | FİTİL is a chain you set off and watch go up in one go. This one you never touch: lay out the pins, open the tap, and hands off. Every drip that strikes a pin flips it behind itself, so the stream rewrites its own board as it pours, and a single spout ends up feeding pans right across the slab. The skill is entirely in the setup. | [`games/caglayan/index.html`](games/caglayan/index.html) |
 | [**KÖR**](games/kor/) | Everywhere else a combo pays out in points. Here it pays out in sight. The board is dark; every tile you clear charges the lamp, and the lamp is the only way to see what you are clearing. A look costs about what one look earns back, so it only pays if you get several clears out of it — and the board shifts whether you can see it or not. | [`games/kor/index.html`](games/kor/index.html) |
 | [**AKIN**](games/akin/) | Everything else here you steer. This you cannot: pick a kind, tap a lane, and from that moment it is out of your hands — it walks, it fights what it meets, and it gets through or it does not. Ram beats pike, pike beats horse, horse beats ram, and no one of them is best. The only decision is what to commit, and when. | [`games/akin/index.html`](games/akin/index.html) |
+| [**DUR**](games/dur/) | One question, over and over: stop, or go on? The belt pays more the longer you ride it, and one tap banks the pot. Every mine is put on at the far end so you always see it coming — losing the pot is never bad luck. What runs out is reaction time: the belt speeds up until six tiles of warning is a blink. Stop when the warning gets as short as you are fast, which is later than it feels. | [`games/dur/index.html`](games/dur/index.html) |
 
 `index.html` at the root is the arcade menu: every cabinet in turn,
 each with a live attract-mode preview of the game running in miniature. It is
@@ -96,4 +97,5 @@ games/
   caglayan/  index.html
   kor/       index.html
   akin/      index.html
+  dur/       index.html
 ```

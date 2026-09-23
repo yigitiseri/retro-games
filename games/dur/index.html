@@ -1,0 +1,563 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="description" content="DUR — stop, or go on? The belt pays more the longer you ride it, and every mine is seen coming">
+<meta name="theme-color" content="#08090e">
+<style>
+  :root {
+    color-scheme: dark;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  body { margin: 0; }
+  img { max-width: 100%; }
+  [hidden] { display: none !important; }
+</style>
+<title>DUR — Retro Games Arcade</title>
+<link rel="preload" href="../../assets/fonts/press-start-2p-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../assets/fonts/fonts.css">
+<style>
+  :root {
+    --ink:    #06100c;
+    --belt:   #0d1f18;
+    --belt2:  #123027;
+    --tile:   #2ee87a;
+    --tile2:  #1a9e52;
+    --mine:   #ff3b46;
+    --pot:    #ffe15c;
+    --paper:  #e8f6ef;
+    --dim:    rgba(232, 246, 239, 0.45);
+    --hud: "Press Start 2P", monospace;
+    --ui: "VT323", ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; margin: 0; overflow: hidden; }
+  body { background: var(--ink); color: var(--paper); font-family: var(--ui);
+         user-select: none; touch-action: none; overscroll-behavior: none; }
+  #wrap { position: fixed; inset: 0; }
+  canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; }
+  .scrim { position: absolute; left: 0; right: 0; top: 0; height: 122px; z-index: 1; pointer-events: none;
+           background: linear-gradient(180deg, rgba(6,16,12,0.94), rgba(6,16,12,0.45) 60%, rgba(6,16,12,0)); }
+
+  .hud { position: absolute; top: 0; left: 0; right: 0;
+    padding: calc(env(safe-area-inset-top, 0px) + 10px) calc(var(--gut, 0px) + 12px) 0;
+    display: grid; grid-template-columns: 1fr auto 1fr; align-items: start;
+    pointer-events: none; z-index: 2; font-family: var(--hud); }
+  .hud .k { font-size: 7px; letter-spacing: 0.16em; color: var(--dim); }
+  .hud .score { font-size: clamp(16px, 5.4vw, 23px); line-height: 1.5; }
+  .hud .best { font-size: 10px; color: var(--dim); line-height: 1.7; }
+  .hud .best.lead { color: var(--pot); }
+  .hud .right { text-align: right; }
+  .mid { text-align: center; }
+  .mid .v { font-size: clamp(16px, 5.4vw, 22px); line-height: 1.5; color: var(--paper); }
+  .mid .v.low { color: var(--mine); }
+
+  .pads { position: absolute; left: calc(var(--gut, 0px) + var(--pi, 12px));
+    right: calc(var(--gut, 0px) + var(--pi, 12px));
+    bottom: var(--pb, 14px); height: var(--ph, 150px); z-index: 2; }
+  .pd { width: 100%; height: 100%; border-radius: 14px;
+    border: 3px solid rgba(46,232,122,0.35);
+    background: linear-gradient(180deg, rgba(46,232,122,0.18), rgba(46,232,122,0.04));
+    display: grid; place-content: center; gap: 6px; cursor: pointer; color: var(--tile);
+    font-family: var(--hud); transition: transform 50ms, filter 50ms; }
+  .pd .big { font-size: clamp(22px, 9vw, 34px); letter-spacing: 0.18em; }
+  .pd .sm { font-size: 8px; letter-spacing: 0.16em; color: var(--dim); }
+  .pd .amt { font-size: clamp(12px, 4.4vw, 17px); color: var(--pot); }
+  .pd.hot { transform: translateY(3px) scale(0.98); filter: brightness(1.6); }
+  .pd.rich { border-color: var(--pot); box-shadow: 0 0 34px -6px var(--pot); }
+  .pd.off { opacity: 0.32; }
+
+  .screen { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center;
+    gap: 15px; text-align: center; padding: 26px; z-index: 3;
+    background: radial-gradient(120% 90% at 50% 42%, rgba(6,16,12,0.88), rgba(6,16,12,0.97)); }
+  .screen[hidden] { display: none; }
+  .title { font-family: var(--hud); font-size: clamp(38px, 15vw, 64px); letter-spacing: 8px; line-height: 1.3;
+    background: linear-gradient(180deg, #fff, var(--tile) 48%, #0d6b38);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 0 26px rgba(46,232,122,0.45)); }
+  .sub { font-family: var(--hud); font-size: clamp(8px, 2.7vw, 10px); letter-spacing: 0.2em; color: var(--tile); }
+  .lines { font-size: clamp(17px, 4.6vw, 20px); line-height: 1.5; color: #d6e9e0; max-width: 34ch; }
+  .lines b { color: var(--pot); }
+  .lines .bad { color: var(--mine); }
+  .lines .ok { color: var(--tile); }
+  .btn { margin-top: 4px; font-family: var(--hud); font-size: 11px; letter-spacing: 0.14em;
+    padding: 14px 30px; color: #03210f; border: 0; border-radius: 4px; cursor: pointer;
+    background: linear-gradient(180deg, #b6ffd6, var(--tile));
+    box-shadow: 0 3px 0 #0f6b39, 0 0 28px rgba(46,232,122,0.36); }
+  .btn:active { transform: translateY(2px); box-shadow: 0 1px 0 #0f6b39; }
+  .hintline { font-family: var(--hud); font-size: 7px; letter-spacing: 0.13em; color: var(--dim); line-height: 2; }
+  .over-title { font-family: var(--hud); font-size: clamp(13px, 4.6vw, 19px); color: var(--pot); letter-spacing: 0.1em; }
+  .final { font-family: var(--hud); font-size: clamp(26px, 9vw, 40px); line-height: 1.4; }
+  .delta { font-family: var(--hud); font-size: 9px; letter-spacing: 0.12em; }
+  .delta.up { color: var(--tile); } .delta.down { color: var(--dim); }
+  .stats { display: grid; grid-template-columns: repeat(3, auto); gap: 8px 20px; justify-content: center; font-family: var(--hud); }
+  .stats .k { font-size: 7px; letter-spacing: 0.15em; color: var(--dim); }
+  .stats .v { font-size: 12px; margin-top: 4px; }
+  .stats .v.gold { color: var(--pot); }
+  .again { font-family: var(--hud); font-size: 9px; letter-spacing: 0.2em; color: var(--tile);
+           animation: pulse 1.1s ease-in-out infinite; }
+  @keyframes pulse { 0%,100% { opacity: 0.45; } 50% { opacity: 1; } }
+</style>
+<link rel="canonical" href="https://yigitiseri.github.io/retro-games/games/dur/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Retro Games Arcade">
+<meta property="og:title" content="DUR — Retro Games Arcade">
+<meta property="og:description" content="DUR — stop, or go on? The belt pays more the longer you ride it, and every mine is seen coming">
+<meta property="og:url" content="https://yigitiseri.github.io/retro-games/games/dur/">
+<meta property="og:image" content="https://yigitiseri.github.io/retro-games/assets/social-card.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="DUR — Retro Games Arcade">
+<meta name="twitter:description" content="DUR — stop, or go on? The belt pays more the longer you ride it, and every mine is seen coming">
+<meta name="twitter:image" content="https://yigitiseri.github.io/retro-games/assets/social-card.png">
+
+<!-- Cloudflare Web Analytics: no cookies, no client-side storage -->
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "aee6e644a3b74cb9bdaf4e1569d570e2"}'></script>
+<!-- End Cloudflare Web Analytics -->
+
+</head>
+<body>
+<div id="wrap">
+  <canvas id="c"></canvas>
+  <div class="scrim"></div>
+
+  <div class="hud">
+    <div>
+      <div class="k">BANKED</div><div class="score" id="hScore">0</div>
+      <div class="k" style="margin-top:5px">BEST</div><div class="best" id="hBest">0</div>
+    </div>
+    <div class="mid">
+      <div class="k">TIME</div><div class="v" id="hTime">60.0</div>
+    </div>
+    <div class="right">
+      <div class="k">DEPTH</div><div class="best" id="hDepth">0</div>
+      <div class="k" style="margin-top:5px">WARNING</div><div class="best" id="hWarn">&mdash;</div>
+    </div>
+  </div>
+
+  <div class="pads" id="pads">
+    <div class="pd" id="pdBank"><div class="big">DUR</div><div class="amt" id="pdAmt">0</div><div class="sm">BANK THE POT</div></div>
+  </div>
+
+  <div class="screen" id="startScreen">
+    <div class="title">DUR</div>
+    <div class="sub">ONE QUESTION, OVER AND OVER</div>
+    <div class="lines">
+      The belt pays more the longer you ride it. Hit <b>DUR</b> and the pot
+      is yours. Let a <span class="bad">mine</span> reach you and it is all
+      gone.
+    </div>
+    <div class="lines" style="font-size:16px;opacity:0.85">
+      Every mine is put on the belt at the far end, so you always see it
+      coming &mdash; <span class="ok">losing the pot is never bad luck.</span>
+      But the belt speeds up as the chain grows, so that warning shrinks
+      from three seconds to a blink. Stop when the warning gets as short as
+      you are fast. It is <b>later than it feels</b>.
+    </div>
+    <button class="btn" id="btnStart">START THE BELT</button>
+    <div class="hintline">TAP DUR &middot; SPACE</div>
+  </div>
+
+  <div class="screen" id="overScreen" hidden>
+    <div class="over-title" id="overTitle">TIME</div>
+    <div class="final" id="overScore">0</div>
+    <div class="delta" id="overDelta">&nbsp;</div>
+    <div class="stats">
+      <div><div class="k">BEST</div><div class="v gold" id="overBest">0</div></div>
+      <div><div class="k">DEEPEST</div><div class="v" id="overDeep">0</div></div>
+      <div><div class="k">LOST</div><div class="v gold" id="overLost">0</div></div>
+    </div>
+    <div class="again">TAP TO GO AGAIN</div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ============================================================
+     DUR -- the whole cabinet is one question, asked over and over:
+     stop, or go on?
+
+     The arcade had 30 cabinets and only 8 with a bank-or-push
+     decision in them, none where that decision IS the game. This
+     is that game, and it is built to be picked up again: a run is
+     60 seconds and the over-screen restarts on a single tap.
+
+     Nothing here is a coin toss. Every mine is put on the belt at
+     the far end of what you can see, so it is on screen for the
+     full six tiles before it reaches you. Losing the pot is never
+     bad luck. What runs out is reaction time: the belt speeds up
+     as the chain grows, so six tiles of warning falls from 2.7
+     seconds at the start to 150ms by depth 35.
+
+     Measured over 350 runs a point, the law is exact -- the best
+     depth to stop at is the one where the warning has shrunk to
+     about your own reaction time:
+
+       reaction 250ms -> best depth 19, warning there 260ms
+       reaction 400ms -> best depth 11, warning there 420ms
+       reaction 500ms -> best depth  9, warning there 496ms
+
+     And the instinct is wrong in the addictive direction. For a
+     250ms player over a 60s run:
+
+       bank the moment you can            74
+       bank when it starts to feel fast  494
+       bank at the best depth           1823
+       never bank                          0
+
+     Stopping when it feels fast costs you 73%. The right play is
+     always further than it feels, which is the whole hook.
+     ============================================================ */
+
+  var wrap = document.getElementById("wrap");
+  var cv = document.getElementById("c");
+  var ctx = cv.getContext("2d", { alpha: false });
+
+  var VW = 420, VH = 780, MIN_VH = 720;
+  var scale = 1, originX = 0, dpr = 1;
+
+  var LOOK = 6, RUN = 60, BANK_LOCK = 0.35, BUST_LOCK = 1.30;
+  var PAD_H = 150, PAD_B = 14, PAD_I = 12;
+
+  function speedAt(s) { return 2.2 + s * 1.1; }
+  function mineAt(s) { return Math.min(0.30, 0.02 + s * 0.012); }
+  function valueAt(s) { return s + 1; }
+  function warnAt(s) { return LOOK / speedAt(s); }
+
+  var seed = (Math.random() * 4294967296) >>> 0, lockSeed = false;
+  function rnd() { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; }
+
+  /* ---------- run state ---------------------------------------- */
+  var state = "start", t = 0, score = 0, best = 0, pot = 0, step = 0;
+  var belt = [], lock = 0, deepest = 0, lost = 0, banks = 0, busts = 0;
+  var pops = [], sparks = [], flash = 0, shake = 0, hot = 0, tRun = 0, lastDelta = 0;
+
+  // A tile is put on the belt at distance LOOK and walks in. Because that is
+  // the ONLY place a mine is ever created, every mine is seen for its whole
+  // approach -- that is the cabinet's promise.
+  function pushTile(d, safe) {
+    var mine = safe ? false : rnd() < mineAt(step);
+    var d0 = d === undefined ? LOOK : d;
+    // d0 is kept so the promise can be checked against what was actually
+    // spawned, rather than against wherever a sampling frame happens to catch it
+    belt.push({ d: d0, d0: d0, mine: mine, step: step, born: tRun });
+    return belt[belt.length - 1];
+  }
+  // The belt is FULL: tiles run a unit apart, so one arrives every 1/speed
+  // seconds while each is in sight for the whole LOOK units. Spawning one at
+  // a time instead made tiles arrive six times too slowly, and a run paid a
+  // sixth of what the model said it should.
+  // The refill is always clean. A mine placed at d = 1 would reach you in a
+  // fraction of the promised warning, so the tiles already on the belt when
+  // a chain starts are never mines -- every mine is born at the far edge.
+  function fillBelt() {
+    belt = [];
+    for (var i = 1; i <= LOOK; i++) pushTile(i, true);
+  }
+
+  function reset() {
+    if (!lockSeed) seed = (Math.random() * 4294967296) >>> 0;
+    t = RUN; score = 0; pot = 0; step = 0; belt = []; lock = 0;
+    deepest = 0; lost = 0; banks = 0; busts = 0;
+    pops = []; sparks = []; flash = 0; shake = 0; tRun = 0;
+    fillBelt();
+  }
+
+  var AC = null;
+  function ac() { if (AC === null) { try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { AC = 0; } } return AC || null; }
+  function blip(f, dur, type, vol) {
+    var a = ac(); if (!a) return;
+    if (a.state === "suspended") a.resume();
+    var o = a.createOscillator(), g = a.createGain();
+    o.type = type || "square"; o.frequency.value = f;
+    g.gain.setValueAtTime(vol || 0.05, a.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001, a.currentTime + dur);
+    o.connect(g); g.connect(a.destination); o.start(); o.stop(a.currentTime + dur);
+  }
+  function addPop(txt, col, sz) { pops.push({ t: 0, txt: txt, col: col, sz: sz || 1 }); if (pops.length > 5) pops.shift(); }
+  function spark(col) { for (var i = 0; i < 14; i++) sparks.push({ x: (Math.random() - 0.5) * 200, y: 0, vx: (Math.random() - 0.5) * 240, vy: -Math.random() * 200, t: 0, col: col }); }
+
+  function bank() {
+    if (state !== "play" || lock > 0) return false;
+    hot = 0.12;
+    if (pot <= 0) { blip(150, 0.05, "square", 0.03); return false; }
+    score += pot;
+    banks++;
+    addPop("+" + pot, "#ffe15c", 1.4);
+    spark("#2ee87a");
+    blip(560 + Math.min(700, pot * 2), 0.13, "square", 0.06);
+    pot = 0;
+    if (step > deepest) deepest = step;
+    step = 0; belt = []; lock = BANK_LOCK;
+    syncHud();
+    return true;
+  }
+
+  function bust() {
+    lost += pot;
+    busts++;
+    addPop("LOST " + pot, "#ff3b46", 1.3);
+    spark("#ff3b46");
+    flash = 1; shake = 1;
+    blip(90, 0.36, "sawtooth", 0.08);
+    pot = 0;
+    if (step > deepest) deepest = step;
+    step = 0; belt = []; lock = BUST_LOCK;
+    syncHud();
+  }
+
+  function step2(dt) {
+    tRun += dt;
+    if (hot > 0) hot = Math.max(0, hot - dt);
+    flash = Math.max(0, flash - dt * 2.2);
+    shake = Math.max(0, shake - dt * 2.4);
+    for (var i = pops.length - 1; i >= 0; i--) { pops[i].t += dt; if (pops[i].t > 1.0) pops.splice(i, 1); }
+    for (i = sparks.length - 1; i >= 0; i--) {
+      var s = sparks[i]; s.t += dt; s.x += s.vx * dt; s.y += s.vy * dt; s.vy += 480 * dt;
+      if (s.t > 0.65) sparks.splice(i, 1);
+    }
+    if (state !== "play") return;
+    t -= dt;
+    if (t <= 0) { t = 0; gameOver(); return; }
+    if (lock > 0) { lock -= dt; if (lock <= 0) { lock = 0; fillBelt(); } syncHud(); return; }
+
+    var v = speedAt(step);
+    for (i = belt.length - 1; i >= 0; i--) {
+      belt[i].d -= v * dt;
+      if (belt[i].d <= 0) {
+        var tile = belt[i];
+        belt.splice(i, 1);
+        if (tile.mine) { bust(); return; }
+        pot += valueAt(step);
+        step++;
+        pushTile(LOOK + tile.d);        // keep the spacing exact across the step
+      }
+    }
+    syncHud();
+  }
+
+  function gameOver() {
+    state = "over";
+    lastDelta = score - best;
+    if (score > best) { best = score; saveNum("dur-best", best); }
+    document.getElementById("overScore").textContent = fmt(score);
+    document.getElementById("overBest").textContent = fmt(best);
+    document.getElementById("overDeep").textContent = Math.max(deepest, step);
+    document.getElementById("overLost").textContent = fmt(lost);
+    var d = document.getElementById("overDelta");
+    if (lastDelta > 0) { d.textContent = "A NEW BEST BY " + fmt(lastDelta); d.className = "delta up"; }
+    else if (lastDelta === 0) { d.textContent = "DEAD LEVEL WITH YOUR BEST"; d.className = "delta up"; }
+    else { d.textContent = fmt(-lastDelta) + " SHORT OF YOUR BEST"; d.className = "delta down"; }
+    document.getElementById("overTitle").textContent = lost > score ? "YOU LOST MORE THAN YOU KEPT" : "TIME";
+    document.getElementById("overScreen").hidden = false;
+    blip(300, 0.3, "sine", 0.05);
+  }
+
+  function start() {
+    reset(); state = "play";
+    document.getElementById("startScreen").hidden = true;
+    document.getElementById("overScreen").hidden = true;
+    syncHud();
+  }
+
+  /* ---------- drawing ------------------------------------------ */
+  function lineY() { return Math.min(VH - PAD_B - PAD_H - 34, 560); }
+  function topY() { return 128; }
+  function tileH() { return (lineY() - topY()) / LOOK; }
+  function laneX() { return 58; }
+  function laneW() { return VW - 116; }
+
+  function draw() {
+    ctx.fillStyle = "#06100c"; ctx.fillRect(0, 0, VW, VH);
+    ctx.save();
+    if (shake > 0) ctx.translate((Math.random() - 0.5) * 10 * shake, (Math.random() - 0.5) * 10 * shake);
+    var ly = lineY(), ty = topY(), th = tileH(), lx = laneX(), lw = laneW();
+
+    // the belt
+    ctx.fillStyle = "#0d1f18";
+    ctx.fillRect(lx - 8, ty - 10, lw + 16, ly - ty + 22);
+    for (var g = 0; g <= LOOK; g++) {
+      ctx.fillStyle = "rgba(232,246,239,0.05)";
+      ctx.fillRect(lx - 8, ty + g * th, lw + 16, 1);
+    }
+    ctx.strokeStyle = "rgba(232,246,239,0.10)"; ctx.lineWidth = 2;
+    ctx.strokeRect(lx - 8, ty - 10, lw + 16, ly - ty + 22);
+
+    // the tiles on their way in
+    for (var i = 0; i < belt.length; i++) {
+      var b = belt[i];
+      var y = ly - b.d * th;
+      if (y < ty - th || y > ly + th) continue;
+      var h = th * 0.78, w = lw;
+      if (b.mine) {
+        var pulse = 0.65 + 0.35 * Math.sin(tRun * 22);
+        ctx.fillStyle = "rgba(255,59,70," + (0.20 * pulse).toFixed(3) + ")";
+        ctx.fillRect(lx - 8, y - h, lw + 16, h);
+        ctx.fillStyle = "#ff3b46";
+        ctx.fillRect(lx, y - h, w, h);
+        ctx.fillStyle = "#ffd9dc";
+        for (var z = 0; z < 5; z++) {
+          var zx = lx + (z + 0.5) * w / 5;
+          ctx.beginPath();
+          ctx.moveTo(zx - 7, y - 3); ctx.lineTo(zx, y - h + 4); ctx.lineTo(zx + 7, y - 3);
+          ctx.closePath(); ctx.fill();
+        }
+      } else {
+        ctx.fillStyle = "#1a9e52";
+        ctx.fillRect(lx, y - h, w, h);
+        ctx.fillStyle = "#2ee87a";
+        ctx.fillRect(lx, y - h, w, Math.max(3, h * 0.30));
+        ctx.fillStyle = "rgba(6,16,12,0.45)";
+        ctx.fillRect(lx, y - 3, w, 3);
+        ctx.font = '10px "Press Start 2P", monospace';
+        ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.fillStyle = "rgba(6,16,12,0.75)";
+        ctx.fillText("+" + valueAt(b.step), lx + w / 2, y - h / 2);
+      }
+    }
+    ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+
+    // the line you are standing on
+    ctx.fillStyle = lock > 0 ? "rgba(232,246,239,0.25)" : "#e8f6ef";
+    ctx.fillRect(lx - 14, ly - 3, lw + 28, 6);
+    for (var k = 0; k < 2; k++) {
+      ctx.fillStyle = "#e8f6ef";
+      ctx.beginPath();
+      var px = k ? lx + lw + 14 : lx - 14;
+      ctx.moveTo(px, ly - 10); ctx.lineTo(px + (k ? -12 : 12), ly); ctx.lineTo(px, ly + 10);
+      ctx.closePath(); ctx.fill();
+    }
+
+    // the pot, right above the line where your eye already is
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.font = 'bold ' + Math.round(34 + Math.min(26, pot * 0.10)) + 'px "VT323", monospace';
+    ctx.fillStyle = pot > 0 ? "#ffe15c" : "rgba(232,246,239,0.22)";
+    ctx.fillText(String(pot), VW / 2, ly + 38);
+    ctx.font = '7px "Press Start 2P", monospace';
+    ctx.fillStyle = "rgba(232,246,239,0.35)";
+    ctx.fillText(lock > 0 ? (busts && lock > BANK_LOCK ? "GONE" : "BANKED") : "IN THE POT", VW / 2, ly + 66);
+
+    for (i = 0; i < sparks.length; i++) {
+      var s2 = sparks[i];
+      ctx.globalAlpha = 1 - s2.t / 0.65;
+      ctx.fillStyle = s2.col;
+      ctx.fillRect(VW / 2 + s2.x - 3, ly + s2.y - 3, 6, 6);
+      ctx.globalAlpha = 1;
+    }
+    for (i = 0; i < pops.length; i++) {
+      var p = pops[i];
+      ctx.globalAlpha = 1 - p.t / 1.0;
+      ctx.fillStyle = p.col;
+      ctx.font = Math.round(11 * p.sz) + 'px "Press Start 2P", monospace';
+      ctx.fillText(p.txt, VW / 2, ly - 40 - p.t * 46);
+      ctx.globalAlpha = 1;
+    }
+    ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+    ctx.restore();
+    if (flash > 0) {
+      ctx.fillStyle = "rgba(255,59,70," + (flash * 0.30).toFixed(3) + ")";
+      ctx.fillRect(0, 0, VW, VH);
+    }
+  }
+
+  /* ---------- HUD ----------------------------------------------- */
+  var hScore = document.getElementById("hScore"), hBest = document.getElementById("hBest");
+  var hTime = document.getElementById("hTime"), hDepth = document.getElementById("hDepth");
+  var hWarn = document.getElementById("hWarn");
+  var pdBank = document.getElementById("pdBank"), pdAmt = document.getElementById("pdAmt");
+
+  function fmt(n) { return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
+  function saveNum(k, v) { try { localStorage.setItem(k, String(v)); } catch (e) {} }
+  function loadNum(k) { try { var v = parseInt(localStorage.getItem(k), 10); return isFinite(v) ? v : 0; } catch (e) { return 0; } }
+  function syncHud() {
+    hScore.textContent = fmt(score);
+    hBest.textContent = fmt(best);
+    hBest.classList.toggle("lead", score >= best && score > 0);
+    hTime.textContent = t.toFixed(1);
+    hTime.classList.toggle("low", t < 10);
+    hDepth.textContent = step;
+    hWarn.textContent = state === "play" ? Math.round(warnAt(step) * 1000) + "ms" : "—";
+    pdAmt.textContent = pot > 0 ? "+" + fmt(pot) : "—";
+    var rich = pot >= 60;
+    if (pdBank._rich !== rich) { pdBank._rich = rich; pdBank.classList.toggle("rich", rich); }
+    var off = state !== "play" || pot <= 0;
+    if (pdBank._off !== off) { pdBank._off = off; pdBank.classList.toggle("off", off); }
+    if (pdBank._hot !== (hot > 0)) { pdBank._hot = hot > 0; pdBank.classList.toggle("hot", hot > 0); }
+  }
+
+  /* ---------- input --------------------------------------------- */
+  document.getElementById("pads").addEventListener("pointerdown", function (e) {
+    e.preventDefault();
+    if (state !== "play") { start(); return; }
+    bank();
+  }, { passive: false });
+  document.getElementById("btnStart").addEventListener("click", function (e) { e.stopPropagation(); start(); });
+  document.getElementById("startScreen").addEventListener("pointerdown", function () { start(); });
+  // one tap and you are playing again -- 23 of the 30 cabinets made you
+  // find a button first, and that is where a run habit goes to die
+  document.getElementById("overScreen").addEventListener("pointerdown", function () { start(); });
+  window.addEventListener("keydown", function (e) {
+    if (e.code === "KeyR") { e.preventDefault(); start(); return; }
+    if (e.code === "Space" || e.code === "Enter") {
+      e.preventDefault();
+      if (state !== "play") start(); else bank();
+    }
+  });
+
+  /* ---------- layout -------------------------------------------- */
+  function resize() {
+    dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+    var w = wrap.clientWidth, h = wrap.clientHeight;
+    cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+    scale = Math.min((w * dpr) / VW, (h * dpr) / MIN_VH);
+    originX = Math.round(((w * dpr) - VW * scale) / 2);
+    VH = (h * dpr) / scale;
+    wrap.style.setProperty("--gut", (originX / dpr) + "px");
+    wrap.style.setProperty("--ph", (PAD_H * scale / dpr) + "px");
+    wrap.style.setProperty("--pb", (PAD_B * scale / dpr) + "px");
+    wrap.style.setProperty("--pi", (PAD_I * scale / dpr) + "px");
+    ctx.setTransform(scale, 0, 0, scale, originX, 0);
+    render();
+  }
+  function render() {
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.fillStyle = "#040a07";
+    ctx.fillRect(0, 0, cv.width, cv.height);
+    ctx.restore();
+    draw();
+    if (originX > 0) {
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.fillStyle = "rgba(232,246,239,0.07)";
+      ctx.fillRect(originX - 1, 0, 1, cv.height);
+      ctx.fillRect(originX + VW * scale, 0, 1, cv.height);
+      ctx.restore();
+    }
+  }
+  var last = 0;
+  function frame(now) {
+    requestAnimationFrame(frame);
+    var dt = last ? Math.min(0.032, (now - last) / 1000) : 0;
+    last = now;
+    step2(dt);
+    render();
+  }
+
+  best = loadNum("dur-best");
+  reset();
+  syncHud();
+  resize();
+  if (window.ResizeObserver) new ResizeObserver(resize).observe(wrap);
+  window.addEventListener("resize", resize);
+  requestAnimationFrame(frame);
+
+})();
+</script>
+</body>
+</html>

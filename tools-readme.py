@@ -16,12 +16,21 @@ cards = re.findall(
     r'<h2>([^<]*)</h2>\s*<p>(.*?)</p>', src, re.S)
 assert cards, 'no cabinets found in index.html'
 
-WORDS = {13: 'Thirteen', 14: 'Fourteen', 15: 'Fifteen', 16: 'Sixteen', 17: 'Seventeen',
-         18: 'Eighteen', 19: 'Nineteen', 20: 'Twenty', 21: 'Twenty-one', 22: 'Twenty-two',
-         23: 'Twenty-three', 24: 'Twenty-four', 25: 'Twenty-five', 26: 'Twenty-six',
-         27: 'Twenty-seven', 28: 'Twenty-eight', 29: 'Twenty-nine', 30: 'Thirty'}
+# Spelled out rather than tabulated: the table ran out at thirty and stopped
+# the build on the cabinet that followed.
+ONES = ['Zero', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight',
+        'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen',
+        'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen']
+TENS = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy',
+        'Eighty', 'Ninety']
+
+def word(n):
+    assert 0 < n < 100, 'cabinet count out of range: %d' % n
+    if n < 20:
+        return ONES[n]
+    return TENS[n // 10] + ('-' + ONES[n % 10].lower() if n % 10 else '')
+
 n = len(cards)
-assert n in WORDS, 'add %d to WORDS in tools-readme.py' % n
 
 def clean(t):
     return re.sub(r'\s+', ' ', html.unescape(re.sub(r'<[^>]+>', '', t))).strip()
@@ -41,7 +50,7 @@ tree = '\n'.join('  %s/%s index.html%s'
 p = os.path.join(root, 'README.md')
 md = io.open(p, encoding='utf-8').read()
 
-md = re.sub(r'^\w[\w-]* arcade cabinets,', '%s arcade cabinets,' % WORDS[n], md, count=1, flags=re.M)
+md = re.sub(r'^\w[\w-]* arcade cabinets,', '%s arcade cabinets,' % word(n), md, count=1, flags=re.M)
 
 a = md.index('| Game | | Play |')
 b = md.index('\n\n', md.index('|', a + 40))
