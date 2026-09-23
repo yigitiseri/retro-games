@@ -74,7 +74,7 @@
     --caglayan: #b8f0ff;
     --kor:     #ffd15e;
     --akin:    #d8b25a;
-    --dur:     #2ee87a;
+    --gec:     #2ee87a;
 
     --cell-font: "Press Start 2P", ui-monospace, "Courier New", monospace;
     --read-font: "VT323", ui-monospace, "Courier New", monospace;
@@ -277,7 +277,7 @@
   .caglayan { --accent: var(--caglayan); }
   .kor { --accent: var(--kor); }
   .akin { --accent: var(--akin); }
-  .dur { --accent: var(--dur); }
+  .gec { --accent: var(--gec); }
 
   /* ---------- footer ---------- */
   .foot {
@@ -733,13 +733,13 @@
       </div>
     </a>
 
-    <a class="cab dur" href="games/dur/">
-      <div class="tube"><canvas data-demo="belt" aria-hidden="true"></canvas></div>
+    <a class="cab gec" href="games/gec/">
+      <div class="tube"><canvas data-demo="vault" aria-hidden="true"></canvas></div>
       <div class="plate">
         <span class="no">CABINET NO. 33 &mdash; 1993</span>
-        <h2>DUR</h2>
-        <p>One question, over and over: stop, or go on? The belt pays more the longer you ride it, and one tap banks the pot. Every mine is put on at the far end so you always see it coming &mdash; losing the pot is never bad luck. What runs out is reaction time: the belt speeds up until six tiles of warning is a blink. Stop when the warning gets as short as you are fast, which is later than it feels.</p>
-        <span class="keys">Tap DUR &middot; Space</span>
+        <h2>GE&Ccedil;</h2>
+        <p>The belt never stops. Green tiles pay; a mine has to be vaulted as it passes under you, and clearing one keeps every point you have and rolls straight on &mdash; nothing is ever taken back. But vault a green tile and you jumped at nothing. Every mine is in sight the full six tiles, so what runs out is precision: the window your tap has to land in falls from 800ms to a blink.</p>
+        <span class="keys">Tap GE&Ccedil; &middot; Space</span>
         <span class="play">&#9654; PLAY</span>
       </div>
     </a>
@@ -3592,58 +3592,76 @@
   }
 
 
-  /* ---------- dur: stop, or go on ---------- */
-  var du = null;
-  function duInit(W, H) { return { W: W, H: H, last: 0, t: 0, belt: [], step: 0, pot: 0, lock: 0, flash: 0, seed: 11 }; }
-  function drawBelt(ctx, W, H, now) {
-    if (!du || du.W !== W) du = duInit(W, H);
-    var v = du, dt = Math.min(0.05, (now - (v.last || now)) / 1000);
+  /* ---------- gec: vault it, keep everything ---------- */
+  var gc = null;
+  function gcInit(W, H) { return { W: W, H: H, last: 0, t: 0, belt: [], step: 0, score: 0, lock: 0, flash: 0, ok: 0, seed: 11 }; }
+  function drawVault(ctx, W, H, now) {
+    if (!gc || gc.W !== W) gc = gcInit(W, H);
+    var v = gc, dt = Math.min(0.05, (now - (v.last || now)) / 1000);
     v.last = now; v.t += dt;
     function rr() { v.seed = (v.seed * 1664525 + 1013904223) >>> 0; return v.seed / 4294967296; }
-    var LOOK = 5, ly = H * 0.74, ty = H * 0.10, th = (ly - ty) / LOOK;
-    var lx = W * 0.14, lw = W * 0.72;
+    var LOOK = 5, ly = H * 0.70, ty = H * 0.10, th = (ly - ty) / (LOOK - 0.5);
+    var lx = W * 0.14, lw = W * 0.72, half = th / 2;
 
     ctx.fillStyle = "#06100c"; ctx.fillRect(0, 0, W, H);
-    ctx.fillStyle = "#0d1f18"; ctx.fillRect(lx - 3, ty - 4, lw + 6, ly - ty + 8);
+    ctx.fillStyle = "#0d1f18"; ctx.fillRect(lx - 3, ty - 10, lw + 6, ly + half + 6 - ty + 10);
+    // the band: the one tile your tap would take
+    ctx.fillStyle = "rgba(139,233,255,0.16)"; ctx.fillRect(lx - 3, ly - half, lw + 6, th);
+    ctx.fillStyle = "rgba(139,233,255,0.55)";
+    ctx.fillRect(lx - 3, ly - half, lw + 6, 1); ctx.fillRect(lx - 3, ly + half - 1, lw + 6, 1);
 
-    if (!v.belt.length) for (var i = 1; i <= LOOK; i++) v.belt.push({ d: i, mine: false, step: 0 });
-    var sp = 1.4 + v.step * 0.5;
-    if (v.lock > 0) { v.lock -= dt; }
+    if (!v.belt.length) for (var i = 1; i <= LOOK; i++) v.belt.push({ d: i, mine: false, tapped: false });
+    var sp = 1.2 + v.step * 0.10;
+    if (v.lock > 0) v.lock -= dt;
     else {
-      for (i = v.belt.length - 1; i >= 0; i--) {
-        v.belt[i].d -= sp * dt;
-        if (v.belt[i].d <= 0) {
-          var tile = v.belt[i];
-          v.belt.splice(i, 1);
-          if (tile.mine) { v.pot = 0; v.step = 0; v.lock = 0.7; v.flash = 1; v.belt = []; break; }
-          v.pot += v.step + 1; v.step++;
-          v.belt.push({ d: LOOK + tile.d, mine: rr() < Math.min(0.3, 0.03 + v.step * 0.02), step: v.step });
-        }
+      // the demo plays it properly: it vaults the mine while it is in the band,
+      // and every so often it is a hair late and takes one
+      for (i = 0; i < v.belt.length; i++) v.belt[i].d -= sp * dt;
+      var near = v.belt[0];
+      if (near && near.mine && !near.tapped && Math.abs(near.d) < 0.5 && rr() < 0.30) {
+        near.tapped = (v.step % 11) !== 10;   // one in eleven, it misses
+        if (near.tapped) v.ok = 0.3;
       }
-      // the demo banks when the warning gets short, which is the whole lesson
-      if (v.step >= 7) { v.pot = 0; v.step = 0; v.lock = 0.45; v.belt = []; }
+      while (v.belt.length && v.belt[0].d <= -0.5) {
+        var tile = v.belt.shift();
+        if (tile.mine && !tile.tapped) { v.score = 0; v.step = 0; v.lock = 0.8; v.flash = 1; v.belt = []; break; }
+        v.score += (v.step + 1) * (tile.mine ? 3 : 1);
+        v.step++;
+        v.belt.push({ d: tile.d + LOOK, tapped: false,
+                      mine: rr() < Math.min(0.34, 0.10 + v.step * 0.02) });
+      }
     }
     for (i = 0; i < v.belt.length; i++) {
-      var b = v.belt[i], y = ly - b.d * th, h = th * 0.74;
+      var b = v.belt[i], y = ly - b.d * th, h = th * 0.74, top = y - h / 2;
       if (y < ty - th || y > ly + th) continue;
-      if (b.mine) {
-        ctx.fillStyle = "#ff3b46"; ctx.fillRect(lx, y - h, lw, h);
+      if (b.mine && !b.tapped) {
+        ctx.fillStyle = "#ff3b46"; ctx.fillRect(lx, top, lw, h);
         ctx.fillStyle = "#ffd9dc";
         for (var z = 0; z < 3; z++) {
           var zx = lx + (z + 0.5) * lw / 3;
-          ctx.beginPath(); ctx.moveTo(zx - 4, y - 2); ctx.lineTo(zx, y - h + 2); ctx.lineTo(zx + 4, y - 2);
+          ctx.beginPath(); ctx.moveTo(zx - 4, top + h - 2); ctx.lineTo(zx, top + 2); ctx.lineTo(zx + 4, top + h - 2);
           ctx.closePath(); ctx.fill();
         }
+      } else if (b.mine) {
+        ctx.fillStyle = "#2b4b52"; ctx.fillRect(lx, top, lw, h);
+        ctx.strokeStyle = "#8be9ff"; ctx.lineWidth = 2;
+        ctx.strokeRect(lx + 1, top + 1, lw - 2, h - 2);
       } else {
-        ctx.fillStyle = "#1a9e52"; ctx.fillRect(lx, y - h, lw, h);
-        ctx.fillStyle = "#2ee87a"; ctx.fillRect(lx, y - h, lw, Math.max(2, h * 0.3));
+        ctx.fillStyle = "#1a9e52"; ctx.fillRect(lx, top, lw, h);
+        ctx.fillStyle = "#2ee87a"; ctx.fillRect(lx, top, lw, Math.max(2, h * 0.3));
+      }
+      if (Math.abs(b.d) < 0.5) {
+        ctx.strokeStyle = "rgba(139,233,255,0.85)"; ctx.lineWidth = 1;
+        ctx.strokeRect(lx - 2, top - 2, lw + 4, h + 4);
       }
     }
-    ctx.fillStyle = "#e8f6ef"; ctx.fillRect(lx - 6, ly - 2, lw + 12, 4);
+    ctx.fillStyle = v.ok > 0 ? "#8be9ff" : "#e8f6ef";
+    ctx.fillRect(lx - 6, ly - 2, lw + 12, 4);
+    v.ok = Math.max(0, v.ok - dt);
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
     ctx.font = 'bold ' + Math.round(H * 0.11) + 'px "VT323", monospace';
-    ctx.fillStyle = v.pot > 0 ? "#ffe15c" : "rgba(232,246,239,0.22)";
-    ctx.fillText(String(v.pot), W / 2, ly + H * 0.12);
+    ctx.fillStyle = v.score > 0 ? "#ffe15c" : "rgba(232,246,239,0.22)";
+    ctx.fillText(String(v.score), W / 2, ly + H * 0.18);
     ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
     v.flash = Math.max(0, v.flash - dt * 2);
     if (v.flash > 0) {
@@ -3652,12 +3670,12 @@
     }
   }
 
-  var painters = { snake: drawSnake, road: drawRoad, lander: drawLander, flap: drawFlap, brick: drawBrick, maze: drawMaze, arch: drawArch, rocks: drawRocks, loom: drawLoom, invade: drawInvade, fuse: drawFuse, pong: drawPong, lamps: drawLamps, climb: drawClimb, lanes: drawLanes, swing: drawSwing, mine: drawMine, sky: drawSky, paint: drawFence, rails: drawRails, night: drawNight, flip: drawFlip, twin: drawTwin, creep: drawCreep, pulse: drawPulse, stack: drawStack, bank: drawBank, drip: drawDrip, blind: drawBlind, march: drawMarch, belt: drawBelt };
+  var painters = { snake: drawSnake, road: drawRoad, lander: drawLander, flap: drawFlap, brick: drawBrick, maze: drawMaze, arch: drawArch, rocks: drawRocks, loom: drawLoom, invade: drawInvade, fuse: drawFuse, pong: drawPong, lamps: drawLamps, climb: drawClimb, lanes: drawLanes, swing: drawSwing, mine: drawMine, sky: drawSky, paint: drawFence, rails: drawRails, night: drawNight, flip: drawFlip, twin: drawTwin, creep: drawCreep, pulse: drawPulse, stack: drawStack, bank: drawBank, drip: drawDrip, blind: drawBlind, march: drawMarch, vault: drawVault };
   Array.prototype.forEach.call(document.querySelectorAll("[data-demo]"), function (c) {
     var fn = painters[c.dataset.demo];
     if (fn) register(c, fn, c.dataset.demo === "flap" || c.dataset.demo === "brick" || c.dataset.demo === "maze" || c.dataset.demo === "arch" ||
                        c.dataset.demo === "rocks" || c.dataset.demo === "loom" ||
-                       c.dataset.demo === "invade" || c.dataset.demo === "fuse" || c.dataset.demo === "pong" || c.dataset.demo === "lamps" || c.dataset.demo === "climb" || c.dataset.demo === "lanes" || c.dataset.demo === "swing" || c.dataset.demo === "mine" || c.dataset.demo === "sky" || c.dataset.demo === "paint" || c.dataset.demo === "rails" || c.dataset.demo === "night" || c.dataset.demo === "flip" || c.dataset.demo === "twin" || c.dataset.demo === "creep" || c.dataset.demo === "pulse" || c.dataset.demo === "stack" || c.dataset.demo === "bank" || c.dataset.demo === "drip" || c.dataset.demo === "blind" || c.dataset.demo === "march" || c.dataset.demo === "belt");
+                       c.dataset.demo === "invade" || c.dataset.demo === "fuse" || c.dataset.demo === "pong" || c.dataset.demo === "lamps" || c.dataset.demo === "climb" || c.dataset.demo === "lanes" || c.dataset.demo === "swing" || c.dataset.demo === "mine" || c.dataset.demo === "sky" || c.dataset.demo === "paint" || c.dataset.demo === "rails" || c.dataset.demo === "night" || c.dataset.demo === "flip" || c.dataset.demo === "twin" || c.dataset.demo === "creep" || c.dataset.demo === "pulse" || c.dataset.demo === "stack" || c.dataset.demo === "bank" || c.dataset.demo === "drip" || c.dataset.demo === "blind" || c.dataset.demo === "march" || c.dataset.demo === "vault");
   });
 
   if (window.ResizeObserver) {
