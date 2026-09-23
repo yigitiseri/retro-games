@@ -160,6 +160,11 @@
       coming &mdash; what runs out is <b>precision</b>. The belt speeds up, and
       the window your tap has to land in shrinks from 800ms to a blink.
     </div>
+    <div class="lines" style="font-size:16px;opacity:0.85">
+      Land a vault in the <b>dead centre</b> of the band for a
+      <b>PERFECT</b>. Every two in a row add <b>x1</b> to everything the belt
+      pays, up to <b>x5</b>. And your deepest run rides in on a gold tile.
+    </div>
     <button class="btn" id="btnStart">START THE BELT</button>
     <div class="hintline">TAP GEÇ &middot; SPACE</div>
   </div>
@@ -232,6 +237,28 @@
      Deaths split about two to one between a mine getting through
      and a green tile vaulted by mistake, at every level of the
      ladder, so neither half of the rule is decoration.
+
+     On top of surviving, two things to chase:
+
+     THE STREAK. A vault in the centre half of the band is PERFECT;
+     every two in a row add x1 to everything the belt pays, up to
+     x5. A vault off centre drops you to x1 and takes nothing. Of
+     the rules tried it is the one that pays a steady hand without
+     shutting a casual one out (1,500 runs a row, median):
+
+                        depth   no streak   with it   peak
+       jitter  30ms      117      11,326     30,385     x5
+       jitter  60ms       59       2,810      5,563     x4
+       jitter 120ms       29         639        880     x2
+       jitter 180ms       20         277        325     x1
+
+     Depth is identical in every row: the streak changes what a run
+     is worth, never whether it survives.
+
+     THE RECORD. The tile that would carry you one past your
+     deepest run is marked in gold, so you watch the record come
+     down the belt at you. Die within five of it and the over
+     screen says exactly how close.
      ============================================================ */
 
   var wrap = document.getElementById("wrap");
@@ -250,13 +277,20 @@
   function mineAt(d) { return Math.min(0.34, 0.18 + d * 0.004); }
   function valueAt(d) { return d + 1; }
   function windowAt(d) { return BAND / speedAt(d); }      // seconds a tap may land in
-  var VAULT_PAY = 3;
+  var VAULT_PAY = 3, PERFECT = 0.25, MULT_CAP = 5;
+  function multFor(s) { return Math.min(MULT_CAP, 1 + Math.floor(s / 2)); }
 
   var seed = (Math.random() * 4294967296) >>> 0, lockSeed = false;
   function rnd() { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; }
 
   /* ---------- run state ---------------------------------------- */
   var state = "start", score = 0, best = 0, depth = 0, vaults = 0, tRun = 0;
+  // the streak: consecutive vaults landed in the centre half of the window.
+  // Every second one adds x1 to everything the belt pays, up to x5. Missing
+  // the centre only resets the multiplier -- it never takes a point back.
+  var streak = 0, mult = 1, perfects = 0, peakMult = 1;
+  // your deepest run, and the tile on the belt that will carry you past it
+  var bestDepth = 0, passedBest = false;
   var belt = [], overWhy = "", lastDelta = 0;
   var pops = [], sparks = [], flash = 0, flashCol = "255,59,70", shake = 0, hot = 0, hold = 0;
 
@@ -273,7 +307,11 @@
     var pay = valueAt(depth + belt.length);
     // d0 is kept so the promise can be checked against what was spawned rather
     // than against wherever a sampling frame happens to catch the tile
-    belt.push({ d: d, d0: d, mine: mine, step: depth, pay: pay, born: tRun, tapped: false });
+    // The tile that will be judged one past your deepest ever carries the
+    // record down the belt, so the chase is something you watch arrive.
+    var record = bestDepth > 0 && depth + belt.length === bestDepth;
+    belt.push({ d: d, d0: d, mine: mine, step: depth, pay: pay, born: tRun, tapped: false,
+                tapD: 0, record: record });
   }
   // The belt is FULL: tiles run a unit apart, so one is judged every 1/speed
   // seconds while each is in sight for the whole LOOK units. The tiles already
@@ -285,6 +323,7 @@
   function reset() {
     if (!lockSeed) seed = (Math.random() * 4294967296) >>> 0;
     score = 0; depth = 0; vaults = 0; tRun = 0; overWhy = "";
+    streak = 0; mult = 1; perfects = 0; peakMult = 1; passedBest = false;
     pops = []; sparks = []; flash = 0; shake = 0; hot = 0; hold = 0;
     fillBelt();
   }
@@ -330,6 +369,7 @@
     }
     if (tile.tapped) return false;     // a second tap on the same tile is free
     tile.tapped = true;
+    tile.tapD = tile.d;          // how far off centre, in tiles
     if (tile.mine) {
       blip(880, 0.07, "square", 0.05);
       hold = 0.16;
@@ -340,25 +380,35 @@
   }
 
   function judge(tile) {
+    var ok = true;
     if (tile.mine && tile.tapped) {
-      var pay = tile.pay * VAULT_PAY;
+      var perfect = Math.abs(tile.tapD) < PERFECT;
+      if (perfect) { streak++; perfects++; } else streak = 0;
+      var was = mult;
+      mult = multFor(streak);
+      if (mult > peakMult) peakMult = mult;
+      var pay = tile.pay * VAULT_PAY * mult;
       score += pay; vaults++;
-      addPop("VAULT +" + pay, "#8be9ff", 1.35);
-      spark("#8be9ff", 16);
-      flash = 0.7; flashCol = "139,233,255";
-      blip(1180, 0.11, "square", 0.055);
-      return true;
+      addPop((perfect ? "PERFECT +" : "VAULT +") + fmt(pay), perfect ? "#ffe15c" : "#8be9ff", perfect ? 1.45 : 1.3);
+      spark(perfect ? "#ffe15c" : "#8be9ff", perfect ? 22 : 14);
+      flash = 0.7; flashCol = perfect ? "255,225,92" : "139,233,255";
+      blip(perfect ? 1320 + mult * 90 : 1000, 0.11, "square", 0.055);
+      if (mult > was) { addPop("x" + mult, "#ffe15c", 2.0); blip(1760, 0.16, "square", 0.05); }
+      else if (was > 1 && mult === 1) addPop("STREAK LOST", "rgba(232,246,239,0.6)", 0.9);
+    } else if (tile.mine) {
+      over("hit", "A mine reached the line with no vault."); ok = false;
+    } else if (tile.tapped) {
+      over("stumble", "You vaulted a green tile. It was paying."); ok = false;
+    } else {
+      score += tile.pay * mult;
     }
-    if (tile.mine) {
-      over("hit", "A mine reached the line with no vault.");
-      return false;
+    if (ok && tile.record && !passedBest) {
+      passedBest = true;
+      addPop("NEW DEEPEST", "#ffe15c", 1.6);
+      spark("#ffe15c", 26);
+      blip(1560, 0.22, "square", 0.06);
     }
-    if (tile.tapped) {
-      over("stumble", "You vaulted a green tile. It was paying.");
-      return false;
-    }
-    score += tile.pay;
-    return true;
+    return ok;
   }
 
   function over(how, why) {
@@ -369,13 +419,21 @@
     shake = 1;
     blip(how === "hit" ? 90 : 150, 0.34, "sawtooth", 0.08);
     lastDelta = score - best;
+    var prevDeep = bestDepth;
+    if (depth > bestDepth) { bestDepth = depth; saveNum("gec-deep", bestDepth); }
     if (score > best) { best = score; saveNum("gec-best", best); }
     document.getElementById("overTitle").textContent = how === "hit" ? "A MINE GOT THROUGH" : "YOU JUMPED AT NOTHING";
     document.getElementById("overScore").textContent = fmt(score);
     document.getElementById("overBest").textContent = fmt(best);
     document.getElementById("overDeep").textContent = depth;
-    document.getElementById("overVault").textContent = vaults;
-    document.getElementById("overWhy").textContent = why;
+    document.getElementById("overVault").textContent = vaults + (perfects ? " / " + perfects + "\u2605" : "");
+    // The line under the score is the reason to go again. Near misses are
+    // said out loud, because "three short" is a much louder itch than a number.
+    var chase;
+    if (depth > prevDeep && prevDeep > 0) chase = "Deepest ever: " + depth + ", past your old " + prevDeep + ".";
+    else if (prevDeep > 0 && prevDeep - depth <= 5) chase = (prevDeep - depth === 0 ? "Level with" : (prevDeep - depth) + (prevDeep - depth === 1 ? " tile" : " tiles") + " short of") + " your deepest (" + prevDeep + ").";
+    else chase = "Deepest " + Math.max(prevDeep, depth) + ". Best streak x" + peakMult + ".";
+    document.getElementById("overWhy").textContent = why + " " + chase;
     var d = document.getElementById("overDelta");
     if (lastDelta > 0) { d.textContent = "A NEW BEST BY " + fmt(lastDelta); d.className = "delta up"; }
     else if (lastDelta === 0) { d.textContent = "DEAD LEVEL WITH YOUR BEST"; d.className = "delta up"; }
@@ -530,6 +588,21 @@
         ctx.fillStyle = "rgba(6,16,12,0.75)";
         ctx.fillText("+" + b.pay, lx + w / 2, y);
       }
+      if (b.record && !passedBest) {
+        // the record, riding in on the tile that beats it
+        ctx.fillStyle = "#ffe15c";
+        ctx.fillRect(lx - 8, top - 4, 6, h + 8);
+        ctx.fillRect(lx + w + 2, top - 4, 6, h + 8);
+        // on its own dark tag: gold straight onto a mine's spikes was unreadable
+        var bl = "BEST " + bestDepth;
+        ctx.font = '8px "Press Start 2P", monospace';
+        ctx.textAlign = "right"; ctx.textBaseline = "middle";
+        var bw = ctx.measureText(bl).width + 12;
+        ctx.fillStyle = "rgba(6,16,12,0.9)";
+        ctx.fillRect(lx + w - bw - 2, top + 2, bw, 16);
+        ctx.fillStyle = "#ffe15c";
+        ctx.fillText(bl, lx + w - 8, top + 10);
+      }
       if (b === band) {
         ctx.strokeStyle = "rgba(139,233,255,0.85)"; ctx.lineWidth = 2;
         ctx.strokeRect(lx - 5, top - 3, w + 10, h + 6);
@@ -554,6 +627,13 @@
     ctx.font = '7px "Press Start 2P", monospace';
     ctx.fillStyle = "rgba(232,246,239,0.35)";
     ctx.fillText("KEPT, WHATEVER HAPPENS", VW / 2, ly + half + 88);
+    if (state === "play") {
+      // the multiplier sits next to the score it multiplies
+      ctx.font = '12px "Press Start 2P", monospace';
+      ctx.fillStyle = mult > 1 ? "#ffe15c" : "rgba(232,246,239,0.28)";
+      ctx.fillText("x" + mult + (mult < MULT_CAP ? "  " + (streak % 2 ? "\u2605\u2606" : "\u2606\u2606") : "  MAX"),
+                   VW / 2, ly + half + 110);
+    }
 
     for (i = 0; i < sparks.length; i++) {
       var s2 = sparks[i];
@@ -665,6 +745,7 @@
   }
 
   best = loadNum("gec-best");
+  bestDepth = loadNum("gec-deep");
   reset();
   syncHud();
   resize();
