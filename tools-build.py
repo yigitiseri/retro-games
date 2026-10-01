@@ -101,6 +101,28 @@ if ANALYTICS_TOKEN:
         'data-cf-beacon=\'{"token": "%s"}\'></script>\n'
         '<!-- End Cloudflare Web Analytics -->\n' % ANALYTICS_TOKEN)
 
+# Holding a button on an iPhone selected its label and opened the system
+# Copy / Translate / Look Up menu, mid-game. Every cabinet already said
+# `user-select: none`, but Safari on iOS only honours the -webkit- prefixed
+# form, and the callout has a switch of its own. This goes into every built
+# page; tools-touch-guard.py puts the same block into pages already built.
+TOUCH_GUARD = """<!-- touch-guard:start -->
+<style>
+  /* no text selection and no long-press callout anywhere on a cabinet:
+     there is nothing on these pages to copy, and a held button is the game */
+  *:not(input):not(textarea) {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+</style>
+<script>
+  document.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+  document.addEventListener("selectstart", function (e) { e.preventDefault(); });
+</script>
+<!-- touch-guard:end -->
+"""
+
 doc = '''<!doctype html>
 <html lang="en">
 <head>
@@ -118,8 +140,7 @@ doc = '''<!doctype html>
   img { max-width: 100%%; }
   [hidden] { display: none !important; }
 </style>
-''' % desc + head + social + analytics + '''
-</head>
+''' % desc + head + social + analytics + TOUCH_GUARD + '''</head>
 <body>
 ''' + body + '''
 </body>

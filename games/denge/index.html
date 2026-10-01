@@ -126,6 +126,21 @@
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "aee6e644a3b74cb9bdaf4e1569d570e2"}'></script>
 <!-- End Cloudflare Web Analytics -->
 
+<!-- touch-guard:start -->
+<style>
+  /* no text selection and no long-press callout anywhere on a cabinet:
+     there is nothing on these pages to copy, and a held button is the game */
+  *:not(input):not(textarea) {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+</style>
+<script>
+  document.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+  document.addEventListener("selectstart", function (e) { e.preventDefault(); });
+</script>
+<!-- touch-guard:end -->
 </head>
 <body>
 <div id="wrap">
